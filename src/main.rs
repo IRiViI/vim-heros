@@ -1,4 +1,5 @@
 mod app;
+mod game;
 mod ui;
 mod vim;
 
@@ -42,13 +43,18 @@ fn main() -> io::Result<()> {
 }
 
 fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> {
-    let mut app = App::new();
+    let size = terminal.size()?;
+    let viewport_height = size.height.saturating_sub(3) as usize; // borders + status bar
+    let mut app = App::new(viewport_height);
 
     // Initial render
     terminal.draw(|frame| ui::game_view::render(frame, &app))?;
 
     while app.running {
-        if app.handle_input() {
+        if app.tick() {
+            // Update viewport height in case terminal was resized
+            let size = terminal.size()?;
+            app.update_viewport_height(size.height as usize);
             terminal.draw(|frame| ui::game_view::render(frame, &app))?;
         }
     }

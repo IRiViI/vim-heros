@@ -39,6 +39,11 @@ game over. Fewer keystrokes = more points. Powered by real Vim commands.
   scrolls past the cursor, it's game over.
 - **Tasks** appear as highlighted regions in the code ahead of the cursor. The player
   must navigate to them and execute the correct edit before they scroll away.
+- **Player-driven scroll boost**: when the cursor moves past the bottom of the
+  viewport, the viewport snaps forward by the same distance. This lets skilled
+  players speed things up — e.g. `6j` at the bottom edge scrolls the viewport
+  6 lines forward instantly. The auto-scroll timer resets after a boost so the
+  player isn't immediately punished.
 
 ### 1.2 Scoring
 
@@ -1000,7 +1005,8 @@ in real-time, quit with `q` or `Ctrl-c`.
 - Basic game over screen (score placeholder, "press R to retry")
 
 **Exit criteria**: Buffer scrolls down automatically, player must press `j` to keep
-up, game over triggers correctly when cursor leaves viewport.
+up, game over triggers correctly when cursor leaves viewport. Moving past the
+bottom of the viewport (e.g. `j`, `6j`) scrolls the viewport forward to match.
 
 ---
 
@@ -1199,6 +1205,39 @@ pick it up, understand the mechanics, and progress through all worlds.
 
 **Exit criteria**: `brew install vim-heroes`, `cargo install vim-heroes`, or
 downloading a binary from GitHub Releases all work.
+
+---
+
+### Phase 15 — Personal Code: GitHub Integration
+
+**Goal**: Let players practice Vim on their own code from their public GitHub repos.
+
+**Deliverables**:
+- `content/github.rs`: fetch player's public repos and code files via GitHub REST API
+- GitHub username detection: parse `~/.gitconfig` for `user.name` → fallback to in-game
+  prompt ("Enter your GitHub username")
+- Fetch top repos by stars: `GET https://api.github.com/users/{name}/repos?sort=stars`
+- Fetch code files: `GET https://api.github.com/repos/{owner}/{repo}/contents/{path}`
+  filtered by supported extensions (.py, .ts, .rs, .cpp)
+- Auto-slicer: split fetched files into game-sized segments (~20–60 lines) with
+  auto-generated tasks (move_to, delete_line, change_word based on code patterns)
+- "Your Code" mode in level select: separate section showing repo names as worlds
+- Cache fetched content locally in `~/.vim-heroes/github-cache/` to avoid redundant
+  API calls and respect rate limits
+- HTTP via `ureq` crate (small, sync, no OpenSSL dependency — pure Rust TLS)
+
+**Constraints**:
+- No `gh` CLI dependency — uses raw HTTPS requests from the Rust binary
+- No sudo / admin rights / elevated privileges required
+- No auth tokens needed — only accesses public repos via unauthenticated API
+- Unauthenticated GitHub API rate limit: 60 requests/hour (sufficient for ~10 repos
+  worth of files per session)
+- Graceful degradation: if API is unreachable or user has no public repos, skip
+  silently and use built-in content
+
+**Exit criteria**: Player enters their GitHub username, sees their top repos listed,
+and can play levels built from their own code. Works on a fresh machine with no
+GitHub tooling installed.
 
 ---
 
