@@ -1,0 +1,950 @@
+# Vim Heroes — Master Plan
+
+A Guitar Hero–inspired terminal game that teaches Vim through escalating, real-code
+challenges. Text scrolls down like a note highway; your cursor must keep up or it's
+game over. Fewer keystrokes = more points. Powered by real Vim commands.
+
+---
+
+## Table of Contents
+
+1. [Game Design](#1-game-design)
+2. [Zone & Level System](#2-zone--level-system)
+3. [Content System](#3-content-system)
+4. [Keybinding / Config System](#4-keybinding--config-system)
+5. [Technical Architecture](#5-technical-architecture)
+6. [Phased Implementation Plan](#6-phased-implementation-plan)
+
+---
+
+## 1. Game Design
+
+### 1.1 Core Loop
+
+```
+┌─────────────┐      ┌───────────────┐      ┌────────────┐
+│  Viewport   │─────▶│  Player edits │─────▶│  Scoring   │
+│  scrolls    │      │  buffer with  │      │  evaluated │
+│  down       │      │  Vim commands │      │            │
+└─────────────┘      └───────────────┘      └────────────┘
+       │                                          │
+       ▼                                          ▼
+  Cursor out of                             Task done?
+  viewport? ──▶ GAME OVER                  ──▶ Points + combo
+```
+
+- The **text buffer is static** — it's a real code file assembled from segments.
+- The **viewport scrolls down** at a steady rate (line-by-line at intervals).
+- The player's **cursor must stay within the visible viewport** — if the viewport
+  scrolls past the cursor, it's game over.
+- **Tasks** appear as highlighted regions in the code ahead of the cursor. The player
+  must navigate to them and execute the correct edit before they scroll away.
+
+### 1.2 Scoring
+
+| Source              | Points      | Notes                                    |
+|---------------------|-------------|------------------------------------------|
+| Each second alive   | +10         | Baseline survival reward                 |
+| Each keystroke      | −2          | Penalizes inefficiency                   |
+| Task completed      | +50 to +500 | Scales with task complexity              |
+| Optimal solution    | +100 bonus  | Used ≤ optimal number of keystrokes      |
+| Combo multiplier    | ×1.5 / ×2 / ×3 | Consecutive optimal task completions |
+| Missed task         | −50         | Task scrolled off-screen uncompleted     |
+
+Tasks must be worth significantly more than survival points so the optimal strategy
+is "complete tasks efficiently," not "hold j and ignore everything."
+
+### 1.3 Star Rating (per level)
+
+- ★☆☆ — Completed the level (survived to the end)
+- ★★☆ — Completed all tasks
+- ★★★ — Completed all tasks within the optimal keystroke budget
+
+### 1.4 Visual Design (Terminal)
+
+```
+┌──────────────────────────────────────────────────┐
+│ ★★☆  Level 2-3  "Word Hopping"   Score: 1,250  ×2│  ← HUD
+├──────────────────────────────────────────────────┤
+│  14 │   for (const item of items) {              │
+│  15 │     sum += item.price;                     │
+│  16 │ ██  sum += item.tax  ██       CHG → "cost" │  ← red = pending task
+│  17 │   }                                        │
+│  18 │   return sum;               █              │  ← cursor
+│  19 │ }                                          │
+│  20 │ ▓▓  console.log(total)  ▓▓       ✓ DONE   │  ← green = completed
+│  21 │                                            │
+├──────────────────────────────────────────────────┤
+│ NORMAL │ Keys: 12 │ ▸ Change "tax" → "cost"     │  ← status bar
+└──────────────────────────────────────────────────┘
+```
+
+- **Red background**: task pending, with a short annotation in the right gutter.
+- **Green background**: task completed.
+- **Yellow background**: partially done / cursor is on it.
+- **Status bar**: current mode, keystroke count, current task description.
+- **HUD**: level name, star progress, score, combo multiplier.
+
+### 1.5 Game Over Screen
+
+Show: final score, stars earned, tasks completed/total, keystrokes used vs optimal,
+and a breakdown of commands used. Offer: retry, next level, back to menu.
+
+---
+
+## 2. Zone & Level System
+
+### 2.1 Four Zones
+
+Each zone maps to a skill tier and a code complexity tier. Zones contain multiple
+worlds, each world contains 5 levels.
+
+| Zone       | Worlds | Scroll Speed    | Vim Skills                        | Code Style            |
+|------------|--------|-----------------|-----------------------------------|-----------------------|
+| **Starter**  | 1–2    | 1 line / 2–3s   | Movement, basic editing           | Hello world, simple scripts |
+| **Junior**   | 3–4    | 1 line / 1.5–2s | Word motions, operators+motions   | Functions, classes, basic patterns |
+| **Medior**   | 5–6    | 1 line / 1–1.5s | Text objects, search, visual mode | Design patterns, async, generics |
+| **Senior**   | 7–8    | 1 line / 0.5–1s | Macros, registers, advanced combos | Production-grade, complex architectures |
+
+### 2.2 Worlds & Levels
+
+Each world introduces specific commands, then tests them in 5 levels of increasing
+density and speed.
+
+#### Zone: Starter
+
+**World 1 — First Steps**
+| Level | New Commands         | Task Types                     |
+|-------|----------------------|--------------------------------|
+| 1-1   | `h` `j` `k` `l`     | Move cursor to marked positions |
+| 1-2   | `w` `b` `e`         | Jump to highlighted words       |
+| 1-3   | `0` `^` `$`         | Reach start/end of lines        |
+| 1-4   | `gg` `G` `{num}G`   | Jump to specific line numbers   |
+| 1-5   | All of the above     | Mixed movement challenges       |
+
+**World 2 — First Edits**
+| Level | New Commands         | Task Types                     |
+|-------|----------------------|--------------------------------|
+| 2-1   | `x` `X`             | Delete specific characters      |
+| 2-2   | `dd` `yy` `p` `P`   | Delete/yank/paste lines         |
+| 2-3   | `i` `a` `I` `A`     | Insert text at positions        |
+| 2-4   | `o` `O`             | Open lines and insert           |
+| 2-5   | All of the above     | Mixed basic editing             |
+
+#### Zone: Junior
+
+**World 3 — Precision**
+| Level | New Commands         | Task Types                     |
+|-------|----------------------|--------------------------------|
+| 3-1   | `f` `t` `F` `T`     | Find characters on a line       |
+| 3-2   | `;` `,`             | Repeat find motions             |
+| 3-3   | `dw` `db` `d$` `d0` | Delete with motions             |
+| 3-4   | `cw` `cb` `c$`      | Change with motions             |
+| 3-5   | `.` (dot repeat)     | Repeat last change efficiently  |
+
+**World 4 — Speed**
+| Level | New Commands         | Task Types                     |
+|-------|----------------------|--------------------------------|
+| 4-1   | `r` `R`             | Replace characters              |
+| 4-2   | `u` `Ctrl-r`        | Undo/redo (fix intentional mistakes) |
+| 4-3   | `/` `?` `n` `N`     | Search navigation               |
+| 4-4   | `*` `#`             | Word-under-cursor search        |
+| 4-5   | All of the above     | Mixed precision + speed         |
+
+#### Zone: Medior
+
+**World 5 — Text Objects**
+| Level | New Commands              | Task Types                   |
+|-------|---------------------------|------------------------------|
+| 5-1   | `iw` `aw`                | Inner/around word            |
+| 5-2   | `i"` `i'` `a"` `a'`     | Inside/around quotes         |
+| 5-3   | `i(` `i{` `i[` `a(` etc | Inside/around brackets       |
+| 5-4   | `ci"` `di(` `yi{`       | Operators + text objects     |
+| 5-5   | All of the above          | Mixed text object challenges |
+
+**World 6 — Visual & Combine**
+| Level | New Commands              | Task Types                   |
+|-------|---------------------------|------------------------------|
+| 6-1   | `v` + motions             | Visual character selection   |
+| 6-2   | `V` + motions             | Visual line selection        |
+| 6-3   | `Ctrl-v`                  | Visual block mode            |
+| 6-4   | `%` (bracket matching)    | Navigate matching pairs      |
+| 6-5   | All of the above          | Complex multi-step edits     |
+
+#### Zone: Senior
+
+**World 7 — Power User**
+| Level | New Commands              | Task Types                   |
+|-------|---------------------------|------------------------------|
+| 7-1   | `q{reg}` ... `q` `@{reg}` | Record and replay macros    |
+| 7-2   | `"{reg}y` `"{reg}p`      | Named registers              |
+| 7-3   | `>` `<` indent operators  | Code indentation tasks       |
+| 7-4   | `gU` `gu` case operators  | Case manipulation            |
+| 7-5   | All of the above          | Mixed power user             |
+
+**World 8 — Mastery**
+| Level | New Commands              | Task Types                       |
+|-------|---------------------------|----------------------------------|
+| 8-1   | Complex macro chains      | Multi-step refactoring w/ macros |
+| 8-2   | Register juggling         | Yank/paste across distant code   |
+| 8-3   | Everything                | Real refactoring: rename vars    |
+| 8-4   | Everything                | Real refactoring: restructure    |
+| 8-5   | Everything                | Boss battle: full code overhaul  |
+
+### 2.3 Special Modes
+
+- **Practice Mode**: No scrolling, no timer. Just tasks on a static buffer. For
+  learning new commands before tackling the real levels.
+- **Endless Mode**: Infinite scrolling code with random tasks. Score-attack with a
+  global leaderboard. Speed increases every 60 seconds.
+- **Daily Challenge**: One shared level per day, same for everyone. Leaderboard.
+
+---
+
+## 3. Content System
+
+### 3.1 Languages
+
+Players choose their language before starting. Available languages:
+
+| Language          | Priority | Ship in   |
+|-------------------|----------|-----------|
+| Python            | 1        | Phase 8   |
+| TypeScript        | 1        | Phase 8   |
+| Rust              | 2        | Phase 10  |
+| C++               | 2        | Phase 10  |
+
+Each language exercises different Vim strengths:
+
+| Language       | Natural Vim focus                                          |
+|----------------|----------------------------------------------------------|
+| Python         | Indentation, `:` landmarks, f-strings, less bracket nesting |
+| TypeScript     | Deep nesting (`ci{`), generics `<>`, template literals     |
+| Rust           | Lifetimes `'a` as f-targets, `::` paths, match arms       |
+| C++            | `<>` templates, `::` scope, `*&` pointers, `#` preprocessor |
+
+### 3.2 Segment Pool Architecture
+
+Code content is organized as a **pool of segments** — self-contained 15–40 line code
+blocks. Each playthrough randomly selects and stitches segments together.
+
+```
+content/
+├── python/
+│   ├── starter/        # ~40 segments  (~800-1200 lines total)
+│   ├── junior/         # ~40 segments
+│   ├── medior/         # ~40 segments
+│   └── senior/         # ~40 segments
+├── typescript/
+│   ├── starter/
+│   └── ...
+├── rust/
+│   └── ...
+└── cpp/
+    └── ...
+```
+
+**Per language**: ~160 segments, ~3500-5000 lines of code.
+**Total**: ~640 segments, ~15,000-20,000 lines across all languages.
+
+Each playthrough uses 3–6 segments. Combined with the "no repeat from last 3
+playthroughs" rule, players get thousands of unique combinations before repetition.
+
+### 3.3 Segment Format
+
+```toml
+[meta]
+id = "py-junior-api-fetch"
+zone = "junior"
+language = "python"
+tags = ["functions", "error-handling", "http"]
+difficulty = 3                    # 1-5 within the zone
+
+[code]
+content = """
+import requests
+
+def fetch_user_profile(user_id: str) -> dict:
+    url = f"https://api.example.com/users/{user_id}"
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    return response.json()
+"""
+
+[[tasks]]
+type = "change_word"
+anchor = { pattern = '"full_name"', occurrence = 1 }
+new_text = '"display_name"'
+description = "Change 'full_name' to 'display_name'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "delete_line"
+anchor = { pattern = "timeout=10", occurrence = 1 }
+description = "Delete this line"
+points = 75
+optimal_keys = 2
+```
+
+### 3.4 Task Types
+
+| Type           | Description                        | Example                          |
+|----------------|------------------------------------|----------------------------------|
+| `move_to`      | Place cursor on target             | "Move to the word 'fetch'"       |
+| `delete_line`  | Delete an entire line              | "Delete this comment"            |
+| `delete_word`  | Delete a word                      | "Delete the variable name"       |
+| `change_word`  | Replace a word with new text       | "Change 'foo' to 'bar'"         |
+| `change_inside`| Change content inside delimiters   | "Change the string contents"     |
+| `insert_text`  | Insert text at a position          | "Add a return statement"         |
+| `yank_paste`   | Copy from one place, paste another | "Copy this line to below line 20"|
+| `delete_block` | Delete multiple lines              | "Delete this function body"      |
+| `indent`       | Fix indentation                    | "Indent this block"              |
+| `replace_char` | Replace a single character         | "Fix this typo: a → e"          |
+
+### 3.5 Assembly Algorithm
+
+When a level starts:
+
+1. Determine zone from level number.
+2. Load segment pool for the player's chosen language + zone.
+3. Randomly select 3–6 segments, weighted by:
+   - Tags matching the level's target commands.
+   - Not recently seen (tracked in save file, last 3 playthroughs).
+4. Stitch segments with natural separators (blank lines, comments like
+   `// ---` or `# ---`).
+5. Resolve task anchors → absolute line/column positions in assembled buffer.
+6. Order tasks top-to-bottom to match scroll direction.
+
+### 3.6 Code Complexity by Zone
+
+**Starter** — Tutorial-level code:
+```python
+name = "Alice"
+print("Hello, " + name)
+
+numbers = [1, 2, 3, 4, 5]
+total = 0
+for n in numbers:
+    total = total + n
+print(total)
+```
+
+**Junior** — Structured code with functions and classes:
+```python
+from dataclasses import dataclass
+
+@dataclass
+class Product:
+    name: str
+    price: float
+    quantity: int
+
+    def total_value(self) -> float:
+        return self.price * self.quantity
+```
+
+**Medior** — Design patterns, async, generics:
+```typescript
+class LRUCache<T> {
+  private items = new Map<string, CacheEntry<T>>();
+
+  get(key: string): T | undefined {
+    const entry = this.items.get(key);
+    if (!entry) return undefined;
+    if (Date.now() > entry.expires_at) {
+      this.items.delete(key);
+      return undefined;
+    }
+    this.items.delete(key);
+    this.items.set(key, entry);
+    return entry.value;
+  }
+}
+```
+
+**Senior** — Production-grade, complex architecture:
+```rust
+trait Middleware: Send + Sync + 'static {
+    fn handle<'a>(
+        &'a self,
+        req: Request,
+        next: &'a dyn Fn(Request) -> BoxFuture<'a, Response>,
+    ) -> BoxFuture<'a, Response>;
+}
+```
+
+### 3.7 Adding New Content
+
+New segments, languages, and task types can be added using the
+`add-content` skill file (see `.claude/skills/add-content.md`). The skill
+guides contributors through the segment format, validation rules, and
+naming conventions.
+
+---
+
+## 4. Keybinding / Config System
+
+### 4.1 Config File Location
+
+`~/.vim-heroes/config.toml` — created on first launch with sensible defaults
+and comments explaining every option.
+
+### 4.2 Config Structure
+
+```toml
+[general]
+language = "python"            # default language for new games
+show_hints = true              # show command hints during gameplay
+color_theme = "default"        # "default", "gruvbox", "solarized", "catppuccin"
+
+[keymap]
+# Optional: load a preset as a base, then override individual keys below.
+# preset = "colemak-dh"        # "qwerty" (default), "colemak", "colemak-dh", "dvorak", "workman"
+
+# Movement
+move_left = "h"
+move_down = "j"
+move_up = "k"
+move_right = "l"
+word_forward = "w"
+word_forward_big = "W"
+word_back = "b"
+word_back_big = "B"
+word_end = "e"
+word_end_big = "E"
+line_start = "0"
+line_first_char = "^"
+line_end = "$"
+goto_line_top = "gg"
+goto_line_bottom = "G"
+find_char_forward = "f"
+find_char_backward = "F"
+till_char_forward = "t"
+till_char_backward = "T"
+repeat_find = ";"
+repeat_find_reverse = ","
+match_bracket = "%"
+paragraph_up = "{"
+paragraph_down = "}"
+
+# Operators
+delete = "d"
+change = "c"
+yank = "y"
+paste_after = "p"
+paste_before = "P"
+delete_char = "x"
+replace_char = "r"
+undo = "u"
+redo = "C-r"
+
+# Mode switching
+insert_before = "i"
+insert_after = "a"
+insert_line_start = "I"
+insert_line_end = "A"
+open_below = "o"
+open_above = "O"
+visual_char = "v"
+visual_line = "V"
+visual_block = "C-v"
+escape = "Escape"              # also supports arrays: ["Escape", "jk"]
+command_mode = ":"
+
+# Search
+search_forward = "/"
+search_backward = "?"
+search_next = "n"
+search_prev = "N"
+search_word = "*"
+search_word_back = "#"
+
+# Other
+repeat_last = "."
+record_macro = "q"
+play_macro = "@"
+```
+
+### 4.3 Key Syntax
+
+| Syntax     | Meaning                              |
+|------------|--------------------------------------|
+| `"j"`      | Single character key                 |
+| `"C-r"`    | Ctrl + r                             |
+| `"S-k"`    | Shift + k                            |
+| `"Escape"` | Special key name                     |
+| `"Space"`  | Spacebar                             |
+| `"Enter"`  | Enter/Return                         |
+| `"gg"`     | Multi-key sequence (sequential)      |
+| `["Escape", "jk"]` | Multiple bindings for one action |
+
+### 4.4 Built-in Presets
+
+| Preset       | Movement keys | Notes                            |
+|--------------|---------------|----------------------------------|
+| `qwerty`     | `h j k l`     | Default, stock Vim               |
+| `colemak`    | `h n e i`     | Common Colemak Vim remap         |
+| `colemak-dh` | `m n e i`     | Colemak-DH variant               |
+| `dvorak`     | `d h t n`     | Common Dvorak Vim remap          |
+| `workman`    | `y n e o`     | Workman layout                   |
+
+Presets remap the full set of keys for that layout. Individual overrides in
+`[keymap]` take precedence over the preset.
+
+### 4.5 Architecture Integration
+
+```
+Raw keystroke (crossterm)
+        │
+        ▼
+  ┌────────────┐
+  │   Keymap    │  ← reads config.toml, resolves sequences with timeout
+  │   Resolver  │     maps physical keys → logical Actions
+  └────────────┘
+        │
+        ▼
+  Logical Action (e.g., Action::WordForward)
+        │
+        ▼
+  ┌────────────┐
+  │    Vim      │  ← operates on logical actions only
+  │   Engine    │     never sees raw keys
+  └────────────┘
+```
+
+**Scoring** counts physical keystrokes, not logical actions — remapping doesn't
+change your score.
+
+**Hints and ghost replays** display keys in the player's active mapping.
+
+---
+
+## 5. Technical Architecture
+
+### 5.1 Stack
+
+| Component        | Choice             | Rationale                              |
+|------------------|--------------------|----------------------------------------|
+| Language         | Rust               | Single binary, fast rendering, no runtime |
+| Terminal UI      | ratatui + crossterm | Production-grade TUI (powers lazygit, etc.) |
+| Text buffer      | ropey              | Efficient rope DS for insert/delete    |
+| Config parsing   | serde + toml       | Ergonomic TOML parsing                 |
+| Content embed    | include_dir        | Bake segments into the binary          |
+| Save data        | serde + bincode    | Fast local save to ~/.vim-heroes/      |
+
+### 5.2 Project Structure
+
+```
+vim-heroes/
+├── src/
+│   ├── main.rs                  # Entry point, terminal init/cleanup
+│   ├── app.rs                   # Top-level state machine: Menu → Playing → Results
+│   │
+│   ├── vim/                     # Vim emulation engine
+│   │   ├── mod.rs
+│   │   ├── buffer.rs            # Text buffer (rope-backed)
+│   │   ├── cursor.rs            # Cursor position, clamping, movement
+│   │   ├── mode.rs              # Normal / Insert / Visual / Operator-pending
+│   │   ├── command.rs           # Keystroke → partial/complete command parser
+│   │   ├── motions.rs           # h/j/k/l/w/b/e/f/t/G/gg/$/^/0 etc.
+│   │   ├── operators.rs         # d/c/y + motion/text-object combinations
+│   │   ├── text_objects.rs      # iw/aw/i"/a(/i{ etc.
+│   │   ├── registers.rs         # Yank/delete registers ("a-z, unnamed, etc.)
+│   │   └── macros.rs            # Macro record/replay
+│   │
+│   ├── game/                    # Game mechanics
+│   │   ├── mod.rs
+│   │   ├── engine.rs            # Core game loop: tick, scroll, input, render
+│   │   ├── viewport.rs          # Viewport position, scroll speed, bounds check
+│   │   ├── scoring.rs           # Points, combo, star calculation
+│   │   ├── task.rs              # Task state machine: pending → active → done/missed
+│   │   └── level.rs             # Level metadata, progression logic
+│   │
+│   ├── content/                 # Content management
+│   │   ├── mod.rs
+│   │   ├── segment.rs           # Segment struct, TOML parsing
+│   │   ├── assembler.rs         # Stitch segments into a level buffer
+│   │   ├── anchor.rs            # Resolve pattern anchors → buffer positions
+│   │   └── history.rs           # Track recently-seen segments for variety
+│   │
+│   ├── config/                  # Configuration
+│   │   ├── mod.rs
+│   │   ├── keymap.rs            # Key mapping resolution, sequence timeout
+│   │   ├── presets.rs           # Embedded layout presets
+│   │   └── key_syntax.rs        # Parser for "C-r", "gg", ["Escape","jk"] etc.
+│   │
+│   ├── ui/                      # Terminal rendering
+│   │   ├── mod.rs
+│   │   ├── game_view.rs         # Main gameplay screen
+│   │   ├── menu.rs              # Main menu, level select, language picker
+│   │   ├── hud.rs               # Score, combo, stars, level info
+│   │   ├── task_overlay.rs      # Red/green/yellow highlights + gutter annotations
+│   │   ├── results.rs           # End-of-level results screen
+│   │   └── theme.rs             # Color themes
+│   │
+│   └── progress/                # Player progress
+│       ├── mod.rs
+│       └── save.rs              # Stars, high scores, unlocks → ~/.vim-heroes/save.dat
+│
+├── content/                     # Code segments (embedded at compile time)
+│   ├── python/
+│   │   ├── starter/
+│   │   │   ├── hello_world.toml
+│   │   │   ├── fizzbuzz.toml
+│   │   │   └── ...
+│   │   ├── junior/
+│   │   ├── medior/
+│   │   └── senior/
+│   ├── typescript/
+│   │   └── ...
+│   ├── rust/
+│   │   └── ...
+│   └── cpp/
+│       └── ...
+│
+├── Cargo.toml
+├── PLAN.md                      # This file
+└── README.md
+```
+
+### 5.3 Key Dependencies
+
+```toml
+[dependencies]
+ratatui = "0.29"
+crossterm = "0.28"
+ropey = "1.6"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+include_dir = "0.7"
+dirs = "5.0"
+bincode = "1.3"
+rand = "0.8"
+```
+
+Binary size target: ~5-8 MB (all content embedded).
+
+### 5.4 Game Loop
+
+```rust
+// Pseudocode
+loop {
+    // 1. Non-blocking input
+    if poll_input(timeout: 33ms) {        // ~30 fps
+        let key = read_key();
+        keystroke_count += 1;
+        let action = keymap.resolve(key); // physical → logical
+        vim_engine.execute(action);
+        check_task_completion(&mut tasks, &buffer, &cursor);
+    }
+
+    // 2. Scroll tick
+    if elapsed >= scroll_interval {
+        viewport.scroll_down(1);
+        if cursor.line < viewport.top_line {
+            return GameOver;
+        }
+        score += SURVIVAL_POINTS;
+    }
+
+    // 3. Check for missed tasks
+    for task in &mut tasks {
+        if task.is_pending() && task.line < viewport.top_line {
+            task.mark_missed();
+            score -= MISS_PENALTY;
+            combo = 0;
+        }
+    }
+
+    // 4. Render
+    terminal.draw(|frame| {
+        render_hud(frame, &game_state);
+        render_buffer(frame, &buffer, &viewport, &cursor, &tasks);
+        render_statusbar(frame, &vim_engine, &keystroke_count, &current_task);
+    });
+
+    // 5. Check level complete
+    if viewport.bottom_line >= buffer.len_lines() {
+        return LevelComplete;
+    }
+}
+```
+
+### 5.5 Distribution
+
+| Channel              | Tool / Method          | Audience              |
+|----------------------|------------------------|-----------------------|
+| `cargo install`      | crates.io              | Rust developers       |
+| Homebrew             | homebrew-tap           | macOS / Linux         |
+| AUR                  | PKGBUILD               | Arch Linux            |
+| `.deb` package       | cargo-deb              | Debian / Ubuntu       |
+| GitHub Releases      | Prebuilt binaries      | Everyone              |
+| Snap / Flatpak       | snapcraft / flatpak    | Universal Linux       |
+
+---
+
+## 6. Phased Implementation Plan
+
+Each phase is a self-contained deliverable. Complete one before starting the next.
+Phases are designed so the game becomes playable as early as possible, then gains
+features incrementally.
+
+### Phase 1 — Project Skeleton & Vim Buffer
+
+**Goal**: A Rust project that can hold text in a buffer and move a cursor with
+basic Vim motions.
+
+**Deliverables**:
+- `cargo init` with all dependencies in Cargo.toml
+- `vim/buffer.rs`: rope-backed text buffer (load string, get line, insert, delete)
+- `vim/cursor.rs`: cursor position with line/column, clamping to buffer bounds
+- `vim/mode.rs`: Normal and Insert mode enum
+- `vim/motions.rs`: `h`, `j`, `k`, `l` movement
+- `vim/command.rs`: keystroke → action parser (Normal mode only)
+- Unit tests for buffer operations and cursor movement
+
+**No rendering yet** — this is pure logic. All testable via `cargo test`.
+
+**Exit criteria**: Tests pass for loading a buffer, moving a cursor with hjkl,
+and cursor stays clamped within buffer bounds.
+
+---
+
+### Phase 2 — Terminal Rendering & Input
+
+**Goal**: See the buffer on screen, move the cursor with real keystrokes.
+
+**Deliverables**:
+- `main.rs`: terminal setup (raw mode, alternate screen) and cleanup
+- `ui/game_view.rs`: render buffer with line numbers, render cursor position
+- `config/keymap.rs`: basic keymap (hardcoded qwerty for now)
+- Input loop: read keystrokes → resolve to actions → update buffer → re-render
+- `app.rs`: minimal state machine (just "Playing" state for now)
+
+**Exit criteria**: Launch the game, see a hardcoded buffer, move cursor with hjkl
+in real-time, quit with `q` or `Ctrl-c`.
+
+---
+
+### Phase 3 — Scrolling Viewport & Game Over
+
+**Goal**: The core Guitar Hero mechanic — viewport scrolls, cursor must keep up.
+
+**Deliverables**:
+- `game/viewport.rs`: viewport with configurable scroll speed, tracks top/bottom line
+- `game/engine.rs`: game loop with tick-based scrolling (decoupled from frame rate)
+- Game over detection: cursor above viewport top → game over screen
+- `ui/game_view.rs`: only render lines within viewport, show scroll indicator
+- Basic game over screen (score placeholder, "press R to retry")
+
+**Exit criteria**: Buffer scrolls down automatically, player must press `j` to keep
+up, game over triggers correctly when cursor leaves viewport.
+
+---
+
+### Phase 4 — Expanded Motions
+
+**Goal**: Enough Vim commands to make movement interesting.
+
+**Deliverables**:
+- `vim/motions.rs` expanded: `w`, `b`, `e`, `W`, `B`, `E` (word motions)
+- `0`, `^`, `$` (line position)
+- `gg`, `G`, `{num}G` (line jumping)
+- `f`, `t`, `F`, `T`, `;`, `,` (find character)
+- `{`, `}` (paragraph)
+- `%` (bracket matching)
+- Unit tests for all motions
+
+**Exit criteria**: All motions work correctly on various buffer contents.
+Edge cases handled (empty lines, end of buffer, etc.).
+
+---
+
+### Phase 5 — Task System
+
+**Goal**: Tasks appear in the buffer and can be completed.
+
+**Deliverables**:
+- `game/task.rs`: task struct, states (pending/active/completed/missed)
+- `content/anchor.rs`: resolve text-pattern anchors to buffer positions
+- `ui/task_overlay.rs`: red/green/yellow highlighting on task lines
+- Gutter annotations ("DEL", "CHG → 'foo'", "✓ DONE")
+- Task completion detection: compare buffer state against expected outcome
+- `move_to` task type (simplest — just move cursor to a position)
+
+**Exit criteria**: Hardcoded tasks appear highlighted in the buffer, completing
+a `move_to` task turns it green, missed tasks (scrolled past) are detected.
+
+---
+
+### Phase 6 — Scoring & HUD
+
+**Goal**: The game feels like a game — points, combos, feedback.
+
+**Deliverables**:
+- `game/scoring.rs`: point accumulation, combo tracking, star calculation
+- `ui/hud.rs`: top bar with score, combo multiplier, level name, star progress
+- `ui/statusbar.rs`: mode indicator, keystroke count, current task description
+- `ui/results.rs`: end-of-level screen with score breakdown
+- Score formula: survival points + task points − keystroke penalty + combo bonus
+
+**Exit criteria**: Playing through a level shows a running score, combos work,
+end-of-level screen shows meaningful results with star rating.
+
+---
+
+### Phase 7 — Content System & Segment Loader
+
+**Goal**: Levels are assembled from content segments, not hardcoded.
+
+**Deliverables**:
+- `content/segment.rs`: parse TOML segment files
+- `content/assembler.rs`: randomly select and stitch segments into a buffer
+- `content/history.rs`: track recently-seen segments in save file
+- `levels/` directory structure with TOML format
+- `include_dir!` macro to embed content in binary
+- Level metadata: zone, world, level number, scroll speed, allowed commands
+
+**Exit criteria**: Starting a level loads random segments from the correct
+zone/language pool. Replaying gives different content.
+
+---
+
+### Phase 8 — First Content: Python & TypeScript (Starter + Junior)
+
+**Goal**: Enough content for a real playable demo across 2 languages, 2 zones.
+
+**Deliverables**:
+- ~40 Python starter segments
+- ~40 Python junior segments
+- ~40 TypeScript starter segments
+- ~40 TypeScript junior segments
+- Each segment has 1–3 well-designed tasks
+- Language selection in menu
+- Tasks cover: `move_to`, `delete_line`, `delete_word`, `change_word`, `insert_text`
+
+**Exit criteria**: Worlds 1–4 are fully playable in Python and TypeScript with
+varied content on each replay.
+
+---
+
+### Phase 9 — Editing Commands & Advanced Tasks
+
+**Goal**: Full operator + motion system, enabling medior/senior content.
+
+**Deliverables**:
+- `vim/operators.rs`: `d`, `c`, `y` combined with any motion
+- `vim/text_objects.rs`: `iw`, `aw`, `i"`, `a"`, `i(`, `a(`, `i{`, `a{`, `i[`, `a[`
+- Insert mode: `i`, `a`, `I`, `A`, `o`, `O`, typing text, `Escape` to return
+- `r`, `R` (replace)
+- `.` (dot repeat)
+- `u`, `Ctrl-r` (undo/redo)
+- Visual mode: `v`, `V`, `Ctrl-v` + operators
+- Registers: unnamed, named `"a`-`"z`
+- Macros: `q{reg}`, `@{reg}`
+- New task types: `change_inside`, `yank_paste`, `delete_block`, `indent`
+- Search: `/`, `?`, `n`, `N`, `*`, `#`
+
+**Exit criteria**: All commands from the level tables (Section 2.2) are
+implemented and tested.
+
+---
+
+### Phase 10 — Full Content: All Languages, All Zones
+
+**Goal**: Complete content library.
+
+**Deliverables**:
+- Medior + senior segments for Python and TypeScript (~80 more per language)
+- All 4 zones for Rust (~160 segments)
+- All 4 zones for C++ (~160 segments)
+- Total: ~640 segments across all languages
+- All 8 worlds fully playable
+
+**Exit criteria**: Every world/level combination works in every language with
+no repetition for at least 3 playthroughs.
+
+---
+
+### Phase 11 — Config System & Presets
+
+**Goal**: Full keybinding customization.
+
+**Deliverables**:
+- `config/mod.rs`: load/create `~/.vim-heroes/config.toml`
+- `config/key_syntax.rs`: parse all key formats ("C-r", "gg", arrays, etc.)
+- `config/presets.rs`: qwerty, colemak, colemak-dh, dvorak, workman
+- Multi-key sequence resolution with configurable timeout (default 300ms)
+- First-run prompt: choose layout or accept default
+- Hints and ghost replay show keys in the player's active mapping
+
+**Exit criteria**: A Colemak user can play the full game with correct bindings.
+Config file changes are picked up on next launch.
+
+---
+
+### Phase 12 — Progress, Saves & Menus
+
+**Goal**: Persistent player progression.
+
+**Deliverables**:
+- `progress/save.rs`: save/load to `~/.vim-heroes/save.dat`
+- Track per-level: best score, stars earned, keystroke counts
+- Track globally: total play time, commands used histogram
+- `ui/menu.rs`: main menu (New Game, Continue, Level Select, Settings, Quit)
+- Level select screen showing stars, locked/unlocked worlds
+- World unlock: earn N stars in previous world to unlock next
+- Settings screen: language picker, keybind preset, theme, hint toggle
+
+**Exit criteria**: Player can quit and resume, see their star progress,
+unlock new worlds by earning stars.
+
+---
+
+### Phase 13 — Polish & Extra Modes
+
+**Goal**: Ship-quality experience.
+
+**Deliverables**:
+- Ghost replay: after level, show optimal keystrokes as a ghost cursor
+- Practice mode: no scrolling, just tasks
+- Endless mode: infinite random content, escalating speed
+- Color themes: default, gruvbox, solarized, catppuccin
+- Sound effects (optional, terminal bell or off)
+- Stats dashboard: command usage, accuracy trends, time played
+- Tutorial: interactive first-launch walkthrough of game mechanics
+
+**Exit criteria**: The game feels complete and polished. A new player can
+pick it up, understand the mechanics, and progress through all worlds.
+
+---
+
+### Phase 14 — Distribution & Release
+
+**Goal**: Players can install the game easily on any platform.
+
+**Deliverables**:
+- CI/CD pipeline (GitHub Actions): build + test on Linux/macOS/Windows
+- `cargo install vim-heroes` — publish to crates.io
+- Homebrew formula in a tap repo
+- `.deb` package via cargo-deb
+- AUR PKGBUILD
+- GitHub Releases with prebuilt binaries (linux-x64, macos-arm64, windows-x64)
+- README with install instructions, screenshots, GIF demo
+
+**Exit criteria**: `brew install vim-heroes`, `cargo install vim-heroes`, or
+downloading a binary from GitHub Releases all work.
+
+---
+
+### Future Ideas (Post-Release)
+
+- **Multiplayer**: split-screen race mode (who finishes the level with more points)
+- **Daily challenge**: shared daily level with global leaderboard
+- **Custom levels**: player-created segment packs (load from `~/.vim-heroes/custom/`)
+- **More languages**: Go, Java, Ruby, Zig, Haskell
+- **Neovim integration**: play inside Neovim as a plugin
+- **Community content**: submit segments via PR, curated into releases
+- **Boss battles**: multi-phase refactoring challenges
+- **Achievements**: "Used 0 arrow keys", "100 combo", "All stars World 1", etc.
