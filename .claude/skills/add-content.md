@@ -48,6 +48,7 @@ zone = "{starter|junior|medior|senior}"
 language = "{python|typescript|rust|cpp}"
 tags = ["tag1", "tag2"]              # Used for level-matching (see Tag List below)
 difficulty = 3                        # 1-5 within the zone
+hints = ["S03", "S07"]               # Hint IDs from PLAN.md Section 1.6 (0-2 per segment)
 
 [code]
 content = """
@@ -56,6 +57,7 @@ content = """
 # Must be syntactically valid in the target language.
 # Must be idiomatic — write code the way a real developer would.
 # No placeholder comments like "// TODO" unless they ARE the task.
+# Include 0-2 VIM TIP comments from the hint catalog (see Hints section below).
 """
 
 [[tasks]]
@@ -67,6 +69,66 @@ optimal_keys = 5                     # Minimum keystrokes for an expert
 
 # Type-specific fields (see Task Types section)
 ```
+
+### Intro segments (tutorial-as-gameplay)
+
+Every level starts with an intro segment that teaches the player what they need.
+There is no separate tutorial — the tutorial IS the first part of the level.
+
+**File naming**: `intro_{level}.toml` — e.g., `intro_1_2.toml`
+**Location**: same directory as regular segments (`content/{language}/{zone}/`)
+
+```toml
+[meta]
+id = "intro-{lang}-{level}"         # e.g., "intro-py-1-2"
+zone = "starter"
+language = "python"
+tags = ["words"]
+difficulty = 1
+intro = true                         # REQUIRED: marks as intro segment
+intro_level = "1-2"                  # REQUIRED: which level this belongs to
+
+[code]
+content = """
+# ═══════════════════════════════════
+# LEVEL 1-2: Word Motions
+# ═══════════════════════════════════
+#
+# Pressing 'l' many times is slow.
+# Use 'w' to jump to the next word!
+# Use 'b' to jump back a word.
+#
+# Try it — move to 'target' below:
+
+name = "hello"
+target = "world"
+result = name + target
+
+# Great! Use 'w' and 'b' from now on.
+# ═══════════════════════════════════
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "target", occurrence = 1 }
+description = "Use 'w' to jump to 'target'"
+points = 25                          # Intro tasks are worth less (25-50)
+optimal_keys = 2
+```
+
+#### Intro segment rules
+
+- **Level X-1** (first level of each world): **Full intro** — explain the new
+  commands with examples, 2-3 simple practice tasks, visual separators
+- **Level X-2 through X-5**: **Short reminder** — just a 3-5 line header comment
+  listing available commands, then straight into code
+- **Level 1-1 is special**: also explains game mechanics (viewport scrolling,
+  tasks, colors, scoring). This is the only meta-tutorial.
+- Intro task points are low (25-50) — they're practice, not the challenge
+- Use clear comment separators (`# ═══`) to visually distinguish the intro
+- The intro must work at the level's scroll speed — keep it short enough that
+  the player can read AND do tasks before it scrolls past
+- Each language needs its own intros (comment syntax differs, code examples differ)
 
 ## Task Types Reference
 
@@ -225,6 +287,39 @@ Tags determine which segments get selected for which levels. Use 1-3 tags per se
   `data-structures`, `algorithms`, `io`, `strings`, `math`, `testing`,
   `config`, `logging`, `database`, `cli`, `types`, `traits`, `templates`
 
+## Vim Hints in Code Segments
+
+Each segment should include **0–2 Vim tip comments** embedded naturally in the code.
+These teach concepts while the player reads the scrolling code. Use the correct
+comment syntax for the language (`#` for Python, `//` for TS/Rust/C++).
+
+### Format
+
+```python
+# VIM TIP: Use 'w' to jump forward by word — much faster than 'llllll'
+```
+
+```typescript
+// VIM TIP: 'ci"' changes everything inside double quotes in one move
+```
+
+### Rules
+
+- Always prefix with `VIM TIP:` so the renderer can highlight them
+- Use hints **from the same zone or earlier** — don't show senior hints in starter code
+- Hints should relate to the tasks in the segment when possible
+- Keep them to one line (two max)
+- Don't put hints on consecutive lines — space them out in the code
+- Reference the hint ID in `meta.hints` so the system can track which hints the player has seen
+
+### Hint IDs by zone
+
+Pick hints from PLAN.md Section 1.6. Use the ID prefix to match zones:
+- **Starter**: S01–S20 (basic movement, modes, simple edits)
+- **Junior**: J01–J20 + any Starter hints (find-char, operators+motions, dot repeat, search)
+- **Medior**: M01–M20 + any earlier (text objects, visual mode, advanced combos)
+- **Senior**: X01–X20 + any earlier (macros, registers, substitution, power moves)
+
 ## Zone Guidelines
 
 ### Starter (difficulty 1-5)
@@ -270,6 +365,17 @@ Before saving a segment, verify:
 - [ ] Tags accurately reflect the Vim commands needed, not just code content
 - [ ] The segment ID is **globally unique** (check existing IDs first)
 - [ ] Difficulty rating (1-5) is **consistent** with other segments in the same zone
+- [ ] **0–2 VIM TIP comments** are included, zone-appropriate, prefixed with `VIM TIP:`
+- [ ] Hint IDs listed in `meta.hints` **match the actual comments** in the code
+- [ ] Hints are **relevant to the segment's tasks** when possible
+
+**Additional checks for intro segments:**
+- [ ] `intro = true` and `intro_level` are set in meta
+- [ ] Explains the new commands clearly in comments before asking the player to use them
+- [ ] Practice tasks use the commands just taught (not commands from later levels)
+- [ ] Task points are low (25-50) since these are training
+- [ ] Short enough to read at the level's scroll speed
+- [ ] Level 1-1 intro also covers game mechanics (viewport, tasks, scoring)
 
 ## Workflow: Adding a New Segment
 

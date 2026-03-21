@@ -90,6 +90,264 @@ is "complete tasks efficiently," not "hold j and ignore everything."
 Show: final score, stars earned, tasks completed/total, keystrokes used vs optimal,
 and a breakdown of commands used. Offer: retry, next level, back to menu.
 
+### 1.6 Tutorial-as-Gameplay: Intro Segments
+
+There is no separate tutorial. Every level begins with an **intro segment** — a
+specially crafted code snippet that teaches the player exactly what they need for
+that level. The intro segment scrolls in just like regular code, but it's
+structured as a guided walkthrough using comments.
+
+The player learns by doing: read the instruction, do the thing, see it work —
+all while the viewport is already scrolling. This creates a natural flow from
+"learning" to "playing" within a single level.
+
+#### How it works
+
+1. Each level's first segment is always a **tutorial intro segment** (tagged
+   `intro: true` in the TOML). It scrolls at the same speed as the rest.
+2. The intro segment contains comment blocks that explain the new commands,
+   interleaved with simple practice tasks.
+3. After the intro segment, regular code segments follow with real tasks.
+4. The intro tasks are worth fewer points (25–50) — they're training wheels.
+
+#### Example: Level 1-2 intro (introduces `w` and `b`)
+
+```
+  1 │ # ═══════════════════════════════════
+  2 │ # LEVEL 1-2: Word Motions
+  3 │ # ═══════════════════════════════════
+  4 │ #
+  5 │ # You already know h/j/k/l.
+  6 │ # But pressing 'lllllll' to cross a
+  7 │ # line is slow. There's a better way:
+  8 │ #
+  9 │ # 'w' — jump to the next word
+ 10 │ # 'b' — jump back a word
+ 11 │ #
+ 12 │ # Try it! Move to 'target' below:
+ 13 │ #
+ 14 │ name = "hello"
+ 15 │ ██ target ██ = "world"        ◄ MOVE HERE
+ 16 │ result = name + target
+ 17 │ #
+ 18 │ # Nice! Now 'w' is your best friend.
+ 19 │ # The rest of this level uses real
+ 20 │ # code — use 'w' and 'b' to move
+ 21 │ # efficiently!
+ 22 │ #
+ 23 │ # ═══════════════════════════════════
+ 24 │
+```
+
+#### Intro segments per world
+
+Each world introduces new commands, so each world's first level (X-1) has a
+full intro. Later levels (X-2 through X-5) have shorter "reminder" intros
+that just list the available commands in a brief header comment.
+
+| Level | Intro type | What it teaches |
+|-------|------------|-----------------|
+| 1-1   | Full intro | `h` `j` `k` `l` — how the game works, what the viewport is, what tasks look like |
+| 1-2   | Full intro | `w` `b` `e` — word motions |
+| 1-3   | Short reminder | `0` `^` `$` |
+| 1-4   | Short reminder | `gg` `G` `{num}G` |
+| 1-5   | Short reminder | Mixed review |
+| 2-1   | Full intro | `x` `X` — first editing commands |
+| 2-2   | Full intro | `dd` `yy` `p` — delete/yank/paste |
+| 2-3   | Short reminder | `i` `a` `I` `A` |
+| ...   | ... | ... |
+| 7-1   | Full intro | `q{reg}` `@{reg}` — macros |
+
+The very first intro (1-1) is special — it also explains the game mechanics:
+the scrolling viewport, what happens when you fall behind, what the colored
+highlights mean, and the scoring system. This is the only "meta-tutorial."
+
+#### Segment format addition
+
+```toml
+[meta]
+id = "intro-1-2-word-motions"
+zone = "starter"
+language = "python"        # one intro per language per level
+tags = ["words"]
+difficulty = 1
+intro = true               # marks this as a level intro segment
+intro_level = "1-2"        # which level this intro belongs to
+
+[code]
+content = """
+# ═══════════════════════════════════
+# LEVEL 1-2: Word Motions
+# ═══════════════════════════════════
+#
+# Pressing 'l' many times is slow.
+# Use 'w' to jump to the next word!
+# Use 'b' to jump back a word.
+#
+# Try it — move to 'target' below:
+
+name = "hello"
+target = "world"
+result = name + target
+
+# Great! Use 'w' and 'b' from now on.
+# ═══════════════════════════════════
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "target", occurrence = 1 }
+description = "Use 'w' to jump to 'target'"
+points = 25
+optimal_keys = 2
+```
+
+### 1.7 Vim Hints System
+
+Vim hints appear throughout the game to teach concepts alongside the hands-on
+practice. Hints are delivered through three channels:
+
+**1. Code comment hints** — Hints embedded as comments in the code segments
+themselves. As the code scrolls by, the player reads real tips mixed into real
+code. This is the primary hint delivery mechanism.
+
+```python
+# VIM TIP: Use 'w' to jump forward by word — much faster than 'llllll'
+def calculate_total(items):
+    total = 0
+    # VIM TIP: 'ci"' changes everything inside quotes in one move
+    label = "Grand Total"
+```
+
+**2. Level intro hints** — A short tip shown on the loading screen before each
+level starts, introducing the new command(s) that level focuses on.
+
+```
+┌─────────────────────────────────────────┐
+│         Level 1-2: Word Motions         │
+│                                         │
+│   NEW COMMAND: w                        │
+│   Jump forward to the start of the      │
+│   next word.                            │
+│                                         │
+│   Try it! Much faster than pressing     │
+│   'l' many times.                       │
+│                                         │
+│        Press any key to start...        │
+└─────────────────────────────────────────┘
+```
+
+**3. Post-level insights** — After completing a level, show a "did you know?"
+tip based on what the player actually did. If they used 20 `l` presses where
+`w` would have taken 3, show: *"You pressed 'l' 20 times — try 'w' to jump
+by word and save keystrokes!"*
+
+#### Hint Catalog
+
+Hints are tiered by zone. Each zone introduces hints for the commands being
+taught, plus general Vim wisdom at that skill level. Code segments in each zone
+should include 0–2 comment hints per segment, drawn from that zone's pool.
+
+##### Zone: Starter
+
+| ID | Hint |
+|----|------|
+| S01 | `h` `j` `k` `l` — left, down, up, right. Your fingers never leave home row. |
+| S02 | Think of `j` as having a downward hook — it moves down. |
+| S03 | `w` jumps to the next word. Way faster than `llllll`. |
+| S04 | `b` jumps back a word. The reverse of `w`. |
+| S05 | `e` jumps to the end of the current word. |
+| S06 | `0` goes to the first column. `^` goes to the first non-space character. |
+| S07 | `$` goes to the end of the line. Think of it like regex. |
+| S08 | `gg` goes to the top of the file. `G` goes to the bottom. |
+| S09 | `5G` jumps to line 5. Works with any number. |
+| S10 | `x` deletes the character under the cursor. Like a tiny eraser. |
+| S11 | `dd` deletes the entire current line. Quick and clean. |
+| S12 | `u` undoes your last change. `Ctrl-r` redoes it. |
+| S13 | `i` enters insert mode before the cursor. `a` enters after. |
+| S14 | `I` inserts at the start of the line. `A` appends at the end. |
+| S15 | `o` opens a new line below and enters insert mode. `O` opens above. |
+| S16 | `p` pastes after the cursor. `P` pastes before. |
+| S17 | `yy` yanks (copies) the entire current line. |
+| S18 | After `dd`, press `p` to paste the deleted line somewhere else — it's a cut! |
+| S19 | Press `Esc` to return to Normal mode from anywhere. Always your safe home. |
+| S20 | In Vim, you spend most of your time in Normal mode, not Insert mode. |
+
+##### Zone: Junior
+
+| ID | Hint |
+|----|------|
+| J01 | `f{char}` finds the next occurrence of {char} on the line. `fa` jumps to the next 'a'. |
+| J02 | `t{char}` jumps to just before {char}. `tf` stops one character before 'f'. |
+| J03 | `;` repeats your last `f` or `t` search forward. `,` repeats it backward. |
+| J04 | `dw` = delete a word. Operators (`d`) + motions (`w`) combine into power moves. |
+| J05 | `d$` deletes from cursor to end of line. `d0` deletes to the start. |
+| J06 | `cw` changes a word — deletes it and drops you into insert mode. |
+| J07 | `c$` changes from cursor to end of line. You can also use `C` as a shortcut. |
+| J08 | `.` repeats your last change. Did `cw`+typed "foo"+`Esc`? Now `.` does it again. |
+| J09 | The dot command `.` is one of Vim's most powerful features. Master it. |
+| J10 | `r{char}` replaces the character under the cursor without entering insert mode. |
+| J11 | `R` enters Replace mode — every character you type overwrites the existing text. |
+| J12 | Counts work with motions: `3w` jumps 3 words forward. `5j` moves 5 lines down. |
+| J13 | Counts work with operators too: `3dd` deletes 3 lines. `2dw` deletes 2 words. |
+| J14 | `/pattern` searches forward. `?pattern` searches backward. |
+| J15 | After searching, `n` goes to the next match, `N` goes to the previous. |
+| J16 | `*` searches for the word under your cursor. `#` searches backward for it. |
+| J17 | Think in terms of "verb + noun": `d` (delete) + `w` (word) = delete word. |
+| J18 | `D` is shorthand for `d$`. `C` is shorthand for `c$`. Saves one keystroke. |
+| J19 | `Y` yanks the entire line (same as `yy`). `yw` yanks one word. |
+| J20 | Combine counts: `d3w` deletes 3 words. Every operator accepts a count. |
+
+##### Zone: Medior
+
+| ID | Hint |
+|----|------|
+| M01 | `ciw` = change inner word. Deletes the word and enters insert mode. Works anywhere in the word. |
+| M02 | `ci"` changes everything inside double quotes. `ci'` for single quotes. |
+| M03 | `ci(` changes inside parentheses. Also works: `ci{`, `ci[`, `ci<`. |
+| M04 | `di"` deletes inside quotes. `da"` deletes the quotes too (around). |
+| M05 | `i` = inner (inside the delimiters). `a` = around (includes the delimiters). |
+| M06 | `vi{` visually selects everything inside curly braces. Great for function bodies. |
+| M07 | `v` starts visual mode (character-wise). `V` selects whole lines. |
+| M08 | In visual mode, press `o` to jump to the other end of your selection. |
+| M09 | `Ctrl-v` enters visual block mode — select a rectangle of text. |
+| M10 | In visual block mode, `I` inserts text on every selected line. |
+| M11 | `%` jumps to the matching bracket: `(↔)`, `{↔}`, `[↔]`. |
+| M12 | `>` indents, `<` dedents. `>>` indents the current line. `>i{` indents inside braces. |
+| M13 | `gU` makes text uppercase. `gu` makes it lowercase. `gUiw` = uppercase the word. |
+| M14 | Text objects understand nesting: `ci(` inside `f(g(x))` changes the innermost `()`. |
+| M15 | `.` after `ciw`+type+`Esc` lets you change the next occurrence instantly. |
+| M16 | `diw` then `w` then `.` — delete words one at a time, wherever you want. |
+| M17 | `dt{char}` deletes from cursor up to (but not including) {char}. |
+| M18 | `yiw` yanks a word without moving the cursor. Great for copy-paste workflows. |
+| M19 | After `y`, the cursor stays where it was. Use `p` to paste at the destination. |
+| M20 | Think of text objects as "what", motions as "where": `d` + `iw` = delete [what: inner word]. |
+
+##### Zone: Senior
+
+| ID | Hint |
+|----|------|
+| X01 | `qa` starts recording a macro into register 'a'. `q` stops recording. `@a` replays it. |
+| X02 | `@@` replays the last macro. `5@a` replays macro 'a' five times. |
+| X03 | Plan your macro: get to a consistent starting position first, end in a position ready for the next `@a`. |
+| X04 | `"ayy` yanks a line into register 'a'. `"ap` pastes from register 'a'. |
+| X05 | Registers `a-z` store text. Uppercase `"Ayy` appends to register 'a' instead of replacing. |
+| X06 | `"0` always holds your last yank. `""` holds the last delete or yank. |
+| X07 | `"+y` yanks to the system clipboard. `"+p` pastes from it. |
+| X08 | `:reg` shows all register contents. Useful when juggling multiple registers. |
+| X09 | Macros ARE register contents. `"ap` pastes macro 'a' as text. Edit it, then `"ayy` to save back. |
+| X10 | `g;` goes to the last change position. `g,` goes to the next. Great for navigating edits. |
+| X11 | `Ctrl-a` increments a number under the cursor. `Ctrl-x` decrements it. |
+| X12 | `gf` opens the file path under the cursor. Useful in imports. |
+| X13 | `=` auto-indents. `=i{` fixes indentation inside a block. `gg=G` re-indents the whole file. |
+| X14 | A well-crafted macro + `100@a` can refactor an entire file in one move. |
+| X15 | `c3w` vs `3cw` — both change 3 words, but muscle memory prefers one. Experiment. |
+| X16 | `xp` swaps two characters. `ddp` swaps two lines. Quick micro-refactors. |
+| X17 | `:s/old/new/g` substitutes on the current line. `:%s/old/new/g` does the whole file. |
+| X18 | `:g/pattern/d` deletes all lines matching a pattern. `:v/pattern/d` keeps only matching lines. |
+| X19 | If you're doing the same edit more than twice, you should be recording a macro. |
+| X20 | The best Vim command is the one that gets the job done in the fewest keystrokes. |
+
 ---
 
 ## 2. Zone & Level System
@@ -259,14 +517,17 @@ zone = "junior"
 language = "python"
 tags = ["functions", "error-handling", "http"]
 difficulty = 3                    # 1-5 within the zone
+hints = ["J04", "J06"]           # Hint IDs from Section 1.6 to embed as comments
 
 [code]
 content = """
 import requests
 
+# VIM TIP: 'dw' deletes a word. Operators + motions = power moves.
 def fetch_user_profile(user_id: str) -> dict:
     url = f"https://api.example.com/users/{user_id}"
     response = requests.get(url, timeout=10)
+    # VIM TIP: 'cw' changes a word — deletes it and drops you into insert mode.
     response.raise_for_status()
     return response.json()
 """
@@ -821,11 +1082,14 @@ zone/language pool. Replaying gives different content.
 - ~40 TypeScript starter segments
 - ~40 TypeScript junior segments
 - Each segment has 1–3 well-designed tasks
+- Each segment includes 0–2 Vim hint comments from Section 1.6 (zone-appropriate)
+- Level intro screen showing the new command(s) for that level
+- Post-level insight: compare player's keystrokes to optimal and suggest commands
 - Language selection in menu
 - Tasks cover: `move_to`, `delete_line`, `delete_word`, `change_word`, `insert_text`
 
 **Exit criteria**: Worlds 1–4 are fully playable in Python and TypeScript with
-varied content on each replay.
+varied content on each replay. Hints are visible in code and on level screens.
 
 ---
 
