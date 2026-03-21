@@ -1,0 +1,11 @@
+[package]
+name = "vim-heroes"
+version = "0.1.0"
+edition = "2024"
+description = "A Guitar Hero-inspired terminal game that teaches Vim"
+license = "MIT"
+
+[dependencies]
+ropey = "1.6"
+ratatui = "0.29"
+crossterm = "0.28"
