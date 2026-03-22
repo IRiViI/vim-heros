@@ -2,6 +2,8 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use std::time::Duration;
 
 use crate::game::engine::{Engine, GameState};
+use crate::game::scoring::Scoring;
+use crate::game::task::{self, Task, TaskKind, TaskState};
 use crate::game::viewport::Viewport;
 use crate::vim::buffer::Buffer;
 use crate::vim::command::{self, Action, CommandParser, ParseResult};
@@ -104,30 +106,35 @@ pub struct App {
     pub cursor: Cursor,
     pub mode: Mode,
     pub running: bool,
-    pub keystroke_count: usize,
     pub viewport: Viewport,
     pub engine: Engine,
+    pub scoring: Scoring,
+    pub tasks: Vec<Task>,
     parser: CommandParser,
 }
 
 impl App {
     pub fn new(viewport_height: usize) -> Self {
+        let buffer = Buffer::from_str(SAMPLE_CODE);
+        let tasks = task::hardcoded_tasks(&buffer);
+        let tasks_total = tasks.len();
         Self {
-            buffer: Buffer::from_str(SAMPLE_CODE),
+            buffer,
             cursor: Cursor::new(0, 0),
             mode: Mode::Normal,
             running: true,
-            keystroke_count: 0,
             viewport: Viewport::new(viewport_height),
             engine: Engine::new(DEFAULT_SCROLL_SPEED_MS),
+            scoring: Scoring::new(tasks_total),
+            tasks,
             parser: CommandParser::new(),
         }
     }
 
     /// Update viewport height when terminal is resized.
     pub fn update_viewport_height(&mut self, terminal_height: usize) {
-        // terminal_height minus 2 (borders) minus 1 (status bar)
-        self.viewport.height = terminal_height.saturating_sub(3);
+        // terminal_height minus 2 (borders) minus 1 (HUD) minus 1 (status bar)
+        self.viewport.height = terminal_height.saturating_sub(4);
     }
 
     /// Main tick: poll for input, handle scroll, check game over.
@@ -163,7 +170,7 @@ impl App {
             for _ in 0..overshoot {
                 if self.viewport.top_line < max_scroll {
                     self.viewport.scroll_down();
-                    self.engine.award_survival_points();
+                    self.scoring.award_survival();
                 }
             }
             // Reset scroll timer so the player isn't immediately punished
@@ -179,7 +186,7 @@ impl App {
                 .saturating_sub(self.viewport.height);
             if self.viewport.top_line < max_scroll {
                 self.viewport.scroll_down();
-                self.engine.award_survival_points();
+                self.scoring.award_survival();
             }
             self.engine.record_scroll();
             needs_render = true;
@@ -187,6 +194,25 @@ impl App {
             // Game over: cursor scrolled above viewport
             if self.cursor.line < self.viewport.top_line {
                 self.engine.state = GameState::GameOver;
+            }
+
+            // Check for missed tasks (scrolled above viewport)
+            for task in &mut self.tasks {
+                if task.is_completable() && task.target_line < self.viewport.top_line {
+                    task.mark_missed();
+                    self.scoring.miss_task();
+                }
+            }
+
+            // Activate tasks that are within or near the viewport
+            let activation_bottom = self.viewport.bottom_line() + 5;
+            for task in &mut self.tasks {
+                if task.state == TaskState::Pending
+                    && task.target_line >= self.viewport.top_line
+                    && task.target_line <= activation_bottom
+                {
+                    task.mark_active();
+                }
             }
         }
 
@@ -229,11 +255,12 @@ impl App {
 
     fn restart(&mut self) {
         self.buffer = Buffer::from_str(SAMPLE_CODE);
+        self.tasks = task::hardcoded_tasks(&self.buffer);
         self.cursor = Cursor::new(0, 0);
         self.mode = Mode::Normal;
-        self.keystroke_count = 0;
         self.viewport = Viewport::new(self.viewport.height);
         self.engine.reset();
+        self.scoring.reset(self.tasks.len());
         self.parser = CommandParser::new();
     }
 
@@ -262,8 +289,7 @@ impl App {
                     return true;
                 }
 
-                self.keystroke_count += 1;
-                self.engine.penalize_keystroke();
+                                self.scoring.penalize_keystroke();
 
                 match self.parser.feed(ch) {
                     ParseResult::Action(action, count) => {
@@ -275,6 +301,7 @@ impl App {
                                 &mut self.mode,
                             );
                         }
+                        self.check_task_completion();
                     }
                     ParseResult::Pending => {}
                     ParseResult::None => {}
@@ -294,9 +321,27 @@ impl App {
             _ => return false,
         };
 
-        self.keystroke_count += 1;
-        self.engine.penalize_keystroke();
+                self.scoring.penalize_keystroke();
         command::execute(action, &mut self.buffer, &mut self.cursor, &mut self.mode);
+        self.check_task_completion();
         true
+    }
+
+    fn check_task_completion(&mut self) {
+        for task in &mut self.tasks {
+            if !task.is_completable() {
+                continue;
+            }
+            let completed = match task.kind {
+                TaskKind::MoveTo => {
+                    self.cursor.line == task.target_line
+                        && self.cursor.col == task.target_col
+                }
+            };
+            if completed {
+                task.mark_completed();
+                self.scoring.complete_task(task.points);
+            }
+        }
     }
 }

@@ -1290,7 +1290,7 @@ bottom of the viewport (e.g. `j`, `6j`) scrolls the viewport forward to match.
 
 ---
 
-### Phase 4 — Expanded Motions
+### Phase 4 — Expanded Motions ✅
 
 **Goal**: Enough Vim commands to make movement interesting.
 
@@ -1308,7 +1308,7 @@ Edge cases handled (empty lines, end of buffer, etc.).
 
 ---
 
-### Phase 5 — Task System
+### Phase 5 — Task System ✅
 
 **Goal**: Tasks appear in the buffer and can be completed.
 
@@ -1325,7 +1325,7 @@ a `move_to` task turns it green, missed tasks (scrolled past) are detected.
 
 ---
 
-### Phase 6 — Scoring & HUD
+### Phase 6 — Scoring & HUD ✅
 
 **Goal**: The game feels like a game — points, combos, feedback.
 
