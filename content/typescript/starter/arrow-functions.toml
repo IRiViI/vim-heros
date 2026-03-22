@@ -1,0 +1,57 @@
+[meta]
+id = "ts-starter-arrow-functions"
+zone = "starter"
+language = "typescript"
+tags = ["arrow-functions", "lambda", "functions"]
+difficulty = 1
+
+[code]
+content = """
+// Arrow Functions
+
+const double = (n: number): number => {
+  return n * 2;
+};
+
+const square = (n: number): number => n * n;
+
+const greetUser = (name: string): string => {
+  return "Welcome, " + name + "!";
+};
+
+const isPositive = (value: number): boolean => value > 0;
+
+const multiply = (a: number, b: number): number => a * b;
+
+const toUpperCase = (text: string): string => {
+  return text.toUpperCase();
+};
+
+console.log(double(5));
+console.log(square(4));
+console.log(greetUser("Alice"));
+console.log(isPositive(-3));
+console.log(multiply(6, 7));
+console.log(toUpperCase("hello"));
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "double", occurrence = 1 }
+description = "Move to 'double'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "square", occurrence = 1 }
+description = "Move to 'square'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "toUpperCase", occurrence = 1 }
+description = "Move to 'toUpperCase'"
+points = 75
+optimal_keys = 7

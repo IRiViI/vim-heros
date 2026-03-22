@@ -1,0 +1,63 @@
+[meta]
+id = "py-junior-map-filter-reduce"
+zone = "junior"
+language = "python"
+tags = ["map", "filter", "reduce", "functional"]
+difficulty = 3
+
+[code]
+content = """
+from functools import reduce
+
+# Map: transform every element
+temperatures_f = [32, 68, 77, 95, 104, 212]
+temperatures_c = list(map(lambda f: round((f - 32) * 5 / 9, 1), temperatures_f))
+
+# Filter: keep elements matching condition
+words = ["apple", "bat", "cherry", "date", "elderberry", "fig"]
+long_words = list(filter(lambda w: len(w) > 4, words))
+
+# Reduce: accumulate into single value
+numbers = [1, 2, 3, 4, 5]
+product = reduce(lambda acc, x: acc * x, numbers)
+maximum = reduce(lambda a, b: a if a > b else b, numbers)
+
+# Chaining map and filter
+raw_prices = ["10.50", "invalid", "23.99", "N/A", "8.75", "42.00"]
+
+def parse_price(s):
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+valid_prices = list(
+    filter(None, map(parse_price, raw_prices))
+)
+total_revenue = reduce(lambda a, b: a + b, valid_prices)
+average_price = total_revenue / len(valid_prices)
+
+print(f"Valid prices: {valid_prices}")
+print(f"Average: ${average_price:.2f}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "temperatures_c", occurrence = 1 }
+description = "Move to 'temperatures_c'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "parse_price", occurrence = 1 }
+description = "Move to 'parse_price'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "total_revenue", occurrence = 1 }
+description = "Move to 'total_revenue'"
+points = 100
+optimal_keys = 6

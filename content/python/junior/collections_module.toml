@@ -1,0 +1,64 @@
+[meta]
+id = "py-junior-collections-module"
+zone = "junior"
+language = "python"
+tags = ["collections", "counter", "defaultdict", "deque"]
+difficulty = 3
+
+[code]
+content = """
+from collections import Counter, defaultdict, deque
+
+
+# Counter: count occurrences
+text = "the quick brown fox jumps over the lazy dog"
+word_counts = Counter(text.split())
+char_counts = Counter(text.replace(" ", ""))
+most_common = word_counts.most_common(3)
+
+# defaultdict: automatic default values
+adjacency = defaultdict(list)
+edges = [("a", "b"), ("a", "c"), ("b", "c"), ("c", "d")]
+for src, dst in edges:
+    adjacency[src].append(dst)
+    adjacency[dst].append(src)
+
+# Group items by category
+items = [("fruit", "apple"), ("veggie", "carrot"), ("fruit", "banana"),
+         ("veggie", "pea"), ("fruit", "cherry"), ("grain", "rice")]
+grouped = defaultdict(list)
+for category, item in items:
+    grouped[category].append(item)
+
+# deque: efficient double-ended queue
+history = deque(maxlen=5)
+for command in ["ls", "cd", "grep", "vim", "git", "python", "cargo"]:
+    history.append(command)
+recent = list(history)
+
+# Rotate and extend
+buffer = deque([1, 2, 3, 4, 5])
+buffer.rotate(2)
+buffer.appendleft(0)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "word_counts", occurrence = 1 }
+description = "Move to 'word_counts'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "adjacency", occurrence = 1 }
+description = "Move to 'adjacency'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "buffer", occurrence = 1 }
+description = "Move to 'buffer'"
+points = 100
+optimal_keys = 6

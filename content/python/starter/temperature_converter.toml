@@ -1,0 +1,55 @@
+[meta]
+id = "py-starter-temperature-converter"
+zone = "starter"
+language = "python"
+tags = ["functions", "conversion", "practical"]
+difficulty = 1
+
+[code]
+content = """
+# Temperature Converter
+
+def fahrenheit_to_celsius(f):
+    return round((f - 32) * 5 / 9, 2)
+
+def celsius_to_fahrenheit(c):
+    return round(c * 9 / 5 + 32, 2)
+
+def celsius_to_kelvin(c):
+    return round(c + 273.15, 2)
+
+def kelvin_to_celsius(k):
+    return round(k - 273.15, 2)
+
+# Test conversions
+boiling_f = 212
+freezing_f = 32
+body_temp_f = 98.6
+
+print(f"{boiling_f}F = {fahrenheit_to_celsius(boiling_f)}C")
+print(f"{freezing_f}F = {fahrenheit_to_celsius(freezing_f)}C")
+print(f"{body_temp_f}F = {fahrenheit_to_celsius(body_temp_f)}C")
+
+# Convert a range of temperatures
+print("\\nTemperature Table:")
+print(f"{'F':>6} {'C':>8} {'K':>8}")
+print("-" * 24)
+for f in range(0, 220, 20):
+    c = fahrenheit_to_celsius(f)
+    k = celsius_to_kelvin(c)
+    print(f"{f:>6} {c:>8} {k:>8}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fahrenheit_to_celsius", occurrence = 1 }
+description = "Move to 'fahrenheit_to_celsius'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "boiling_f", occurrence = 1 }
+description = "Move to 'boiling_f'"
+points = 75
+optimal_keys = 6

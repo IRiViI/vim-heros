@@ -1,0 +1,75 @@
+[meta]
+id = "ts-starter-enums"
+zone = "starter"
+language = "typescript"
+tags = ["enums", "constants", "types"]
+difficulty = 2
+
+[code]
+content = """
+// Enums in TypeScript
+// VIM TIP: Use 'H', 'M', 'L' to jump to the top, middle, or bottom of the screen.
+
+enum Direction {
+  Up = "UP",
+  Down = "DOWN",
+  Left = "LEFT",
+  Right = "RIGHT"
+}
+
+enum Status {
+  Pending,
+  Active,
+  Completed,
+  Archived
+}
+
+enum HttpCode {
+  Ok = 200,
+  NotFound = 404,
+  ServerError = 500
+}
+
+const move = Direction.Up;
+const state = Status.Active;
+const code = HttpCode.NotFound;
+
+function handleStatus(status: Status): string {
+  switch (status) {
+    case Status.Pending:
+      return "Waiting...";
+    case Status.Active:
+      return "In progress";
+    case Status.Completed:
+      return "Done!";
+    default:
+      return "Unknown";
+  }
+}
+
+console.log("Move:", move);
+console.log("State:", state);
+console.log("Code:", code);
+console.log(handleStatus(Status.Completed));
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Direction", occurrence = 1 }
+description = "Move to 'Direction'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "HttpCode", occurrence = 1 }
+description = "Move to 'HttpCode'"
+points = 75
+optimal_keys = 6
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "handleStatus", occurrence = 1 }
+description = "Move to 'handleStatus'"
+points = 50
+optimal_keys = 5

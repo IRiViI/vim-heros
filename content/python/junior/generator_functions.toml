@@ -1,0 +1,71 @@
+[meta]
+id = "py-junior-generator-functions"
+zone = "junior"
+language = "python"
+tags = ["generators", "yield", "iteration"]
+difficulty = 3
+
+[code]
+content = """
+def countdown(start):
+    \"\"\"Yield numbers from start down to 1.\"\"\"
+    current = start
+    while current > 0:
+        yield current
+        current -= 1
+
+
+def fibonacci_sequence(limit):
+    \"\"\"Generate Fibonacci numbers up to a limit.\"\"\"
+    a, b = 0, 1
+    while a <= limit:
+        yield a
+        a, b = b, a + b
+
+
+def chunked(iterable, size):
+    \"\"\"Yield successive chunks of a given size.\"\"\"
+    chunk = []
+    for item in iterable:
+        chunk.append(item)
+        if len(chunk) == size:
+            yield chunk
+            chunk = []
+    if chunk:
+        yield chunk
+
+
+def flatten(nested):
+    \"\"\"Recursively flatten nested lists.\"\"\"
+    for item in nested:
+        if isinstance(item, list):
+            yield from flatten(item)
+        else:
+            yield item
+
+
+data = [[1, [2, 3]], [4, 5], [[6], 7, [8, 9]]]
+flat = list(flatten(data))
+batches = list(chunked(range(10), 3))
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "countdown", occurrence = 1 }
+description = "Move to 'countdown'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fibonacci_sequence", occurrence = 1 }
+description = "Move to 'fibonacci_sequence'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "flatten", occurrence = 1 }
+description = "Move to 'flatten'"
+points = 100
+optimal_keys = 6

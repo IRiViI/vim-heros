@@ -1,0 +1,81 @@
+[meta]
+id = "ts-junior-index-signatures"
+zone = "junior"
+language = "typescript"
+tags = ["index-signatures", "dynamic-keys"]
+difficulty = 3
+
+[code]
+content = """
+interface StringMap {
+  [key: string]: string;
+}
+
+interface NumberIndex {
+  [index: number]: string;
+  length: number;
+}
+
+interface FlexibleConfig {
+  name: string;
+  version: number;
+  [key: string]: string | number | boolean;
+}
+
+class TypedDictionary<V> {
+  private store: { [key: string]: V } = {};
+
+  set(key: string, value: V): void {
+    this.store[key] = value;
+  }
+
+  get(key: string): V | undefined {
+    return this.store[key];
+  }
+
+  has(key: string): boolean {
+    return key in this.store;
+  }
+
+  keys(): string[] {
+    return Object.keys(this.store);
+  }
+
+  values(): V[] {
+    return Object.values(this.store);
+  }
+
+  entries(): [string, V][] {
+    return Object.entries(this.store);
+  }
+}
+
+const scores = new TypedDictionary<number>();
+scores.set("alice", 95);
+scores.set("bob", 87);
+scores.set("charlie", 92);
+
+console.log(scores.get("alice"));
+console.log(scores.keys());
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "StringMap", occurrence = 1 }
+description = "Move to 'StringMap'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "TypedDictionary", occurrence = 1 }
+description = "Move to 'TypedDictionary'"
+points = 100
+optimal_keys = 9
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "entries", occurrence = 1 }
+description = "Move to 'entries'"
+points = 100
+optimal_keys = 7

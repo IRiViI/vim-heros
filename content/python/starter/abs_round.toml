@@ -1,0 +1,64 @@
+[meta]
+id = "py-starter-abs-round"
+zone = "starter"
+language = "python"
+tags = ["abs", "round", "math", "builtins"]
+difficulty = 1
+
+[code]
+content = """
+# Absolute Value and Rounding
+
+# VIM TIP: Use 'dd' to delete an entire line quickly.
+
+# Absolute value
+print(f"abs(-5) = {abs(-5)}")
+print(f"abs(5) = {abs(5)}")
+print(f"abs(-3.14) = {abs(-3.14)}")
+
+# Practical use of abs: distance between points
+point_a = 15
+point_b = 42
+distance = abs(point_a - point_b)
+print(f"Distance: {distance}")
+
+# Basic rounding
+print(f"round(3.7) = {round(3.7)}")
+print(f"round(3.2) = {round(3.2)}")
+print(f"round(3.5) = {round(3.5)}")
+
+# Round to specific decimal places
+pi = 3.14159265
+print(f"round(pi, 2) = {round(pi, 2)}")
+print(f"round(pi, 4) = {round(pi, 4)}")
+
+# Rounding for currency
+price = 19.995
+print(f"Price: ${round(price, 2)}")
+
+subtotal = 47.836
+tax = round(subtotal * 0.08, 2)
+total = round(subtotal + tax, 2)
+print(f"Subtotal: ${subtotal}")
+print(f"Tax: ${tax}")
+print(f"Total: ${total}")
+
+# Negative rounding (to nearest 10, 100, etc.)
+big_number = 1234
+print(f"round(1234, -1) = {round(big_number, -1)}")
+print(f"round(1234, -2) = {round(big_number, -2)}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "distance", occurrence = 1 }
+description = "Move to first 'distance'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "currency", occurrence = 1 }
+description = "Move to 'currency'"
+points = 75
+optimal_keys = 7

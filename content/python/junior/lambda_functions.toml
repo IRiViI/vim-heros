@@ -1,0 +1,57 @@
+[meta]
+id = "py-junior-lambda-functions"
+zone = "junior"
+language = "python"
+tags = ["lambda", "anonymous", "functional"]
+difficulty = 3
+
+[code]
+content = """
+# Simple lambda functions
+square = lambda x: x ** 2
+add = lambda a, b: a + b
+is_even = lambda n: n % 2 == 0
+
+# Sorting with lambda key functions
+employees = [
+    {"name": "Alice", "salary": 75000, "department": "Engineering"},
+    {"name": "Bob", "salary": 62000, "department": "Marketing"},
+    {"name": "Carol", "salary": 89000, "department": "Engineering"},
+    {"name": "Dave", "salary": 54000, "department": "Support"},
+    {"name": "Eve", "salary": 71000, "department": "Marketing"},
+]
+
+by_salary = sorted(employees, key=lambda e: e["salary"], reverse=True)
+by_department = sorted(employees, key=lambda e: (e["department"], e["name"]))
+
+# Lambda in higher-order functions
+numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+evens = list(filter(lambda x: x % 2 == 0, numbers))
+doubled = list(map(lambda x: x * 2, numbers))
+
+# Conditional lambda
+classify = lambda x: "positive" if x > 0 else "negative" if x < 0 else "zero"
+
+results = [classify(n) for n in [-5, 0, 3, -1, 7]]
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "employees", occurrence = 1 }
+description = "Move to 'employees'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "by_department", occurrence = 1 }
+description = "Move to 'by_department'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "classify", occurrence = 1 }
+description = "Move to 'classify'"
+points = 100
+optimal_keys = 6

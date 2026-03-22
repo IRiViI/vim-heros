@@ -1,0 +1,62 @@
+[meta]
+id = "py-starter-word-counter"
+zone = "starter"
+language = "python"
+tags = ["strings", "dictionary", "counting"]
+difficulty = 2
+
+[code]
+content = """
+# Word Counter
+
+text = \"\"\"
+Python is a great programming language.
+Python is easy to learn and fun to use.
+Many developers love Python for its simplicity.
+\"\"\"
+
+# Split into words and normalize
+words = text.lower().split()
+print(f"Total words: {len(words)}")
+
+# Count each word
+word_counts = {}
+for word in words:
+    clean = word.strip(".,!?")
+    if clean in word_counts:
+        word_counts[clean] += 1
+    else:
+        word_counts[clean] = 1
+
+# Display all counts
+print("\\nWord Frequencies:")
+for word, count in sorted(word_counts.items()):
+    bar = "#" * count
+    print(f"  {word:<15} {count} {bar}")
+
+# Find most common word
+most_common = max(word_counts, key=word_counts.get)
+print(f"\\nMost common: '{most_common}' ({word_counts[most_common]} times)")
+
+# Count unique words
+unique = len(word_counts)
+print(f"Unique words: {unique}")
+
+# Find words appearing only once
+rare = [w for w, c in word_counts.items() if c == 1]
+print(f"Words appearing once: {rare}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "normalize", occurrence = 1 }
+description = "Move to 'normalize'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Frequencies", occurrence = 1 }
+description = "Move to 'Frequencies'"
+points = 75
+optimal_keys = 6

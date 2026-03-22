@@ -1,0 +1,61 @@
+[meta]
+id = "py-starter-multiple-assignment"
+zone = "starter"
+language = "python"
+tags = ["variables", "assignment", "unpacking"]
+difficulty = 1
+
+[code]
+content = """
+# Multiple Assignment
+
+# Assign multiple variables at once
+x, y, z = 10, 20, 30
+print(f"x={x}, y={y}, z={z}")
+
+# Same value to multiple variables
+a = b = c = 0
+print(f"a={a}, b={b}, c={c}")
+
+# Unpack a list into variables
+coordinates = [5, 12, 8]
+lat, lon, alt = coordinates
+print(f"Lat: {lat}, Lon: {lon}, Alt: {alt}")
+
+# Star unpacking
+first, *middle, last = [1, 2, 3, 4, 5, 6]
+print(f"First: {first}")
+print(f"Middle: {middle}")
+print(f"Last: {last}")
+
+# Practical example: parsing data
+record = "Alice,30,Engineer,Denver"
+name, age, job, city = record.split(",")
+print(f"{name} is a {age}-year-old {job} in {city}")
+
+# Nested unpacking
+points = [(1, 2), (3, 4), (5, 6)]
+for x_val, y_val in points:
+    print(f"Point: ({x_val}, {y_val})")
+
+# Multiple return values
+def get_dimensions():
+    return 1920, 1080
+
+width, height = get_dimensions()
+print(f"Resolution: {width}x{height}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Unpack", occurrence = 1 }
+description = "Move to 'Unpack'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "parsing", occurrence = 1 }
+description = "Move to 'parsing'"
+points = 75
+optimal_keys = 7

@@ -1,0 +1,65 @@
+[meta]
+id = "py-junior-file-io"
+zone = "junior"
+language = "python"
+tags = ["files", "reading", "writing", "io"]
+difficulty = 3
+
+[code]
+content = """
+from pathlib import Path
+
+
+def read_csv_manual(filepath):
+    \"\"\"Read a CSV file without the csv module.\"\"\"
+    records = []
+    with open(filepath, "r", encoding="utf-8") as fh:
+        header = fh.readline().strip().split(",")
+        for line in fh:
+            values = line.strip().split(",")
+            record = dict(zip(header, values))
+            records.append(record)
+    return records
+
+
+def write_report(filepath, title, data):
+    \"\"\"Write a formatted text report to a file.\"\"\"
+    with open(filepath, "w", encoding="utf-8") as fh:
+        fh.write(f"{'=' * 40}\\n")
+        fh.write(f"{title:^40}\\n")
+        fh.write(f"{'=' * 40}\\n\\n")
+        for key, value in data.items():
+            fh.write(f"  {key:<20}: {value}\\n")
+        fh.write(f"\\n{'=' * 40}\\n")
+
+
+def count_lines(directory, extension=".py"):
+    \"\"\"Count total lines across all files with given extension.\"\"\"
+    total = 0
+    path = Path(directory)
+    for source_file in path.rglob(f"*{extension}"):
+        with open(source_file) as fh:
+            total += sum(1 for _ in fh)
+    return total
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "read_csv_manual", occurrence = 1 }
+description = "Move to 'read_csv_manual'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "write_report", occurrence = 1 }
+description = "Move to 'write_report'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "count_lines", occurrence = 1 }
+description = "Move to 'count_lines'"
+points = 100
+optimal_keys = 6

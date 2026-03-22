@@ -1,0 +1,55 @@
+[meta]
+id = "ts-starter-functions-with-types"
+zone = "starter"
+language = "typescript"
+tags = ["functions", "parameters", "types"]
+difficulty = 1
+
+[code]
+content = """
+// Functions with Type Annotations
+
+function greet(name: string): string {
+  return "Hello, " + name + "!";
+}
+
+function add(a: number, b: number): number {
+  return a + b;
+}
+
+function isEven(num: number): boolean {
+  return num % 2 === 0;
+}
+
+function repeat(text: string, times: number): string {
+  let result = "";
+  for (let i = 0; i < times; i++) {
+    result = result + text;
+  }
+  return result;
+}
+
+let message = greet("World");
+let sum = add(10, 20);
+let even = isEven(4);
+let stars = repeat("*", 5);
+
+console.log(message);
+console.log("Sum:", sum);
+console.log("Is even:", even);
+console.log("Stars:", stars);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "greet", occurrence = 1 }
+description = "Move to 'greet'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "repeat", occurrence = 1 }
+description = "Move to 'repeat'"
+points = 75
+optimal_keys = 8

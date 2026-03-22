@@ -1,0 +1,68 @@
+[meta]
+id = "ts-junior-static-methods"
+zone = "junior"
+language = "typescript"
+tags = ["classes", "static-methods"]
+difficulty = 3
+
+[code]
+content = """
+class MathUtils {
+  static readonly PI = 3.14159265359;
+  private static instance: MathUtils | null = null;
+
+  private constructor() {}
+
+  static getInstance(): MathUtils {
+    if (!MathUtils.instance) {
+      MathUtils.instance = new MathUtils();
+    }
+    return MathUtils.instance;
+  }
+
+  static clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  static lerp(start: number, end: number, t: number): number {
+    return start + (end - start) * MathUtils.clamp(t, 0, 1);
+  }
+
+  static randomInRange(min: number, max: number): number {
+    return Math.random() * (max - min) + min;
+  }
+
+  static degToRad(degrees: number): number {
+    return (degrees * MathUtils.PI) / 180;
+  }
+
+  static radToDeg(radians: number): number {
+    return (radians * 180) / MathUtils.PI;
+  }
+}
+
+const clamped = MathUtils.clamp(150, 0, 100);
+const interpolated = MathUtils.lerp(0, 100, 0.5);
+console.log(clamped, interpolated);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "MathUtils", occurrence = 1 }
+description = "Move to 'MathUtils'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "getInstance", occurrence = 1 }
+description = "Move to 'getInstance'"
+points = 100
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "randomInRange", occurrence = 1 }
+description = "Move to 'randomInRange'"
+points = 100
+optimal_keys = 8

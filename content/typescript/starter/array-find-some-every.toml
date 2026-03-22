@@ -1,0 +1,54 @@
+[meta]
+id = "ts-starter-array-find-some-every"
+zone = "starter"
+language = "typescript"
+tags = ["arrays", "find", "some", "every"]
+difficulty = 2
+
+[code]
+content = """
+// Array.find, Array.some, Array.every
+
+const users = [
+  { name: "Alice", age: 25 },
+  { name: "Bob", age: 17 },
+  { name: "Charlie", age: 30 },
+  { name: "Diana", age: 22 }
+];
+
+const found = users.find((user) => user.name === "Charlie");
+console.log("Found:", found);
+
+const firstAdult = users.find((user) => user.age >= 18);
+console.log("First adult:", firstAdult);
+
+const hasMinor = users.some((user) => user.age < 18);
+console.log("Has minor:", hasMinor);
+
+const allAdults = users.every((user) => user.age >= 18);
+console.log("All adults:", allAdults);
+
+const numbers = [2, 4, 6, 8, 10];
+
+const hasOdd = numbers.some((n) => n % 2 !== 0);
+const allEven = numbers.every((n) => n % 2 === 0);
+const bigNumber = numbers.find((n) => n > 7);
+
+console.log("Has odd:", hasOdd);
+console.log("All even:", allEven);
+console.log("Big number:", bigNumber);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "found", occurrence = 1 }
+description = "Move to 'found'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "hasMinor", occurrence = 1 }
+description = "Move to 'hasMinor'"
+points = 75
+optimal_keys = 6

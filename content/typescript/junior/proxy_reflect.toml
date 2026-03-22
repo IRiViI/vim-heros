@@ -1,0 +1,75 @@
+[meta]
+id = "ts-junior-proxy-reflect"
+zone = "junior"
+language = "typescript"
+tags = ["proxy", "reflect", "metaprogramming"]
+difficulty = 4
+
+[code]
+content = """
+interface TrackedObject {
+  [key: string]: unknown;
+}
+
+function createTrackedObject<T extends TrackedObject>(
+  target: T
+): T {
+  const changes: Array<{ prop: string; old: unknown; new: unknown }> = [];
+
+  const handler: ProxyHandler<T> = {
+    get(obj, prop: string) {
+      console.log(`Reading property: ${prop}`);
+      return Reflect.get(obj, prop);
+    },
+    set(obj, prop: string, value: unknown) {
+      const oldValue = Reflect.get(obj, prop);
+      changes.push({ prop, old: oldValue, new: value });
+      console.log(`Setting ${prop}: ${oldValue} -> ${value}`);
+      return Reflect.set(obj, prop, value);
+    },
+    deleteProperty(obj, prop: string) {
+      console.log(`Deleting property: ${prop}`);
+      return Reflect.deleteProperty(obj, prop);
+    },
+  };
+
+  return new Proxy(target, handler);
+}
+
+function createReadonlyProxy<T extends object>(target: T): Readonly<T> {
+  return new Proxy(target, {
+    set() {
+      throw new Error("Cannot modify readonly object");
+    },
+    deleteProperty() {
+      throw new Error("Cannot delete from readonly object");
+    },
+  });
+}
+
+const user = createTrackedObject({ name: "Alice", age: 30 });
+user.name = "Bob";
+user.age = 31;
+console.log(user.name);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "TrackedObject", occurrence = 1 }
+description = "Move to 'TrackedObject'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "createTrackedObject", occurrence = 1 }
+description = "Move to 'createTrackedObject'"
+points = 100
+optimal_keys = 9
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "createReadonlyProxy", occurrence = 1 }
+description = "Move to 'createReadonlyProxy'"
+points = 125
+optimal_keys = 10

@@ -1,0 +1,66 @@
+[meta]
+id = "py-junior-unpacking"
+zone = "junior"
+language = "python"
+tags = ["unpacking", "star", "destructuring"]
+difficulty = 3
+
+[code]
+content = """
+# Basic unpacking
+coordinates = (10, 20, 30)
+x, y, z = coordinates
+
+# Star unpacking: first, middle, last
+scores = [95, 87, 73, 91, 88, 76, 82]
+best, *middle, worst = sorted(scores, reverse=True)
+
+# Swap variables without temp
+a, b = 1, 2
+a, b = b, a
+
+# Nested unpacking
+points = [(1, 2), (3, 4), (5, 6)]
+for px, py in points:
+    distance = (px ** 2 + py ** 2) ** 0.5
+
+# Dictionary unpacking
+defaults = {"color": "blue", "size": "medium", "quantity": 1}
+overrides = {"color": "red", "quantity": 5}
+merged = {**defaults, **overrides}
+
+# Function argument unpacking
+def create_profile(name, age, city, occupation):
+    return f"{name}, {age}, from {city}, works as {occupation}"
+
+user_data = ("Alice", 30, "Portland", "Engineer")
+profile = create_profile(*user_data)
+
+config_kwargs = {"name": "Bob", "age": 25, "city": "Austin", "occupation": "Designer"}
+another_profile = create_profile(**config_kwargs)
+
+# Unpacking in assignments
+first, second, *rest = range(10)
+*beginning, last = range(10)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "coordinates", occurrence = 1 }
+description = "Move to 'coordinates'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "create_profile", occurrence = 1 }
+description = "Move to 'create_profile'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "config_kwargs", occurrence = 1 }
+description = "Move to 'config_kwargs'"
+points = 100
+optimal_keys = 6

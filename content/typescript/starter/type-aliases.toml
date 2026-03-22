@@ -1,0 +1,56 @@
+[meta]
+id = "ts-starter-type-aliases"
+zone = "starter"
+language = "typescript"
+tags = ["type-aliases", "types", "custom-types"]
+difficulty = 2
+
+[code]
+content = """
+// Type Aliases
+// VIM TIP: Use 'G' to jump to the bottom of the file.
+
+type Point = {
+  x: number;
+  y: number;
+};
+
+type Color = "red" | "green" | "blue";
+type Status = "pending" | "active" | "completed";
+
+type Rectangle = {
+  width: number;
+  height: number;
+  color: Color;
+};
+
+const origin: Point = { x: 0, y: 0 };
+const target: Point = { x: 10, y: 20 };
+
+const box: Rectangle = {
+  width: 100,
+  height: 50,
+  color: "blue"
+};
+
+const currentStatus: Status = "active";
+
+console.log("Origin:", origin.x, origin.y);
+console.log("Target:", target.x, target.y);
+console.log("Box:", box.width, "x", box.height);
+console.log("Status:", currentStatus);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Point", occurrence = 1 }
+description = "Move to 'Point'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Rectangle", occurrence = 1 }
+description = "Move to 'Rectangle'"
+points = 75
+optimal_keys = 6

@@ -1,0 +1,77 @@
+[meta]
+id = "py-starter-break-continue"
+zone = "starter"
+language = "python"
+tags = ["loops", "break", "continue", "control-flow"]
+difficulty = 1
+
+[code]
+content = """
+# Break and Continue
+
+# Break exits the loop entirely
+print("Finding first even number:")
+numbers = [3, 7, 11, 8, 5, 2]
+for num in numbers:
+    if num % 2 == 0:
+        print(f"Found: {num}")
+        break
+
+# Continue skips to the next iteration
+print("Odd numbers only:")
+for num in range(1, 11):
+    if num % 2 == 0:
+        continue
+    print(num, end=" ")
+print()
+
+# Break in a while loop
+secret = 42
+guess = 0
+attempts = 0
+while True:
+    guess += 10
+    attempts += 1
+    if guess >= secret:
+        print(f"Reached {guess} in {attempts} attempts")
+        break
+
+# Continue to skip invalid data
+data = ["10", "abc", "20", "", "30", "xyz"]
+total = 0
+for item in data:
+    if not item.isdigit():
+        continue
+    total += int(item)
+print(f"Sum of valid numbers: {total}")
+
+# Break with else clause
+target = 15
+for n in range(2, target):
+    if target % n == 0:
+        print(f"{target} is not prime, divisible by {n}")
+        break
+else:
+    print(f"{target} is prime")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "entirely", occurrence = 1 }
+description = "Move to 'entirely'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "iteration", occurrence = 1 }
+description = "Move to 'iteration'"
+points = 75
+optimal_keys = 6
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "prime", occurrence = 1 }
+description = "Move to first 'prime'"
+points = 75
+optimal_keys = 8

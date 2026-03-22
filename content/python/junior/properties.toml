@@ -1,0 +1,60 @@
+[meta]
+id = "py-junior-properties"
+zone = "junior"
+language = "python"
+tags = ["property", "getter", "setter", "encapsulation"]
+difficulty = 3
+
+[code]
+content = """
+class Circle:
+    \"\"\"Circle with computed properties for area and perimeter.\"\"\"
+
+    def __init__(self, radius):
+        self._radius = radius
+
+    @property
+    def radius(self):
+        return self._radius
+
+    @radius.setter
+    def radius(self, value):
+        if value < 0:
+            raise ValueError("Radius cannot be negative")
+        self._radius = value
+
+    @property
+    def diameter(self):
+        return self._radius * 2
+
+    @property
+    def area(self):
+        import math
+        return math.pi * self._radius ** 2
+
+    @property
+    def perimeter(self):
+        import math
+        return 2 * math.pi * self._radius
+
+    def scale(self, factor):
+        self.radius = self._radius * factor
+        return self
+
+    def __repr__(self):
+        return f"Circle(radius={self._radius})"
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "diameter", occurrence = 1 }
+description = "Move to 'diameter'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "perimeter", occurrence = 1 }
+description = "Move to 'perimeter'"
+points = 100
+optimal_keys = 5

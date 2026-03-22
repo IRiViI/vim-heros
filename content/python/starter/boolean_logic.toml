@@ -1,0 +1,74 @@
+[meta]
+id = "py-starter-boolean-logic"
+zone = "starter"
+language = "python"
+tags = ["booleans", "logic", "operators"]
+difficulty = 1
+
+[code]
+content = """
+# Boolean Logic
+
+# VIM TIP: Use '$' to jump to the end of the current line.
+
+is_sunny = True
+is_warm = False
+
+# Logical AND
+if is_sunny and is_warm:
+    print("Perfect beach day!")
+else:
+    print("Maybe stay inside")
+
+# Logical OR
+has_coffee = False
+has_tea = True
+if has_coffee or has_tea:
+    print("You have a drink")
+
+# Logical NOT
+is_raining = False
+if not is_raining:
+    print("No umbrella needed")
+
+# Combining operators
+age = 25
+has_ticket = True
+is_vip = False
+can_enter = (age >= 18 and has_ticket) or is_vip
+print(f"Can enter: {can_enter}")
+
+# Truthiness
+print(bool(0))
+print(bool(42))
+print(bool(""))
+print(bool("Python"))
+print(bool([]))
+print(bool([1]))
+
+# Short-circuit evaluation
+name = ""
+display = name or "Anonymous"
+print(f"Display: {display}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Logical", occurrence = 1 }
+description = "Move to first 'Logical'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Truthiness", occurrence = 1 }
+description = "Move to 'Truthiness'"
+points = 75
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Anonymous", occurrence = 1 }
+description = "Move to 'Anonymous'"
+points = 75
+optimal_keys = 9

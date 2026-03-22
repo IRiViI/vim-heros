@@ -1,0 +1,89 @@
+[meta]
+id = "ts-junior-using-declaration"
+zone = "junior"
+language = "typescript"
+tags = ["using", "disposable", "resource-management"]
+difficulty = 4
+
+[code]
+content = """
+// VIM TIP: Use 'vi(' to visually select inside parentheses.
+class DatabaseConnection implements Disposable {
+  private connected = false;
+
+  constructor(private connectionString: string) {
+    console.log(`Connecting to ${connectionString}`);
+    this.connected = true;
+  }
+
+  query(sql: string): unknown[] {
+    if (!this.connected) {
+      throw new Error("Not connected");
+    }
+    console.log(`Executing: ${sql}`);
+    return [];
+  }
+
+  [Symbol.dispose](): void {
+    if (this.connected) {
+      console.log("Closing database connection");
+      this.connected = false;
+    }
+  }
+}
+
+class TempFile implements Disposable {
+  private deleted = false;
+
+  constructor(
+    public readonly path: string,
+    public readonly content: string
+  ) {
+    console.log(`Created temp file: ${path}`);
+  }
+
+  read(): string {
+    if (this.deleted) throw new Error("File deleted");
+    return this.content;
+  }
+
+  [Symbol.dispose](): void {
+    if (!this.deleted) {
+      console.log(`Deleting temp file: ${this.path}`);
+      this.deleted = true;
+    }
+  }
+}
+
+function processData(): void {
+  using db = new DatabaseConnection("postgres://localhost/mydb");
+  using tempFile = new TempFile("/tmp/data.csv", "a,b,c");
+
+  const data = db.query("SELECT * FROM users");
+  const fileContent = tempFile.read();
+  console.log(data, fileContent);
+}
+
+processData();
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "DatabaseConnection", occurrence = 1 }
+description = "Move to 'DatabaseConnection'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "TempFile", occurrence = 1 }
+description = "Move to 'TempFile'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "processData", occurrence = 1 }
+description = "Move to 'processData'"
+points = 100
+optimal_keys = 7

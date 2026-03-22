@@ -1,0 +1,57 @@
+[meta]
+id = "ts-starter-boolean-logic"
+zone = "starter"
+language = "typescript"
+tags = ["boolean", "logic", "operators"]
+difficulty = 1
+
+[code]
+content = """
+// Boolean Logic
+// VIM TIP: Use '%' to jump between matching brackets.
+
+const isAdmin = true;
+const isLoggedIn = true;
+const isBanned = false;
+
+// AND operator (&&)
+const canAccess = isLoggedIn && isAdmin;
+const isAllowed = isLoggedIn && !isBanned;
+
+// OR operator (||)
+const hasRole = isAdmin || false;
+const needsReview = isBanned || !isLoggedIn;
+
+// NOT operator (!)
+const isGuest = !isLoggedIn;
+const isNotBanned = !isBanned;
+
+// Combining operators
+const canEdit = isLoggedIn && isAdmin && !isBanned;
+const showWarning = !isLoggedIn || isBanned;
+
+const age = 25;
+const hasLicense = true;
+const canDrive = age >= 16 && hasLicense;
+const canRentCar = age >= 21 && hasLicense;
+
+console.log("Can access:", canAccess);
+console.log("Is allowed:", isAllowed);
+console.log("Can edit:", canEdit);
+console.log("Can drive:", canDrive);
+console.log("Can rent:", canRentCar);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "isAdmin", occurrence = 1 }
+description = "Move to 'isAdmin'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "canEdit", occurrence = 1 }
+description = "Move to 'canEdit'"
+points = 75
+optimal_keys = 7

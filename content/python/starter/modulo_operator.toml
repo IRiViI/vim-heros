@@ -1,0 +1,71 @@
+[meta]
+id = "py-starter-modulo-operator"
+zone = "starter"
+language = "python"
+tags = ["modulo", "remainder", "operators"]
+difficulty = 1
+
+[code]
+content = """
+# The Modulo Operator
+
+# Basic remainder
+print(f"10 % 3 = {10 % 3}")
+print(f"15 % 4 = {15 % 4}")
+print(f"20 % 5 = {20 % 5}")
+
+# Check even or odd
+for num in range(1, 11):
+    if num % 2 == 0:
+        print(f"{num} is even")
+    else:
+        print(f"{num} is odd")
+
+# Check divisibility
+number = 36
+if number % 6 == 0:
+    print(f"{number} is divisible by 6")
+
+# Cycle through values
+colors = ["red", "green", "blue"]
+for i in range(10):
+    color = colors[i % len(colors)]
+    print(f"Item {i}: {color}")
+
+# Clock arithmetic
+hours = 0
+for tick in range(1, 26):
+    hours = tick % 12
+    if hours == 0:
+        hours = 12
+    period = "AM" if tick < 12 or tick == 24 else "PM"
+    print(f"Tick {tick}: {hours} {period}")
+
+# Extract digits
+value = 12345
+ones = value % 10
+tens = (value // 10) % 10
+print(f"Ones digit: {ones}")
+print(f"Tens digit: {tens}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "remainder", occurrence = 1 }
+description = "Move to 'remainder'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "divisible", occurrence = 1 }
+description = "Move to 'divisible'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Extract", occurrence = 1 }
+description = "Move to 'Extract'"
+points = 75
+optimal_keys = 8

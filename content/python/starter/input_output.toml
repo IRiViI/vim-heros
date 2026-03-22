@@ -1,0 +1,58 @@
+[meta]
+id = "py-starter-input-output"
+zone = "starter"
+language = "python"
+tags = ["input", "output", "user-interaction"]
+difficulty = 1
+
+[code]
+content = """
+# Input and Output
+
+# VIM TIP: Use '/' to search forward for a pattern.
+
+# Getting user input
+name = input("What is your name? ")
+print(f"Hello, {name}!")
+
+# Converting input to numbers
+age_str = input("How old are you? ")
+age = int(age_str)
+print(f"In 10 years you'll be {age + 10}")
+
+# Input with inline conversion
+price = float(input("Enter price: "))
+tax = price * 0.08
+total = price + tax
+print(f"Subtotal: ${price:.2f}")
+print(f"Tax: ${tax:.2f}")
+print(f"Total: ${total:.2f}")
+
+# Multiple inputs on one line
+data = input("Enter three numbers separated by spaces: ")
+parts = data.split()
+numbers = [int(p) for p in parts]
+print(f"Numbers: {numbers}")
+print(f"Sum: {sum(numbers)}")
+
+# Yes/No input
+answer = input("Continue? (yes/no): ")
+if answer.lower() in ["yes", "y"]:
+    print("Continuing...")
+else:
+    print("Goodbye!")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Converting", occurrence = 1 }
+description = "Move to 'Converting'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Subtotal", occurrence = 1 }
+description = "Move to 'Subtotal'"
+points = 75
+optimal_keys = 7

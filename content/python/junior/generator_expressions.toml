@@ -1,0 +1,64 @@
+[meta]
+id = "py-junior-generator-expressions"
+zone = "junior"
+language = "python"
+tags = ["generators", "lazy", "memory"]
+difficulty = 3
+
+[code]
+content = """
+# Vim tip: Use % to jump between matching brackets () {} []
+import sys
+
+numbers = range(1, 1_000_001)
+
+# Generator expression vs list comprehension memory usage
+squares_list = [x ** 2 for x in numbers]
+squares_gen = (x ** 2 for x in numbers)
+
+list_size = sys.getsizeof(squares_list)
+gen_size = sys.getsizeof(squares_gen)
+print(f"List: {list_size} bytes, Generator: {gen_size} bytes")
+
+# Sum of squares using generator (memory efficient)
+total = sum(x ** 2 for x in range(1, 10001))
+
+# Chaining generator expressions
+raw_data = ["  Alice  ", "BOB", " carol ", "", "  Dave"]
+cleaned = (name.strip() for name in raw_data)
+normalized = (name.title() for name in cleaned if name)
+valid_names = list(normalized)
+
+# Finding first match with generator and next()
+inventory = [
+    ("sword", 150),
+    ("shield", 100),
+    ("potion", 25),
+    ("armor", 300),
+]
+affordable = next(
+    (item for item, price in inventory if price < 50),
+    "nothing"
+)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "getsizeof", occurrence = 1 }
+description = "Move to 'getsizeof'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "normalized", occurrence = 1 }
+description = "Move to 'normalized'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "affordable", occurrence = 1 }
+description = "Move to 'affordable'"
+points = 100
+optimal_keys = 6

@@ -1,0 +1,61 @@
+[meta]
+id = "py-starter-list-comprehensions"
+zone = "starter"
+language = "python"
+tags = ["lists", "comprehensions", "concise"]
+difficulty = 2
+
+[code]
+content = """
+# Basic List Comprehensions
+
+# VIM TIP: Use 'ci(' to change inside parentheses.
+
+# Traditional way
+squares = []
+for x in range(1, 8):
+    squares.append(x ** 2)
+print(f"Squares: {squares}")
+
+# List comprehension way
+squares = [x ** 2 for x in range(1, 8)]
+print(f"Squares: {squares}")
+
+# With a condition (filter)
+evens = [n for n in range(20) if n % 2 == 0]
+print(f"Evens: {evens}")
+
+# Transform strings
+names = ["alice", "bob", "charlie"]
+capitalized = [name.capitalize() for name in names]
+print(f"Capitalized: {capitalized}")
+
+# Filter and transform
+words = ["hello", "hi", "hey", "world", "howdy"]
+h_words = [w.upper() for w in words if w.startswith("h")]
+print(f"H-words: {h_words}")
+
+# With expressions
+temps_f = [32, 68, 77, 95, 104]
+temps_c = [round((f - 32) * 5 / 9, 1) for f in temps_f]
+print(f"Celsius: {temps_c}")
+
+# Flatten with comprehension
+nested = [[1, 2], [3, 4], [5, 6]]
+flat = [item for sublist in nested for item in sublist]
+print(f"Flat: {flat}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Traditional", occurrence = 1 }
+description = "Move to 'Traditional'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "comprehension", occurrence = 2 }
+description = "Move to second 'comprehension'"
+points = 75
+optimal_keys = 6

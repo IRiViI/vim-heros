@@ -1,0 +1,61 @@
+[meta]
+id = "ts-starter-array-reduce"
+zone = "starter"
+language = "typescript"
+tags = ["arrays", "reduce", "accumulator"]
+difficulty = 2
+
+[code]
+content = """
+// Array.reduce Basics
+// VIM TIP: Use 'e' to jump to the end of the current word.
+
+const numbers = [10, 20, 30, 40, 50];
+
+const sum = numbers.reduce((total, current) => {
+  return total + current;
+}, 0);
+
+const product = numbers.reduce((result, num) => result * num, 1);
+
+const words = ["Hello", "World", "from", "TypeScript"];
+const sentence = words.reduce((acc, word) => {
+  return acc + " " + word;
+});
+
+const grades = [85, 92, 78, 95, 88];
+const highest = grades.reduce((max, grade) => {
+  return grade > max ? grade : max;
+}, 0);
+
+const lowest = grades.reduce((min, grade) => {
+  return grade < min ? grade : min;
+}, Infinity);
+
+console.log("Sum:", sum);
+console.log("Product:", product);
+console.log("Sentence:", sentence);
+console.log("Highest grade:", highest);
+console.log("Lowest grade:", lowest);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "numbers", occurrence = 1 }
+description = "Move to 'numbers'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "sentence", occurrence = 1 }
+description = "Move to 'sentence'"
+points = 75
+optimal_keys = 6
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "highest", occurrence = 1 }
+description = "Move to 'highest'"
+points = 50
+optimal_keys = 4

@@ -1,0 +1,85 @@
+[meta]
+id = "ts-junior-intersection-types"
+zone = "junior"
+language = "typescript"
+tags = ["intersection-types", "type-composition"]
+difficulty = 3
+
+[code]
+content = """
+interface Timestamped {
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface SoftDeletable {
+  deletedAt: Date | null;
+  isDeleted: boolean;
+}
+
+interface Auditable {
+  createdBy: string;
+  updatedBy: string;
+}
+
+type BaseEntity = Timestamped & SoftDeletable & Auditable;
+
+interface BlogPost {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+}
+
+type ManagedBlogPost = BlogPost & BaseEntity;
+
+function createManagedPost(
+  post: BlogPost,
+  author: string
+): ManagedBlogPost {
+  const now = new Date();
+  return {
+    ...post,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+    isDeleted: false,
+    createdBy: author,
+    updatedBy: author,
+  };
+}
+
+function softDelete(entity: BaseEntity, deletedBy: string): void {
+  entity.deletedAt = new Date();
+  entity.isDeleted = true;
+  entity.updatedBy = deletedBy;
+  entity.updatedAt = new Date();
+}
+
+const post = createManagedPost(
+  { id: "1", title: "Hello", content: "World", tags: ["intro"] },
+  "admin"
+);
+console.log(post.createdBy, post.title);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Timestamped", occurrence = 1 }
+description = "Move to 'Timestamped'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "BaseEntity", occurrence = 1 }
+description = "Move to 'BaseEntity'"
+points = 100
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "createManagedPost", occurrence = 1 }
+description = "Move to 'createManagedPost'"
+points = 100
+optimal_keys = 8

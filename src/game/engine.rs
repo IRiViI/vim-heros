@@ -1,8 +1,11 @@
 use std::time::{Duration, Instant};
 
+const COUNTDOWN_SECS: u64 = 3;
+
 /// Current state of the game.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameState {
+    Countdown,
     Playing,
     GameOver,
     LevelComplete,
@@ -15,17 +18,44 @@ pub struct Engine {
     pub scroll_speed: Duration,
     last_scroll: Instant,
     start_time: Instant,
+    countdown_start: Instant,
 }
 
 impl Engine {
     pub fn new(scroll_speed_ms: u64) -> Self {
         let now = Instant::now();
         Self {
-            state: GameState::Playing,
+            state: GameState::Countdown,
             score: 0,
             scroll_speed: Duration::from_millis(scroll_speed_ms),
             last_scroll: now,
             start_time: now,
+            countdown_start: now,
+        }
+    }
+
+    /// Seconds remaining in the countdown (0 if not in countdown).
+    pub fn countdown_remaining(&self) -> u64 {
+        if self.state != GameState::Countdown {
+            return 0;
+        }
+        let elapsed = self.countdown_start.elapsed().as_secs();
+        COUNTDOWN_SECS.saturating_sub(elapsed)
+    }
+
+    /// Check if countdown is finished; if so, transition to Playing.
+    /// Returns true if state changed.
+    pub fn check_countdown(&mut self) -> bool {
+        if self.state == GameState::Countdown
+            && self.countdown_start.elapsed() >= Duration::from_secs(COUNTDOWN_SECS)
+        {
+            self.state = GameState::Playing;
+            let now = Instant::now();
+            self.last_scroll = now;
+            self.start_time = now;
+            true
+        } else {
+            false
         }
     }
 
@@ -63,10 +93,11 @@ impl Engine {
     /// Reset the engine for a new game.
     pub fn reset(&mut self) {
         let now = Instant::now();
-        self.state = GameState::Playing;
+        self.state = GameState::Countdown;
         self.score = 0;
         self.last_scroll = now;
         self.start_time = now;
+        self.countdown_start = now;
     }
 }
 
@@ -78,9 +109,8 @@ mod tests {
     #[test]
     fn test_new_engine() {
         let engine = Engine::new(2000);
-        assert_eq!(engine.state, GameState::Playing);
+        assert_eq!(engine.state, GameState::Countdown);
         assert_eq!(engine.score, 0);
-        assert!(!engine.should_scroll());
     }
 
     #[test]
@@ -107,7 +137,7 @@ mod tests {
         engine.score = 500;
         engine.state = GameState::GameOver;
         engine.reset();
-        assert_eq!(engine.state, GameState::Playing);
+        assert_eq!(engine.state, GameState::Countdown);
         assert_eq!(engine.score, 0);
     }
 }

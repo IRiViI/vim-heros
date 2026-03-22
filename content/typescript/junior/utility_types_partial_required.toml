@@ -1,0 +1,63 @@
+[meta]
+id = "ts-junior-utility-partial-required"
+zone = "junior"
+language = "typescript"
+tags = ["utility-types", "partial", "required"]
+difficulty = 3
+
+[code]
+content = """
+interface Config {
+  host?: string;
+  port?: number;
+  database?: string;
+  ssl?: boolean;
+  timeout?: number;
+}
+
+type StrictConfig = Required<Config>;
+
+function createConnection(config: StrictConfig): void {
+  console.log(`Connecting to ${config.host}:${config.port}`);
+  console.log(`Database: ${config.database}`);
+  console.log(`SSL: ${config.ssl}, Timeout: ${config.timeout}ms`);
+}
+
+interface UserProfile {
+  username: string;
+  email: string;
+  avatar: string;
+  bio: string;
+}
+
+function updateProfile(
+  current: UserProfile,
+  changes: Partial<UserProfile>
+): UserProfile {
+  return { ...current, ...changes };
+}
+
+const profile: UserProfile = {
+  username: "dev_hero",
+  email: "hero@example.com",
+  avatar: "/img/default.png",
+  bio: "TypeScript enthusiast",
+};
+
+const updated = updateProfile(profile, { bio: "Vim master" });
+console.log(updated);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "StrictConfig", occurrence = 1 }
+description = "Move to 'StrictConfig'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "updateProfile", occurrence = 1 }
+description = "Move to 'updateProfile'"
+points = 100
+optimal_keys = 7

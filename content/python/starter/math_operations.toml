@@ -1,0 +1,65 @@
+[meta]
+id = "py-starter-math-operations"
+zone = "starter"
+language = "python"
+tags = ["math", "operators", "arithmetic"]
+difficulty = 1
+
+[code]
+content = """
+# Basic Math Operations
+
+# VIM TIP: Use '0' to jump to the beginning of a line.
+
+a = 15
+b = 4
+
+# Arithmetic operators
+addition = a + b
+subtraction = a - b
+multiplication = a * b
+division = a / b
+floor_division = a // b
+modulo = a % b
+exponent = a ** b
+
+print(f"Addition: {addition}")
+print(f"Subtraction: {subtraction}")
+print(f"Multiplication: {multiplication}")
+print(f"Division: {division}")
+print(f"Floor Division: {floor_division}")
+print(f"Modulo: {modulo}")
+print(f"Exponent: {exponent}")
+
+# Order of operations
+result = (a + b) * 2 - 3
+print(f"Combined: {result}")
+
+# Augmented assignment
+total = 100
+total += 50
+total -= 20
+total *= 2
+print(f"Total: {total}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Arithmetic", occurrence = 1 }
+description = "Move to 'Arithmetic'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "floor_division", occurrence = 1 }
+description = "Move to 'floor_division'"
+points = 75
+optimal_keys = 6
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Augmented", occurrence = 1 }
+description = "Move to 'Augmented'"
+points = 75
+optimal_keys = 8

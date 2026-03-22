@@ -1,0 +1,60 @@
+[meta]
+id = "py-starter-return-values"
+zone = "starter"
+language = "python"
+tags = ["functions", "return", "values"]
+difficulty = 1
+
+[code]
+content = """
+# Return Values in Python
+
+# VIM TIP: Use 'e' to jump to end of current word.
+
+def multiply(a, b):
+    return a * b
+
+result = multiply(4, 5)
+print(f"Product: {result}")
+
+def is_even(number):
+    return number % 2 == 0
+
+print(is_even(10))
+print(is_even(7))
+
+# Return multiple values
+def get_min_max(numbers):
+    minimum = min(numbers)
+    maximum = max(numbers)
+    return minimum, maximum
+
+data = [3, 7, 1, 9, 4]
+low, high = get_min_max(data)
+print(f"Min: {low}, Max: {high}")
+
+# Return early
+def find_first_negative(values):
+    for val in values:
+        if val < 0:
+            return val
+    return None
+
+sample = [5, 8, -3, 2, -1]
+neg = find_first_negative(sample)
+print(f"First negative: {neg}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "multiply", occurrence = 1 }
+description = "Move to 'multiply'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "minimum", occurrence = 1 }
+description = "Move to 'minimum'"
+points = 75
+optimal_keys = 6

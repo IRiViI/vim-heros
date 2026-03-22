@@ -1,0 +1,54 @@
+[meta]
+id = "ts-starter-for-loops"
+zone = "starter"
+language = "typescript"
+tags = ["for", "loops", "iteration"]
+difficulty = 1
+
+[code]
+content = """
+// For Loops in TypeScript
+
+const fruits = ["apple", "banana", "cherry", "date"];
+
+// Classic for loop
+for (let i = 0; i < fruits.length; i++) {
+  console.log(i, fruits[i]);
+}
+
+// for...of loop (values)
+for (const fruit of fruits) {
+  console.log("Fruit:", fruit);
+}
+
+const scores = [85, 92, 78, 95, 88];
+let total = 0;
+
+for (const score of scores) {
+  total = total + score;
+}
+
+const average = total / scores.length;
+
+// Counting loop
+for (let count = 1; count <= 5; count++) {
+  console.log("Count:", count);
+}
+
+console.log("Total:", total);
+console.log("Average:", average);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fruits", occurrence = 1 }
+description = "Move to 'fruits'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "average", occurrence = 1 }
+description = "Move to 'average'"
+points = 75
+optimal_keys = 8

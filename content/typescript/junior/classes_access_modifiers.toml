@@ -1,0 +1,70 @@
+[meta]
+id = "ts-junior-classes-access-modifiers"
+zone = "junior"
+language = "typescript"
+tags = ["classes", "access-modifiers"]
+difficulty = 3
+
+[code]
+content = """
+// VIM TIP: Use 'w' and 'b' to jump forward/backward by word.
+class BankAccount {
+  private balance: number;
+  protected accountNumber: string;
+  public readonly owner: string;
+
+  constructor(owner: string, initialBalance: number) {
+    this.owner = owner;
+    this.balance = initialBalance;
+    this.accountNumber = this.generateAccountNumber();
+  }
+
+  private generateAccountNumber(): string {
+    return `ACC-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  public deposit(amount: number): void {
+    if (amount <= 0) {
+      throw new Error("Deposit must be positive");
+    }
+    this.balance += amount;
+  }
+
+  public withdraw(amount: number): void {
+    if (amount > this.balance) {
+      throw new Error("Insufficient funds");
+    }
+    this.balance -= amount;
+  }
+
+  public getBalance(): number {
+    return this.balance;
+  }
+}
+
+const account = new BankAccount("Alice", 1000);
+account.deposit(500);
+account.withdraw(200);
+console.log(account.getBalance());
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "BankAccount", occurrence = 1 }
+description = "Move to 'BankAccount'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "generateAccountNumber", occurrence = 1 }
+description = "Move to 'generateAccountNumber'"
+points = 125
+optimal_keys = 10
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "withdraw", occurrence = 1 }
+description = "Move to 'withdraw'"
+points = 100
+optimal_keys = 7

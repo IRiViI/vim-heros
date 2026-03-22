@@ -1,0 +1,69 @@
+[meta]
+id = "ts-junior-utility-pick-omit"
+zone = "junior"
+language = "typescript"
+tags = ["utility-types", "pick", "omit"]
+difficulty = 3
+
+[code]
+content = """
+interface Employee {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string;
+  salary: number;
+  startDate: Date;
+  isActive: boolean;
+}
+
+type EmployeeSummary = Pick<Employee, "id" | "firstName" | "lastName">;
+
+type PublicEmployee = Omit<Employee, "salary" | "isActive">;
+
+function displaySummary(employee: EmployeeSummary): string {
+  return `${employee.firstName} ${employee.lastName} (#${employee.id})`;
+}
+
+function toPublicProfile(employee: Employee): PublicEmployee {
+  const { salary, isActive, ...publicData } = employee;
+  return publicData;
+}
+
+const emp: Employee = {
+  id: 42,
+  firstName: "Sarah",
+  lastName: "Connor",
+  email: "sarah@skynet.com",
+  department: "Engineering",
+  salary: 120000,
+  startDate: new Date("2023-01-15"),
+  isActive: true,
+};
+
+const summary = displaySummary(emp);
+const publicProfile = toPublicProfile(emp);
+console.log(summary, publicProfile);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "EmployeeSummary", occurrence = 1 }
+description = "Move to 'EmployeeSummary'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "PublicEmployee", occurrence = 1 }
+description = "Move to 'PublicEmployee'"
+points = 100
+optimal_keys = 6
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "toPublicProfile", occurrence = 1 }
+description = "Move to 'toPublicProfile'"
+points = 100
+optimal_keys = 8

@@ -1,0 +1,66 @@
+[meta]
+id = "py-starter-comparison-operators"
+zone = "starter"
+language = "python"
+tags = ["comparison", "operators", "equality"]
+difficulty = 1
+
+[code]
+content = """
+# Comparison Operators
+
+x = 10
+y = 20
+
+# Basic comparisons
+print(f"{x} == {y}: {x == y}")
+print(f"{x} != {y}: {x != y}")
+print(f"{x} > {y}: {x > y}")
+print(f"{x} < {y}: {x < y}")
+print(f"{x} >= {y}: {x >= y}")
+print(f"{x} <= {y}: {x <= y}")
+
+# Chained comparisons
+age = 25
+is_young_adult = 18 <= age <= 35
+print(f"Young adult: {is_young_adult}")
+
+# Comparing strings
+word_a = "apple"
+word_b = "banana"
+print(f"apple < banana: {word_a < word_b}")
+
+# Identity vs equality
+list_a = [1, 2, 3]
+list_b = [1, 2, 3]
+list_c = list_a
+
+print(f"a == b: {list_a == list_b}")
+print(f"a is b: {list_a is list_b}")
+print(f"a is c: {list_a is list_c}")
+
+# None checking
+result = None
+if result is None:
+    print("No result yet")
+
+# Practical example
+score = 78
+passed = score >= 60
+honors = score >= 90
+print(f"Passed: {passed}, Honors: {honors}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Chained", occurrence = 1 }
+description = "Move to 'Chained'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Identity", occurrence = 1 }
+description = "Move to 'Identity'"
+points = 75
+optimal_keys = 7

@@ -1,0 +1,63 @@
+[meta]
+id = "ts-starter-while-loops"
+zone = "starter"
+language = "typescript"
+tags = ["while", "loops", "control-flow"]
+difficulty = 1
+
+[code]
+content = """
+// While Loops
+
+let countdown = 10;
+
+while (countdown > 0) {
+  console.log("T-minus", countdown);
+  countdown = countdown - 1;
+}
+console.log("Liftoff!");
+
+// Summing numbers until threshold
+let balance = 0;
+let deposit = 100;
+
+while (balance < 500) {
+  balance = balance + deposit;
+  console.log("Balance:", balance);
+}
+
+// Finding first even number
+const values = [3, 7, 11, 8, 15, 2];
+let index = 0;
+
+while (index < values.length) {
+  if (values[index] % 2 === 0) {
+    console.log("First even:", values[index]);
+    break;
+  }
+  index = index + 1;
+}
+
+console.log("Final balance:", balance);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "countdown", occurrence = 1 }
+description = "Move to 'countdown'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "balance", occurrence = 1 }
+description = "Move to 'balance'"
+points = 75
+optimal_keys = 6
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "values", occurrence = 1 }
+description = "Move to 'values'"
+points = 50
+optimal_keys = 4

@@ -1,0 +1,56 @@
+[meta]
+id = "py-starter-zip-function"
+zone = "starter"
+language = "python"
+tags = ["zip", "parallel", "iteration"]
+difficulty = 2
+
+[code]
+content = """
+# Zip Function
+
+names = ["Alice", "Bob", "Charlie"]
+scores = [95, 82, 90]
+grades = ["A", "B", "A"]
+
+# Combine two lists
+for name, score in zip(names, scores):
+    print(f"{name}: {score}")
+
+# Combine three lists
+for name, score, grade in zip(names, scores, grades):
+    print(f"{name} scored {score} ({grade})")
+
+# Create a dictionary from two lists
+student_scores = dict(zip(names, scores))
+print(f"Scores: {student_scores}")
+
+# Unzipping with zip and asterisk
+pairs = [(1, "a"), (2, "b"), (3, "c")]
+numbers, letters = zip(*pairs)
+print(f"Numbers: {numbers}")
+print(f"Letters: {letters}")
+
+# Practical example: parallel processing
+prices = [10.99, 5.49, 8.99, 12.50]
+quantities = [2, 5, 1, 3]
+products = ["Widget", "Gadget", "Tool", "Gizmo"]
+
+for product, price, qty in zip(products, prices, quantities):
+    total = price * qty
+    print(f"{product}: {qty} x ${price:.2f} = ${total:.2f}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Combine", occurrence = 1 }
+description = "Move to first 'Combine'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Unzipping", occurrence = 1 }
+description = "Move to 'Unzipping'"
+points = 75
+optimal_keys = 7

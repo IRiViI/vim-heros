@@ -1,0 +1,75 @@
+[meta]
+id = "ts-junior-discriminated-unions"
+zone = "junior"
+language = "typescript"
+tags = ["discriminated-unions", "pattern-matching"]
+difficulty = 3
+
+[code]
+content = """
+interface LoadingState {
+  status: "loading";
+}
+
+interface SuccessState<T> {
+  status: "success";
+  data: T;
+  timestamp: Date;
+}
+
+interface ErrorState {
+  status: "error";
+  message: string;
+  code: number;
+}
+
+type RequestState<T> = LoadingState | SuccessState<T> | ErrorState;
+
+function renderState<T>(state: RequestState<T>): string {
+  switch (state.status) {
+    case "loading":
+      return "Loading...";
+    case "success":
+      return `Data received at ${state.timestamp}`;
+    case "error":
+      return `Error ${state.code}: ${state.message}`;
+  }
+}
+
+const loading: RequestState<string> = { status: "loading" };
+const success: RequestState<string> = {
+  status: "success",
+  data: "Hello",
+  timestamp: new Date(),
+};
+const failure: RequestState<string> = {
+  status: "error",
+  message: "Not found",
+  code: 404,
+};
+
+console.log(renderState(loading));
+console.log(renderState(success));
+console.log(renderState(failure));
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "LoadingState", occurrence = 1 }
+description = "Move to 'LoadingState'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "RequestState", occurrence = 1 }
+description = "Move to 'RequestState'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "renderState", occurrence = 1 }
+description = "Move to 'renderState'"
+points = 100
+optimal_keys = 7

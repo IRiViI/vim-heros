@@ -1389,7 +1389,7 @@ zone/language pool. Replaying gives different content.
 
 ---
 
-### Phase 8 — First Content: Python & TypeScript (Starter + Junior)
+### Phase 8 — First Content: Python & TypeScript (Starter + Junior) ✅
 
 **Goal**: Enough content for a real playable demo across 2 languages, 2 zones.
 

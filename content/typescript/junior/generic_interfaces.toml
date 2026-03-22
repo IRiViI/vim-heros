@@ -1,0 +1,81 @@
+[meta]
+id = "ts-junior-generic-interfaces"
+zone = "junior"
+language = "typescript"
+tags = ["generics", "interfaces"]
+difficulty = 3
+
+[code]
+content = """
+interface Repository<T> {
+  getAll(): Promise<T[]>;
+  getById(id: string): Promise<T | null>;
+  create(entity: T): Promise<T>;
+  update(id: string, entity: Partial<T>): Promise<T>;
+  delete(id: string): Promise<boolean>;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: Date;
+}
+
+interface Product {
+  id: string;
+  title: string;
+  price: number;
+  inStock: boolean;
+}
+
+class UserRepository implements Repository<User> {
+  private users: User[] = [];
+
+  async getAll(): Promise<User[]> {
+    return this.users;
+  }
+
+  async getById(id: string): Promise<User | null> {
+    return this.users.find((u) => u.id === id) ?? null;
+  }
+
+  async create(entity: User): Promise<User> {
+    this.users.push(entity);
+    return entity;
+  }
+
+  async update(id: string, entity: Partial<User>): Promise<User> {
+    const index = this.users.findIndex((u) => u.id === id);
+    this.users[index] = { ...this.users[index], ...entity };
+    return this.users[index];
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const length = this.users.length;
+    this.users = this.users.filter((u) => u.id !== id);
+    return this.users.length < length;
+  }
+}
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Repository", occurrence = 1 }
+description = "Move to 'Repository'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "UserRepository", occurrence = 1 }
+description = "Move to 'UserRepository'"
+points = 100
+optimal_keys = 10
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "findIndex", occurrence = 1 }
+description = "Move to 'findIndex'"
+points = 100
+optimal_keys = 7

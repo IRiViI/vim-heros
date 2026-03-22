@@ -1,0 +1,69 @@
+[meta]
+id = "py-junior-exception-handling"
+zone = "junior"
+language = "python"
+tags = ["exceptions", "custom", "error-handling"]
+difficulty = 4
+
+[code]
+content = """
+class ValidationError(Exception):
+    \"\"\"Raised when input validation fails.\"\"\"
+
+    def __init__(self, field, message, value=None):
+        self.field = field
+        self.message = message
+        self.value = value
+        super().__init__(f"{field}: {message}")
+
+
+class NotFoundError(Exception):
+    \"\"\"Raised when a resource is not found.\"\"\"
+    pass
+
+
+class UserRepository:
+    def __init__(self):
+        self.users = {}
+
+    def add_user(self, username, email):
+        if not username or len(username) < 3:
+            raise ValidationError("username", "Must be at least 3 chars", username)
+        if "@" not in email:
+            raise ValidationError("email", "Invalid format", email)
+        if username in self.users:
+            raise ValidationError("username", "Already exists", username)
+        self.users[username] = {"email": email, "active": True}
+
+    def get_user(self, username):
+        try:
+            return self.users[username]
+        except KeyError:
+            raise NotFoundError(f"User '{username}' not found") from None
+
+    def deactivate_user(self, username):
+        user = self.get_user(username)
+        user["active"] = False
+        return user
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "ValidationError", occurrence = 1 }
+description = "Move to 'ValidationError'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "UserRepository", occurrence = 1 }
+description = "Move to 'UserRepository'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "deactivate_user", occurrence = 1 }
+description = "Move to 'deactivate_user'"
+points = 100
+optimal_keys = 6

@@ -1,0 +1,71 @@
+[meta]
+id = "ts-junior-promises"
+zone = "junior"
+language = "typescript"
+tags = ["promises", "async"]
+difficulty = 3
+
+[code]
+content = """
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function fetchWithTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number
+): Promise<T> {
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error("Timeout")), timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]);
+}
+
+function retryAsync<T>(
+  fn: () => Promise<T>,
+  maxRetries: number,
+  delayMs: number
+): Promise<T> {
+  return fn().catch(async (error) => {
+    if (maxRetries <= 0) throw error;
+    await delay(delayMs);
+    return retryAsync(fn, maxRetries - 1, delayMs);
+  });
+}
+
+async function loadData(): Promise<string> {
+  const random = Math.random();
+  if (random < 0.7) {
+    throw new Error("Simulated network failure");
+  }
+  return "Data loaded successfully";
+}
+
+async function main(): Promise<void> {
+  const result = await retryAsync(loadData, 3, 1000);
+  console.log(result);
+}
+
+main().catch(console.error);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fetchWithTimeout", occurrence = 1 }
+description = "Move to 'fetchWithTimeout'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "retryAsync", occurrence = 1 }
+description = "Move to 'retryAsync'"
+points = 100
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "loadData", occurrence = 1 }
+description = "Move to 'loadData'"
+points = 75
+optimal_keys = 5

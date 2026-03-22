@@ -1,0 +1,64 @@
+[meta]
+id = "py-starter-list-slicing"
+zone = "starter"
+language = "python"
+tags = ["lists", "slicing", "indexing"]
+difficulty = 2
+
+[code]
+content = """
+# List Slicing
+
+letters = ["a", "b", "c", "d", "e", "f", "g", "h"]
+
+# Basic slicing
+first_three = letters[0:3]
+print(f"First three: {first_three}")
+
+middle = letters[2:6]
+print(f"Middle: {middle}")
+
+# Shorthand slicing
+from_start = letters[:4]
+to_end = letters[5:]
+everything = letters[:]
+print(f"From start: {from_start}")
+print(f"To end: {to_end}")
+
+# Negative indexing
+last_item = letters[-1]
+last_three = letters[-3:]
+print(f"Last item: {last_item}")
+print(f"Last three: {last_three}")
+
+# Step slicing
+every_other = letters[::2]
+reversed_list = letters[::-1]
+print(f"Every other: {every_other}")
+print(f"Reversed: {reversed_list}")
+
+# Slice assignment
+letters[1:3] = ["X", "Y"]
+print(f"After assignment: {letters}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Shorthand", occurrence = 1 }
+description = "Move to 'Shorthand'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Negative", occurrence = 1 }
+description = "Move to 'Negative'"
+points = 75
+optimal_keys = 6
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "reversed_list", occurrence = 1 }
+description = "Move to 'reversed_list'"
+points = 75
+optimal_keys = 8

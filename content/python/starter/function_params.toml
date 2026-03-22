@@ -1,0 +1,61 @@
+[meta]
+id = "py-starter-function-params"
+zone = "starter"
+language = "python"
+tags = ["functions", "parameters", "defaults"]
+difficulty = 2
+
+[code]
+content = """
+# Function Parameters and Defaults
+
+def make_coffee(size="medium", milk=False):
+    order = f"{size} coffee"
+    if milk:
+        order += " with milk"
+    return order
+
+print(make_coffee())
+print(make_coffee("large"))
+print(make_coffee("small", True))
+
+# Keyword arguments
+def create_profile(name, age, city="Unknown"):
+    profile = {
+        "name": name,
+        "age": age,
+        "city": city
+    }
+    return profile
+
+user = create_profile("Sam", 28, city="Denver")
+print(user)
+
+# Multiple default parameters
+def format_address(street, city, state="CA", country="USA"):
+    return f"{street}, {city}, {state}, {country}"
+
+address = format_address("123 Main St", "Portland", "OR")
+print(address)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "coffee", occurrence = 1 }
+description = "Move to 'coffee'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Keyword", occurrence = 1 }
+description = "Move to 'Keyword'"
+points = 75
+optimal_keys = 6
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Portland", occurrence = 1 }
+description = "Move to 'Portland'"
+points = 75
+optimal_keys = 8

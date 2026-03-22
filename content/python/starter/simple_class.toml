@@ -1,0 +1,70 @@
+[meta]
+id = "py-starter-simple-class"
+zone = "starter"
+language = "python"
+tags = ["class", "objects", "methods"]
+difficulty = 2
+
+[code]
+content = """
+# Simple Class Introduction
+
+class Dog:
+    def __init__(self, name, breed, age):
+        self.name = name
+        self.breed = breed
+        self.age = age
+
+    def bark(self):
+        print(f"{self.name} says: Woof!")
+
+    def describe(self):
+        print(f"{self.name} is a {self.age}-year-old {self.breed}")
+
+    def birthday(self):
+        self.age += 1
+        print(f"Happy birthday {self.name}! Now {self.age} years old")
+
+# Create instances
+buddy = Dog("Buddy", "Golden Retriever", 3)
+luna = Dog("Luna", "Husky", 5)
+
+# Call methods
+buddy.describe()
+buddy.bark()
+luna.describe()
+
+# Access attributes
+print(f"\\n{buddy.name}'s breed: {buddy.breed}")
+
+# Modify state through methods
+buddy.birthday()
+buddy.describe()
+
+# A list of dogs
+kennel = [buddy, luna, Dog("Max", "Beagle", 2)]
+print("\\nAll dogs:")
+for dog in kennel:
+    dog.describe()
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "class", occurrence = 1 }
+description = "Move to 'class'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "birthday", occurrence = 1 }
+description = "Move to 'birthday'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "kennel", occurrence = 1 }
+description = "Move to 'kennel'"
+points = 75
+optimal_keys = 8

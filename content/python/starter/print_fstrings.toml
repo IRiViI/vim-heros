@@ -1,0 +1,59 @@
+[meta]
+id = "py-starter-print-fstrings"
+zone = "starter"
+language = "python"
+tags = ["print", "f-strings", "formatting"]
+difficulty = 1
+
+[code]
+content = """
+# Print and F-Strings
+
+name = "Charlie"
+age = 22
+balance = 1234.567
+
+# Basic print
+print("Welcome to Python!")
+
+# String concatenation
+print("Hello, " + name + "!")
+
+# F-string basics
+print(f"My name is {name} and I am {age} years old.")
+
+# F-string with expressions
+print(f"Next year I will be {age + 1}")
+print(f"Name in uppercase: {name.upper()}")
+
+# Number formatting
+print(f"Balance: ${balance:.2f}")
+print(f"Padded number: {age:05d}")
+
+# Multi-line output
+print(f\"\"\"
+=== Profile ===
+Name: {name}
+Age:  {age}
+Balance: ${balance:,.2f}
+\"\"\")
+
+# Print with sep and end
+print("one", "two", "three", sep=" | ")
+print("Loading", end="...")
+print("Done!")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Charlie", occurrence = 1 }
+description = "Move to 'Charlie'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "formatting", occurrence = 1 }
+description = "Move to 'formatting'"
+points = 75
+optimal_keys = 6

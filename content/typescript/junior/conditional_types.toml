@@ -1,0 +1,68 @@
+[meta]
+id = "ts-junior-conditional-types"
+zone = "junior"
+language = "typescript"
+tags = ["conditional-types", "generics"]
+difficulty = 4
+
+[code]
+content = """
+type IsString<T> = T extends string ? true : false;
+
+type IsArray<T> = T extends any[] ? true : false;
+
+type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
+
+type ElementType<T> = T extends (infer E)[] ? E : never;
+
+type FunctionReturn<T> = T extends (...args: any[]) => infer R
+  ? R
+  : never;
+
+type A = IsString<"hello">;
+type B = IsArray<number[]>;
+type C = UnwrapPromise<Promise<string>>;
+type D = ElementType<boolean[]>;
+
+interface ApiResponse<T> {
+  data: T;
+  status: number;
+}
+
+type ExtractData<T> = T extends ApiResponse<infer D> ? D : never;
+
+type UserData = ExtractData<ApiResponse<{ name: string }>>;
+
+function processValue<T>(
+  value: T
+): T extends string ? string : number {
+  if (typeof value === "string") {
+    return value.toUpperCase() as any;
+  }
+  return 42 as any;
+}
+
+const result = processValue("hello");
+console.log(result);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "UnwrapPromise", occurrence = 1 }
+description = "Move to 'UnwrapPromise'"
+points = 100
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "FunctionReturn", occurrence = 1 }
+description = "Move to 'FunctionReturn'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "ExtractData", occurrence = 1 }
+description = "Move to 'ExtractData'"
+points = 100
+optimal_keys = 6

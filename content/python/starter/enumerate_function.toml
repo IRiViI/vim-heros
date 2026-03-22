@@ -1,0 +1,55 @@
+[meta]
+id = "py-starter-enumerate-function"
+zone = "starter"
+language = "python"
+tags = ["enumerate", "indexing", "iteration"]
+difficulty = 2
+
+[code]
+content = """
+# Enumerate Function
+
+# VIM TIP: Use 'G' to jump to the last line of the file.
+
+languages = ["Python", "JavaScript", "Rust", "Go"]
+
+# Without enumerate (not ideal)
+for i in range(len(languages)):
+    print(f"{i}: {languages[i]}")
+
+# With enumerate (much cleaner)
+for index, lang in enumerate(languages):
+    print(f"{index}: {lang}")
+
+# Start from a different number
+for rank, lang in enumerate(languages, start=1):
+    print(f"Rank {rank}: {lang}")
+
+# Practical example: find item positions
+scores = [88, 92, 75, 92, 85, 92]
+target = 92
+positions = []
+for idx, score in enumerate(scores):
+    if score == target:
+        positions.append(idx)
+print(f"Score {target} found at positions: {positions}")
+
+# Enumerate with strings
+word = "Python"
+for pos, char in enumerate(word):
+    print(f"Position {pos}: {char}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "enumerate", occurrence = 1 }
+description = "Move to first 'enumerate'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "positions", occurrence = 1 }
+description = "Move to 'positions'"
+points = 75
+optimal_keys = 7

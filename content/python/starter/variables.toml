@@ -1,0 +1,55 @@
+[meta]
+id = "py-starter-variables"
+zone = "starter"
+language = "python"
+tags = ["variables", "types", "assignment"]
+difficulty = 1
+
+[code]
+content = """
+# Variables and Types in Python
+
+name = "Alice"
+age = 30
+height = 5.7
+is_student = False
+
+# VIM TIP: Use 'w' to jump forward by word.
+
+print(f"Name: {name}")
+print(f"Age: {age}")
+print(f"Height: {height}")
+print(f"Student: {is_student}")
+
+# Check types
+print(type(name))
+print(type(age))
+print(type(height))
+print(type(is_student))
+
+# Reassign variables
+name = "Bob"
+age = 25
+print(f"Updated name: {name}, age: {age}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Alice", occurrence = 1 }
+description = "Move to 'Alice'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "height", occurrence = 1 }
+description = "Move to 'height'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Reassign", occurrence = 1 }
+description = "Move to 'Reassign'"
+points = 75
+optimal_keys = 8

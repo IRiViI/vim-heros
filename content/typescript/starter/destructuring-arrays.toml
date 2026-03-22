@@ -1,0 +1,55 @@
+[meta]
+id = "ts-starter-destructuring-arrays"
+zone = "starter"
+language = "typescript"
+tags = ["destructuring", "arrays", "assignment"]
+difficulty = 2
+
+[code]
+content = """
+// Array Destructuring
+// VIM TIP: Use 'W' to jump forward by WORD (ignoring punctuation).
+
+const colors = ["red", "green", "blue", "yellow"];
+
+const [primary, secondary, tertiary] = colors;
+console.log("Primary:", primary);
+console.log("Secondary:", secondary);
+
+// Skipping elements
+const [first, , third] = colors;
+console.log("First:", first, "Third:", third);
+
+// Rest pattern
+const [head, ...tail] = colors;
+console.log("Head:", head);
+console.log("Tail:", tail);
+
+// Swapping variables
+let a = 1;
+let b = 2;
+[a, b] = [b, a];
+console.log("Swapped:", a, b);
+
+// From function return
+function getCoordinates(): [number, number] {
+  return [45.5, -122.6];
+}
+
+const [latitude, longitude] = getCoordinates();
+console.log("Lat:", latitude, "Lng:", longitude);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "primary", occurrence = 1 }
+description = "Move to 'primary'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "latitude", occurrence = 1 }
+description = "Move to 'latitude'"
+points = 75
+optimal_keys = 8

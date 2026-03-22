@@ -1,0 +1,67 @@
+[meta]
+id = "py-starter-nested-loops"
+zone = "starter"
+language = "python"
+tags = ["loops", "nested", "patterns"]
+difficulty = 2
+
+[code]
+content = """
+# Nested Loops
+
+# VIM TIP: Use 'H', 'M', 'L' to jump to top, middle, bottom of screen.
+
+# Multiplication table
+for i in range(1, 6):
+    for j in range(1, 6):
+        print(f"{i*j:4}", end="")
+    print()
+
+# Grid coordinates
+rows = 3
+cols = 4
+for r in range(rows):
+    for c in range(cols):
+        print(f"({r},{c})", end=" ")
+    print()
+
+# Triangle pattern
+for i in range(1, 6):
+    for j in range(i):
+        print("*", end="")
+    print()
+
+# Searching in 2D list
+matrix = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+]
+target = 5
+for row_idx, row in enumerate(matrix):
+    for col_idx, val in enumerate(row):
+        if val == target:
+            print(f"Found {target} at ({row_idx}, {col_idx})")
+
+# Flatten a nested list
+nested = [[1, 2], [3, 4], [5, 6]]
+flat = []
+for sublist in nested:
+    for item in sublist:
+        flat.append(item)
+print(f"Flattened: {flat}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Multiplication", occurrence = 1 }
+description = "Move to 'Multiplication'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Flatten", occurrence = 1 }
+description = "Move to 'Flatten'"
+points = 75
+optimal_keys = 7

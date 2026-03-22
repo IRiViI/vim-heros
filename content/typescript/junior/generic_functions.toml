@@ -1,0 +1,56 @@
+[meta]
+id = "ts-junior-generic-functions"
+zone = "junior"
+language = "typescript"
+tags = ["generics", "functions"]
+difficulty = 3
+
+[code]
+content = """
+function identity<T>(value: T): T {
+  return value;
+}
+
+function mapArray<T, U>(
+  items: T[],
+  transform: (item: T) => U
+): U[] {
+  const result: U[] = [];
+  for (const item of items) {
+    result.push(transform(item));
+  }
+  return result;
+}
+
+const numbers = [1, 2, 3, 4, 5];
+const doubled = mapArray(numbers, (n) => n * 2);
+const strings = mapArray(numbers, (n) => String(n));
+
+function firstElement<T>(arr: T[]): T | undefined {
+  return arr.length > 0 ? arr[0] : undefined;
+}
+
+const first = firstElement(doubled);
+console.log(first);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "identity", occurrence = 1 }
+description = "Move to 'identity'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "transform", occurrence = 1 }
+description = "Move to 'transform'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "firstElement", occurrence = 1 }
+description = "Move to 'firstElement'"
+points = 100
+optimal_keys = 6

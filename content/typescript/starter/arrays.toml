@@ -1,0 +1,46 @@
+[meta]
+id = "ts-starter-arrays"
+zone = "starter"
+language = "typescript"
+tags = ["arrays", "list", "collection"]
+difficulty = 1
+
+[code]
+content = """
+// Arrays in TypeScript
+
+let colors: string[] = ["red", "green", "blue"];
+let numbers: number[] = [10, 20, 30, 40, 50];
+let flags: boolean[] = [true, false, true];
+
+let fruits: Array<string> = ["apple", "banana", "cherry"];
+
+let first = colors[0];
+let second = colors[1];
+let length = colors.length;
+
+colors.push("yellow");
+colors.push("purple");
+
+let lastNumber = numbers[numbers.length - 1];
+
+console.log("Colors:", colors);
+console.log("First color:", first);
+console.log("Total colors:", length);
+console.log("Fruits:", fruits);
+console.log("Last number:", lastNumber);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "colors", occurrence = 1 }
+description = "Move to 'colors'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fruits", occurrence = 1 }
+description = "Move to 'fruits'"
+points = 75
+optimal_keys = 6

@@ -1,0 +1,77 @@
+[meta]
+id = "ts-junior-type-guards"
+zone = "junior"
+language = "typescript"
+tags = ["type-guards", "is-keyword"]
+difficulty = 3
+
+[code]
+content = """
+interface Fish {
+  swim: () => void;
+  habitat: string;
+}
+
+interface Bird {
+  fly: () => void;
+  wingspan: number;
+}
+
+function isFish(animal: Fish | Bird): animal is Fish {
+  return (animal as Fish).swim !== undefined;
+}
+
+function isBird(animal: Fish | Bird): animal is Bird {
+  return (animal as Bird).fly !== undefined;
+}
+
+function describeAnimal(animal: Fish | Bird): string {
+  if (isFish(animal)) {
+    return `Fish in ${animal.habitat}`;
+  }
+  return `Bird with ${animal.wingspan}cm wingspan`;
+}
+
+interface ApiError {
+  kind: "error";
+  message: string;
+  statusCode: number;
+}
+
+interface ApiSuccess<T> {
+  kind: "success";
+  payload: T;
+}
+
+type ApiResult<T> = ApiError | ApiSuccess<T>;
+
+function isApiError<T>(result: ApiResult<T>): result is ApiError {
+  return result.kind === "error";
+}
+
+const result: ApiResult<string> = { kind: "success", payload: "ok" };
+if (!isApiError(result)) {
+  console.log(result.payload);
+}
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "isFish", occurrence = 1 }
+description = "Move to 'isFish'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "describeAnimal", occurrence = 1 }
+description = "Move to 'describeAnimal'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "isApiError", occurrence = 1 }
+description = "Move to 'isApiError'"
+points = 100
+optimal_keys = 7

@@ -1,0 +1,65 @@
+[meta]
+id = "py-starter-type-conversion"
+zone = "starter"
+language = "python"
+tags = ["types", "conversion", "casting"]
+difficulty = 1
+
+[code]
+content = """
+# Type Conversion
+
+# String to integer
+age_str = "25"
+age_int = int(age_str)
+print(f"Age + 5 = {age_int + 5}")
+
+# String to float
+price_str = "19.99"
+price_float = float(price_str)
+print(f"Price with tax: {price_float * 1.08:.2f}")
+
+# Number to string
+count = 42
+message = "There are " + str(count) + " items"
+print(message)
+
+# Float to int (truncates)
+temperature = 98.6
+temp_int = int(temperature)
+print(f"Truncated: {temp_int}")
+
+# Int to float
+whole = 7
+decimal = float(whole)
+print(f"As float: {decimal}")
+
+# Boolean conversions
+print(bool(0))
+print(bool(1))
+print(bool(""))
+print(bool("hello"))
+print(bool([]))
+print(bool([1, 2, 3]))
+
+# Practical example
+user_input = "3"
+quantity = int(user_input)
+unit_price = 4.50
+total = quantity * unit_price
+print(f"Total: ${total:.2f}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "truncates", occurrence = 1 }
+description = "Move to 'truncates'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Boolean", occurrence = 1 }
+description = "Move to 'Boolean'"
+points = 75
+optimal_keys = 7

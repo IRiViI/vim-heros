@@ -1,0 +1,73 @@
+[meta]
+id = "py-junior-walrus-operator"
+zone = "junior"
+language = "python"
+tags = ["walrus", "assignment", "expressions"]
+difficulty = 4
+
+[code]
+content = """
+import re
+
+
+# Walrus operator := assigns inside expressions
+
+# Filter and transform in one pass
+raw_data = ["42", "hello", "17", "", "99", "world", "3"]
+valid_numbers = [
+    int(n)
+    for item in raw_data
+    if (n := item.strip()) and n.isdigit()
+]
+
+# Avoid redundant computation in while loops
+def read_chunks(data, chunk_size=3):
+    results = []
+    index = 0
+    while (chunk := data[index:index + chunk_size]):
+        results.append(chunk)
+        index += chunk_size
+    return results
+
+# Use with regex matching
+patterns = {
+    "email": r"[\\w.]+@[\\w.]+",
+    "phone": r"\\d{3}-\\d{3}-\\d{4}",
+    "zip": r"\\b\\d{5}\\b",
+}
+
+text = "Contact jane@example.com or call 555-123-4567"
+matches = {
+    name: match.group()
+    for name, pattern in patterns.items()
+    if (match := re.search(pattern, text))
+}
+
+# Simplify nested conditions
+def process_response(response):
+    if (data := response.get("data")) and (users := data.get("users")):
+        active = [u for u in users if u.get("active")]
+        return active
+    return []
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "valid_numbers", occurrence = 1 }
+description = "Move to 'valid_numbers'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "read_chunks", occurrence = 1 }
+description = "Move to 'read_chunks'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "process_response", occurrence = 1 }
+description = "Move to 'process_response'"
+points = 100
+optimal_keys = 6

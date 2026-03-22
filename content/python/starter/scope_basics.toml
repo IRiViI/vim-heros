@@ -1,0 +1,87 @@
+[meta]
+id = "py-starter-scope-basics"
+zone = "starter"
+language = "python"
+tags = ["scope", "variables", "functions"]
+difficulty = 2
+
+[code]
+content = """
+# Variable Scope Basics
+
+# VIM TIP: Use 'ctrl+d' to scroll down half a page.
+
+# Global variable
+message = "Hello from global"
+
+def show_message():
+    print(message)
+
+show_message()
+
+# Local variable shadows global
+count = 100
+
+def update_count():
+    count = 50
+    print(f"Inside function: {count}")
+
+update_count()
+print(f"Outside function: {count}")
+
+# Using global keyword
+score = 0
+
+def add_points(points):
+    global score
+    score += points
+    print(f"Score is now: {score}")
+
+add_points(10)
+add_points(25)
+print(f"Final score: {score}")
+
+# Nested function scope
+def outer():
+    greeting = "Hello"
+    def inner():
+        print(f"Inner sees: {greeting}")
+    inner()
+
+outer()
+
+# Variables defined in loops are accessible after
+for i in range(5):
+    last = i
+print(f"Last value from loop: {last}")
+
+# Function parameters are local
+def double(value):
+    value = value * 2
+    return value
+
+original = 10
+result = double(original)
+print(f"Original: {original}, Doubled: {result}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Global", occurrence = 1 }
+description = "Move to first 'Global'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "shadows", occurrence = 1 }
+description = "Move to 'shadows'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Nested", occurrence = 1 }
+description = "Move to 'Nested'"
+points = 75
+optimal_keys = 8

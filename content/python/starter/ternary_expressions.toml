@@ -1,0 +1,62 @@
+[meta]
+id = "py-starter-ternary-expressions"
+zone = "starter"
+language = "python"
+tags = ["ternary", "conditional", "expressions"]
+difficulty = 2
+
+[code]
+content = """
+# Ternary Expressions (Conditional Expressions)
+
+age = 20
+
+# Basic ternary
+status = "adult" if age >= 18 else "minor"
+print(f"Status: {status}")
+
+# Ternary in print
+score = 85
+print("Pass" if score >= 60 else "Fail")
+
+# Nested ternary (use sparingly)
+grade = "A" if score >= 90 else "B" if score >= 80 else "C"
+print(f"Grade: {grade}")
+
+# Ternary with function calls
+numbers = [3, 7, 2, 9, 4]
+label = "many" if len(numbers) > 5 else "few"
+print(f"Items: {label}")
+
+# Ternary for default values
+username = ""
+display = username if username else "Guest"
+print(f"Welcome, {display}")
+
+# Practical examples
+temperature = 35
+clothing = "coat" if temperature < 50 else "t-shirt"
+print(f"Wear a {clothing}")
+
+balance = -50
+color = "red" if balance < 0 else "green"
+print(f"Balance color: {color}")
+
+items = []
+message = "Cart is empty" if not items else f"{len(items)} items"
+print(message)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Conditional", occurrence = 1 }
+description = "Move to 'Conditional'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "sparingly", occurrence = 1 }
+description = "Move to 'sparingly'"
+points = 75
+optimal_keys = 7

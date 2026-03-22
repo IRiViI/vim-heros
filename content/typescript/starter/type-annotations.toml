@@ -1,0 +1,53 @@
+[meta]
+id = "ts-starter-type-annotations"
+zone = "starter"
+language = "typescript"
+tags = ["types", "annotations", "declarations"]
+difficulty = 1
+
+[code]
+content = """
+// Type Annotations
+// VIM TIP: Use 'b' to jump backward by word.
+
+let city: string = "Portland";
+let population: number = 650000;
+let isCapital: boolean = false;
+
+let zipCode: string = "97201";
+let latitude: number = 45.5155;
+let longitude: number = -122.6789;
+
+let founded: number = 1845;
+let nickname: string = "Rose City";
+let counties: string = "Multnomah";
+
+let area: number = 145.09;
+let elevation: number = 50;
+
+console.log(city + " was founded in " + founded);
+console.log("Population: " + population);
+console.log("Nickname: " + nickname);
+console.log("Area: " + area + " sq miles");
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "population", occurrence = 1 }
+description = "Move to 'population'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "latitude", occurrence = 1 }
+description = "Move to 'latitude'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "elevation", occurrence = 1 }
+description = "Move to 'elevation'"
+points = 50
+optimal_keys = 4

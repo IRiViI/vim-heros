@@ -1,0 +1,58 @@
+[meta]
+id = "ts-starter-typeof-instanceof"
+zone = "starter"
+language = "typescript"
+tags = ["typeof", "instanceof", "type-checking"]
+difficulty = 2
+
+[code]
+content = """
+// typeof and instanceof
+
+const name = "Alice";
+const count = 42;
+const active = true;
+const nothing = null;
+
+console.log(typeof name);
+console.log(typeof count);
+console.log(typeof active);
+console.log(typeof nothing);
+console.log(typeof undefined);
+
+function describe(value: string | number | boolean): string {
+  if (typeof value === "string") {
+    return "String: " + value;
+  } else if (typeof value === "number") {
+    return "Number: " + value.toFixed(2);
+  } else {
+    return "Boolean: " + value;
+  }
+}
+
+class Animal {
+  constructor(public species: string) {}
+}
+
+const dog = new Animal("Canine");
+const isAnimal = dog instanceof Animal;
+
+console.log(describe("hello"));
+console.log(describe(3.14));
+console.log(describe(true));
+console.log("Is animal:", isAnimal);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "describe", occurrence = 1 }
+description = "Move to 'describe'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Animal", occurrence = 1 }
+description = "Move to 'Animal'"
+points = 75
+optimal_keys = 8

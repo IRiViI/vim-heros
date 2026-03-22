@@ -1,0 +1,83 @@
+[meta]
+id = "ts-junior-iterator-protocol"
+zone = "junior"
+language = "typescript"
+tags = ["iterators", "generators", "protocol"]
+difficulty = 4
+
+[code]
+content = """
+// VIM TIP: Use '%' to jump between matching brackets, braces, or parentheses.
+class NumberRange implements Iterable<number> {
+  constructor(
+    private start: number,
+    private end: number,
+    private step: number = 1
+  ) {}
+
+  [Symbol.iterator](): Iterator<number> {
+    let current = this.start;
+    const end = this.end;
+    const step = this.step;
+
+    return {
+      next(): IteratorResult<number> {
+        if (current <= end) {
+          const value = current;
+          current += step;
+          return { value, done: false };
+        }
+        return { value: undefined, done: true };
+      },
+    };
+  }
+}
+
+function* fibonacci(limit: number): Generator<number> {
+  let a = 0;
+  let b = 1;
+  while (a <= limit) {
+    yield a;
+    [a, b] = [b, a + b];
+  }
+}
+
+function* take<T>(iterable: Iterable<T>, count: number): Generator<T> {
+  let taken = 0;
+  for (const item of iterable) {
+    if (taken >= count) break;
+    yield item;
+    taken++;
+  }
+}
+
+const range = new NumberRange(1, 100, 5);
+for (const num of take(range, 10)) {
+  console.log(num);
+}
+
+for (const fib of fibonacci(1000)) {
+  console.log(fib);
+}
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "NumberRange", occurrence = 1 }
+description = "Move to 'NumberRange'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fibonacci", occurrence = 1 }
+description = "Move to 'fibonacci'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "take", occurrence = 1 }
+description = "Move to 'take' generator"
+points = 100
+optimal_keys = 6

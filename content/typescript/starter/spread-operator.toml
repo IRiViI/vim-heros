@@ -1,0 +1,54 @@
+[meta]
+id = "ts-starter-spread-operator"
+zone = "starter"
+language = "typescript"
+tags = ["spread", "operator", "arrays", "objects"]
+difficulty = 2
+
+[code]
+content = """
+// Spread Operator
+
+const original = [1, 2, 3];
+const copy = [...original];
+const extended = [...original, 4, 5, 6];
+
+const first = ["a", "b"];
+const second = ["c", "d"];
+const combined = [...first, ...second];
+
+const defaults = {
+  theme: "light",
+  fontSize: 14,
+  language: "en"
+};
+
+const userPrefs = {
+  theme: "dark",
+  fontSize: 16
+};
+
+const merged = { ...defaults, ...userPrefs };
+
+const baseConfig = { debug: false, verbose: false };
+const devConfig = { ...baseConfig, debug: true };
+
+console.log("Extended:", extended);
+console.log("Combined:", combined);
+console.log("Merged:", merged);
+console.log("Dev config:", devConfig);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "original", occurrence = 1 }
+description = "Move to 'original'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "merged", occurrence = 1 }
+description = "Move to 'merged'"
+points = 75
+optimal_keys = 7

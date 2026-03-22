@@ -1,0 +1,78 @@
+[meta]
+id = "ts-junior-abstract-classes"
+zone = "junior"
+language = "typescript"
+tags = ["abstract-classes", "inheritance"]
+difficulty = 4
+
+[code]
+content = """
+abstract class Shape {
+  abstract readonly name: string;
+  abstract area(): number;
+  abstract perimeter(): number;
+
+  describe(): string {
+    return `${this.name}: area=${this.area().toFixed(2)}, perimeter=${this.perimeter().toFixed(2)}`;
+  }
+}
+
+class Circle extends Shape {
+  readonly name = "Circle";
+
+  constructor(private radius: number) {
+    super();
+  }
+
+  area(): number {
+    return Math.PI * this.radius ** 2;
+  }
+
+  perimeter(): number {
+    return 2 * Math.PI * this.radius;
+  }
+}
+
+class Rectangle extends Shape {
+  readonly name = "Rectangle";
+
+  constructor(
+    private width: number,
+    private height: number
+  ) {
+    super();
+  }
+
+  area(): number {
+    return this.width * this.height;
+  }
+
+  perimeter(): number {
+    return 2 * (this.width + this.height);
+  }
+}
+
+const shapes: Shape[] = [new Circle(5), new Rectangle(4, 6)];
+shapes.forEach((s) => console.log(s.describe()));
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Shape", occurrence = 1 }
+description = "Move to 'Shape'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "perimeter", occurrence = 1 }
+description = "Move to 'perimeter'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Rectangle", occurrence = 1 }
+description = "Move to 'Rectangle'"
+points = 100
+optimal_keys = 7

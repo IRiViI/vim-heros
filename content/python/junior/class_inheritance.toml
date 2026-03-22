@@ -1,0 +1,70 @@
+[meta]
+id = "py-junior-class-inheritance"
+zone = "junior"
+language = "python"
+tags = ["classes", "inheritance", "super"]
+difficulty = 3
+
+[code]
+content = """
+class Animal:
+    def __init__(self, name, species):
+        self.name = name
+        self.species = species
+        self.energy = 100
+
+    def speak(self):
+        raise NotImplementedError("Subclasses must implement speak()")
+
+    def eat(self, food):
+        self.energy += 10
+        return f"{self.name} eats {food}"
+
+
+class Dog(Animal):
+    def __init__(self, name, breed):
+        super().__init__(name, species="Canis familiaris")
+        self.breed = breed
+        self.tricks = []
+
+    def speak(self):
+        return f"{self.name} says: Woof!"
+
+    def learn_trick(self, trick):
+        self.tricks.append(trick)
+        return f"{self.name} learned {trick}"
+
+
+class Cat(Animal):
+    def __init__(self, name, indoor=True):
+        super().__init__(name, species="Felis catus")
+        self.indoor = indoor
+
+    def speak(self):
+        return f"{self.name} says: Meow!"
+
+    def purr(self):
+        self.energy -= 5
+        return f"{self.name} is purring softly"
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "NotImplementedError", occurrence = 1 }
+description = "Move to 'NotImplementedError'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "breed", occurrence = 1 }
+description = "Move to 'breed'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "purr", occurrence = 1 }
+description = "Move to 'purr'"
+points = 100
+optimal_keys = 6

@@ -1,0 +1,58 @@
+[meta]
+id = "py-starter-file-basics"
+zone = "starter"
+language = "python"
+tags = ["files", "reading", "writing"]
+difficulty = 2
+
+[code]
+content = """
+# Basic File Concepts
+
+# Writing to a file
+with open("output.txt", "w") as file:
+    file.write("Hello, World!\\n")
+    file.write("This is line two.\\n")
+    file.write("Python file handling is easy.\\n")
+
+# Reading entire file
+with open("output.txt", "r") as file:
+    content = file.read()
+    print(content)
+
+# Reading line by line
+with open("output.txt", "r") as file:
+    for line in file:
+        print(line.strip())
+
+# Reading into a list
+with open("output.txt", "r") as file:
+    lines = file.readlines()
+    print(f"Number of lines: {len(lines)}")
+
+# Appending to a file
+with open("output.txt", "a") as file:
+    file.write("This line was appended.\\n")
+
+# Writing a list of lines
+data = ["apple\\n", "banana\\n", "cherry\\n"]
+with open("fruits.txt", "w") as file:
+    file.writelines(data)
+
+# Check if file operations succeeded
+print("File operations complete!")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Writing", occurrence = 1 }
+description = "Move to first 'Writing'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Appending", occurrence = 1 }
+description = "Move to 'Appending'"
+points = 75
+optimal_keys = 7

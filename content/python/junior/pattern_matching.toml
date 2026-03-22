@@ -1,0 +1,77 @@
+[meta]
+id = "py-junior-pattern-matching"
+zone = "junior"
+language = "python"
+tags = ["match", "case", "structural"]
+difficulty = 4
+
+[code]
+content = """
+# Vim tip: Use :set number to toggle line numbers in Vim
+from dataclasses import dataclass
+
+
+@dataclass
+class Point:
+    x: float
+    y: float
+
+
+def describe_point(point):
+    match point:
+        case Point(x=0, y=0):
+            return "origin"
+        case Point(x=0, y=y):
+            return f"on y-axis at {y}"
+        case Point(x=x, y=0):
+            return f"on x-axis at {x}"
+        case Point(x=x, y=y) if x == y:
+            return f"on diagonal at {x}"
+        case Point(x=x, y=y):
+            return f"at ({x}, {y})"
+
+
+def handle_command(command):
+    match command.split():
+        case ["quit" | "exit"]:
+            return "Goodbye!"
+        case ["go", direction]:
+            return f"Moving {direction}"
+        case ["pick", "up", *items]:
+            return f"Picking up: {', '.join(items)}"
+        case ["attack", target, "with", weapon]:
+            return f"Attacking {target} with {weapon}"
+        case _:
+            return "Unknown command"
+
+
+def classify_response(response):
+    match response:
+        case {"status": 200, "data": data}:
+            return f"Success: {len(data)} records"
+        case {"status": status, "error": msg} if status >= 400:
+            return f"Error {status}: {msg}"
+        case {"status": status}:
+            return f"Status: {status}"
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "describe_point", occurrence = 1 }
+description = "Move to 'describe_point'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "handle_command", occurrence = 1 }
+description = "Move to 'handle_command'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "classify_response", occurrence = 1 }
+description = "Move to 'classify_response'"
+points = 100
+optimal_keys = 6

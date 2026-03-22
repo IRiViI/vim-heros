@@ -196,9 +196,36 @@ impl App {
     /// Returns true if a frame should be rendered.
     pub fn tick(&mut self) -> bool {
         match self.engine.state {
+            GameState::Countdown => self.tick_countdown(),
             GameState::Playing => self.tick_playing(),
             GameState::GameOver | GameState::LevelComplete => self.tick_game_over(),
         }
+    }
+
+    fn tick_countdown(&mut self) -> bool {
+        // Check if countdown is done
+        if self.engine.check_countdown() {
+            return true;
+        }
+
+        // Consume input during countdown (allow quit, but don't penalize)
+        if event::poll(Duration::from_millis(50)).unwrap_or(false) {
+            if let Ok(Event::Key(key)) = event::read() {
+                if key.modifiers.contains(KeyModifiers::CONTROL)
+                    && key.code == KeyCode::Char('c')
+                {
+                    self.running = false;
+                    return true;
+                }
+                if key.code == KeyCode::Char('q') {
+                    self.running = false;
+                    return true;
+                }
+            }
+        }
+
+        // Re-render each tick so the countdown number updates
+        true
     }
 
     fn tick_playing(&mut self) -> bool {

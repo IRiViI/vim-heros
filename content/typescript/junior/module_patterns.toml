@@ -1,0 +1,71 @@
+[meta]
+id = "ts-junior-module-patterns"
+zone = "junior"
+language = "typescript"
+tags = ["modules", "export", "import"]
+difficulty = 3
+
+[code]
+content = """
+// VIM TIP: Use 'da"' to delete around double quotes including the quotes.
+export interface Logger {
+  debug(message: string): void;
+  info(message: string): void;
+  warn(message: string): void;
+  error(message: string): void;
+}
+
+export enum LogLevel {
+  DEBUG = 0,
+  INFO = 1,
+  WARN = 2,
+  ERROR = 3,
+}
+
+export function createLogger(
+  prefix: string,
+  minLevel: LogLevel = LogLevel.INFO
+): Logger {
+  const log = (level: LogLevel, label: string, msg: string) => {
+    if (level >= minLevel) {
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] [${label}] ${prefix}: ${msg}`);
+    }
+  };
+
+  return {
+    debug: (msg) => log(LogLevel.DEBUG, "DEBUG", msg),
+    info: (msg) => log(LogLevel.INFO, "INFO", msg),
+    warn: (msg) => log(LogLevel.WARN, "WARN", msg),
+    error: (msg) => log(LogLevel.ERROR, "ERROR", msg),
+  };
+}
+
+export default createLogger;
+
+const appLogger = createLogger("App", LogLevel.DEBUG);
+appLogger.info("Application started");
+appLogger.debug("Loading configuration");
+appLogger.warn("Deprecated API usage detected");
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Logger", occurrence = 1 }
+description = "Move to 'Logger'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "createLogger", occurrence = 1 }
+description = "Move to 'createLogger'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "timestamp", occurrence = 1 }
+description = "Move to 'timestamp'"
+points = 100
+optimal_keys = 7

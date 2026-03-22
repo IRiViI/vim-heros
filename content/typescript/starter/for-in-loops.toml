@@ -1,0 +1,55 @@
+[meta]
+id = "ts-starter-for-in-loops"
+zone = "starter"
+language = "typescript"
+tags = ["for-in", "loops", "objects"]
+difficulty = 1
+
+[code]
+content = """
+// For...in Loops (Object Keys)
+// VIM TIP: Use '0' to jump to the beginning of a line.
+
+const settings = {
+  theme: "dark",
+  fontSize: 14,
+  language: "en",
+  autoSave: true,
+  tabSize: 2
+};
+
+for (const key in settings) {
+  console.log(key, "=", settings[key as keyof typeof settings]);
+}
+
+const inventory = {
+  apples: 12,
+  bananas: 6,
+  oranges: 8,
+  grapes: 15
+};
+
+let totalItems = 0;
+
+for (const item in inventory) {
+  const count = inventory[item as keyof typeof inventory];
+  totalItems = totalItems + count;
+  console.log(item + ":", count);
+}
+
+console.log("Total items:", totalItems);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "settings", occurrence = 1 }
+description = "Move to 'settings'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "inventory", occurrence = 1 }
+description = "Move to 'inventory'"
+points = 75
+optimal_keys = 6

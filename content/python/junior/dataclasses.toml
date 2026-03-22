@@ -1,0 +1,75 @@
+[meta]
+id = "py-junior-dataclasses"
+zone = "junior"
+language = "python"
+tags = ["dataclass", "typing", "structured"]
+difficulty = 3
+
+[code]
+content = """
+from dataclasses import dataclass, field
+from typing import Optional
+
+
+@dataclass
+class Address:
+    street: str
+    city: str
+    state: str
+    zip_code: str
+    country: str = "US"
+
+
+@dataclass
+class Employee:
+    name: str
+    employee_id: int
+    department: str
+    salary: float
+    address: Optional[Address] = None
+    skills: list[str] = field(default_factory=list)
+
+    @property
+    def annual_bonus(self):
+        return self.salary * 0.10
+
+    def add_skill(self, skill):
+        if skill not in self.skills:
+            self.skills.append(skill)
+
+    def promote(self, raise_amount):
+        self.salary += raise_amount
+        return self.salary
+
+
+@dataclass(frozen=True)
+class Coordinate:
+    latitude: float
+    longitude: float
+
+    def distance_to(self, other):
+        dx = self.latitude - other.latitude
+        dy = self.longitude - other.longitude
+        return (dx ** 2 + dy ** 2) ** 0.5
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Employee", occurrence = 1 }
+description = "Move to 'Employee'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "annual_bonus", occurrence = 1 }
+description = "Move to 'annual_bonus'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Coordinate", occurrence = 1 }
+description = "Move to 'Coordinate'"
+points = 100
+optimal_keys = 6

@@ -1,0 +1,76 @@
+[meta]
+id = "ts-junior-promise-all-race"
+zone = "junior"
+language = "typescript"
+tags = ["promises", "promise-all", "promise-race"]
+difficulty = 4
+
+[code]
+content = """
+// VIM TIP: Use 'gg' to go to top of file and 'G' to go to bottom.
+interface ServiceHealth {
+  service: string;
+  healthy: boolean;
+  latency: number;
+}
+
+async function checkService(name: string): Promise<ServiceHealth> {
+  const start = performance.now();
+  await new Promise((r) => setTimeout(r, Math.random() * 2000));
+  return {
+    service: name,
+    healthy: Math.random() > 0.2,
+    latency: performance.now() - start,
+  };
+}
+
+async function healthCheck(): Promise<ServiceHealth[]> {
+  const services = ["database", "cache", "auth", "storage"];
+  const results = await Promise.all(
+    services.map((s) => checkService(s))
+  );
+  return results;
+}
+
+async function fastestResponse(): Promise<ServiceHealth> {
+  const services = ["primary-db", "replica-db", "cache-layer"];
+  return Promise.race(
+    services.map((s) => checkService(s))
+  );
+}
+
+async function settledResults(): Promise<void> {
+  const checks = [checkService("api"), checkService("cdn")];
+  const results = await Promise.allSettled(checks);
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      console.log(`OK: ${result.value.service}`);
+    } else {
+      console.log(`FAIL: ${result.reason}`);
+    }
+  }
+}
+
+healthCheck().then(console.log);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "ServiceHealth", occurrence = 1 }
+description = "Move to 'ServiceHealth'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "healthCheck", occurrence = 1 }
+description = "Move to 'healthCheck'"
+points = 100
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "settledResults", occurrence = 1 }
+description = "Move to 'settledResults'"
+points = 100
+optimal_keys = 8

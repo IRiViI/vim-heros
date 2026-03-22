@@ -1,0 +1,62 @@
+[meta]
+id = "py-starter-string-slicing"
+zone = "starter"
+language = "python"
+tags = ["strings", "slicing", "indexing"]
+difficulty = 1
+
+[code]
+content = """
+# String Slicing
+
+message = "Hello, Python World!"
+
+# Indexing single characters
+first = message[0]
+last = message[-1]
+print(f"First: {first}, Last: {last}")
+
+# Basic slicing
+hello = message[0:5]
+python = message[7:13]
+print(f"Slice 1: {hello}")
+print(f"Slice 2: {python}")
+
+# Shorthand slicing
+from_start = message[:5]
+to_end = message[7:]
+print(f"From start: {from_start}")
+print(f"To end: {to_end}")
+
+# Step slicing
+every_other = message[::2]
+reversed_msg = message[::-1]
+print(f"Every other: {every_other}")
+print(f"Reversed: {reversed_msg}")
+
+# Practical examples
+email = "user@example.com"
+username = email[:email.index("@")]
+domain = email[email.index("@") + 1:]
+print(f"Username: {username}")
+print(f"Domain: {domain}")
+
+# Check palindrome
+word = "racecar"
+is_palindrome = word == word[::-1]
+print(f"'{word}' is palindrome: {is_palindrome}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Indexing", occurrence = 1 }
+description = "Move to 'Indexing'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "palindrome", occurrence = 1 }
+description = "Move to first 'palindrome'"
+points = 75
+optimal_keys = 7

@@ -1,0 +1,81 @@
+[meta]
+id = "py-junior-binary-search"
+zone = "junior"
+language = "python"
+tags = ["binary-search", "algorithms", "searching"]
+difficulty = 4
+
+[code]
+content = """
+def binary_search(sorted_list, target):
+    \"\"\"Find target in a sorted list, return index or -1.\"\"\"
+    left = 0
+    right = len(sorted_list) - 1
+
+    while left <= right:
+        mid = (left + right) // 2
+        current = sorted_list[mid]
+
+        if current == target:
+            return mid
+        elif current < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+
+    return -1
+
+
+def binary_search_recursive(arr, target, left=0, right=None):
+    \"\"\"Recursive version of binary search.\"\"\"
+    if right is None:
+        right = len(arr) - 1
+    if left > right:
+        return -1
+    mid = (left + right) // 2
+    if arr[mid] == target:
+        return mid
+    elif arr[mid] < target:
+        return binary_search_recursive(arr, target, mid + 1, right)
+    else:
+        return binary_search_recursive(arr, target, left, mid - 1)
+
+
+def find_insertion_point(sorted_list, value):
+    \"\"\"Find where to insert value to keep list sorted.\"\"\"
+    left = 0
+    right = len(sorted_list)
+    while left < right:
+        mid = (left + right) // 2
+        if sorted_list[mid] < value:
+            left = mid + 1
+        else:
+            right = mid
+    return left
+
+
+data = list(range(0, 100, 3))
+index = binary_search(data, 42)
+insert_at = find_insertion_point(data, 50)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "binary_search", occurrence = 1 }
+description = "Move to 'binary_search'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "binary_search_recursive", occurrence = 1 }
+description = "Move to 'binary_search_recursive'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "find_insertion_point", occurrence = 1 }
+description = "Move to 'find_insertion_point'"
+points = 150
+optimal_keys = 7

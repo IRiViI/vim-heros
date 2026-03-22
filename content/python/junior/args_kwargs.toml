@@ -1,0 +1,68 @@
+[meta]
+id = "py-junior-args-kwargs"
+zone = "junior"
+language = "python"
+tags = ["args", "kwargs", "variadic"]
+difficulty = 3
+
+[code]
+content = """
+def log_message(level, *args, **kwargs):
+    \"\"\"Flexible logging with variable arguments.\"\"\"
+    separator = kwargs.get("sep", " ")
+    prefix = kwargs.get("prefix", "")
+    timestamp = kwargs.get("timestamp", True)
+
+    message = separator.join(str(a) for a in args)
+    if prefix:
+        message = f"{prefix} {message}"
+    if timestamp:
+        from datetime import datetime
+        now = datetime.now().strftime("%H:%M:%S")
+        message = f"[{now}] [{level}] {message}"
+    return message
+
+
+def compose(*functions):
+    \"\"\"Compose multiple functions into one.\"\"\"
+    def composed(value):
+        result = value
+        for func in reversed(functions):
+            result = func(result)
+        return result
+    return composed
+
+
+def merge_configs(**defaults):
+    \"\"\"Create a config merger with default values.\"\"\"
+    def update(**overrides):
+        config = {**defaults, **overrides}
+        return config
+    return update
+
+
+make_config = merge_configs(debug=False, verbose=True, retries=3)
+dev_config = make_config(debug=True, retries=5)
+prod_config = make_config(verbose=False)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "separator", occurrence = 1 }
+description = "Move to 'separator'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "compose", occurrence = 1 }
+description = "Move to 'compose'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "merge_configs", occurrence = 1 }
+description = "Move to 'merge_configs'"
+points = 100
+optimal_keys = 6

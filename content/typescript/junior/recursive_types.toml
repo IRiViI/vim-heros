@@ -1,0 +1,85 @@
+[meta]
+id = "ts-junior-recursive-types"
+zone = "junior"
+language = "typescript"
+tags = ["recursive-types", "tree-structures"]
+difficulty = 4
+
+[code]
+content = """
+// VIM TIP: Use 'zz' to center the current line in the viewport.
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
+interface TreeNode<T> {
+  value: T;
+  children: TreeNode<T>[];
+}
+
+function createNode<T>(value: T, children: TreeNode<T>[] = []): TreeNode<T> {
+  return { value, children };
+}
+
+function traverseDepthFirst<T>(
+  node: TreeNode<T>,
+  visitor: (value: T, depth: number) => void,
+  depth: number = 0
+): void {
+  visitor(node.value, depth);
+  for (const child of node.children) {
+    traverseDepthFirst(child, visitor, depth + 1);
+  }
+}
+
+function findInTree<T>(
+  node: TreeNode<T>,
+  predicate: (value: T) => boolean
+): T | undefined {
+  if (predicate(node.value)) return node.value;
+  for (const child of node.children) {
+    const found = findInTree(child, predicate);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+const fileSystem = createNode("/", [
+  createNode("src", [
+    createNode("index.ts"),
+    createNode("utils.ts"),
+  ]),
+  createNode("tests", [
+    createNode("index.test.ts"),
+  ]),
+]);
+
+traverseDepthFirst(fileSystem, (val, depth) => {
+  console.log(`${"  ".repeat(depth)}${val}`);
+});
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "JsonValue", occurrence = 1 }
+description = "Move to 'JsonValue'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "traverseDepthFirst", occurrence = 1 }
+description = "Move to 'traverseDepthFirst'"
+points = 125
+optimal_keys = 10
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "findInTree", occurrence = 1 }
+description = "Move to 'findInTree'"
+points = 100
+optimal_keys = 7

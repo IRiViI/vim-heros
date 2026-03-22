@@ -1,0 +1,75 @@
+[meta]
+id = "py-junior-multiple-return"
+zone = "junior"
+language = "python"
+tags = ["return", "tuples", "unpacking"]
+difficulty = 3
+
+[code]
+content = """
+def analyze_text(text):
+    \"\"\"Return multiple statistics about a text string.\"\"\"
+    words = text.split()
+    word_count = len(words)
+    char_count = len(text)
+    unique_words = len(set(w.lower() for w in words))
+    avg_word_len = sum(len(w) for w in words) / max(word_count, 1)
+    return word_count, char_count, unique_words, round(avg_word_len, 2)
+
+
+def min_max_avg(numbers):
+    \"\"\"Return minimum, maximum, and average of a sequence.\"\"\"
+    if not numbers:
+        return None, None, None
+    minimum = min(numbers)
+    maximum = max(numbers)
+    average = sum(numbers) / len(numbers)
+    return minimum, maximum, round(average, 2)
+
+
+def divide_with_remainder(dividend, divisor):
+    \"\"\"Return quotient and remainder as a tuple.\"\"\"
+    if divisor == 0:
+        raise ZeroDivisionError("Cannot divide by zero")
+    quotient = dividend // divisor
+    remainder = dividend % divisor
+    return quotient, remainder
+
+
+def parse_full_name(full_name):
+    \"\"\"Split a full name into components.\"\"\"
+    parts = full_name.strip().split()
+    if len(parts) == 1:
+        return parts[0], "", ""
+    elif len(parts) == 2:
+        return parts[0], "", parts[1]
+    else:
+        return parts[0], " ".join(parts[1:-1]), parts[-1]
+
+
+sample = "The quick brown fox jumps over the lazy dog"
+words, chars, unique, avg_len = analyze_text(sample)
+low, high, mean = min_max_avg([4, 8, 15, 16, 23, 42])
+first, middle, last = parse_full_name("Jean-Luc Picard")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "analyze_text", occurrence = 1 }
+description = "Move to 'analyze_text'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "min_max_avg", occurrence = 1 }
+description = "Move to 'min_max_avg'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "parse_full_name", occurrence = 1 }
+description = "Move to 'parse_full_name'"
+points = 100
+optimal_keys = 6

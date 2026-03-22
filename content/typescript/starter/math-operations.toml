@@ -1,0 +1,57 @@
+[meta]
+id = "ts-starter-math-operations"
+zone = "starter"
+language = "typescript"
+tags = ["math", "numbers", "operators"]
+difficulty = 1
+
+[code]
+content = """
+// Math Operations
+
+const a = 15;
+const b = 4;
+
+const addition = a + b;
+const subtraction = a - b;
+const multiplication = a * b;
+const division = a / b;
+const modulo = a % b;
+const exponent = a ** 2;
+
+// Math object methods
+const rounded = Math.round(3.7);
+const floored = Math.floor(3.7);
+const ceiled = Math.ceil(3.2);
+const absolute = Math.abs(-42);
+const maximum = Math.max(10, 20, 5, 30);
+const minimum = Math.min(10, 20, 5, 30);
+const squareRoot = Math.sqrt(144);
+const random = Math.random();
+
+// Practical calculations
+const price = 49.99;
+const taxRate = 0.08;
+const totalPrice = price + price * taxRate;
+const roundedPrice = Math.round(totalPrice * 100) / 100;
+
+console.log("Addition:", addition);
+console.log("Division:", division);
+console.log("Max:", maximum);
+console.log("Square root:", squareRoot);
+console.log("Total price:", roundedPrice);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "addition", occurrence = 1 }
+description = "Move to 'addition'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "squareRoot", occurrence = 1 }
+description = "Move to 'squareRoot'"
+points = 75
+optimal_keys = 7

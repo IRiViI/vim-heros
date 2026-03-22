@@ -1,0 +1,78 @@
+[meta]
+id = "ts-junior-readonly-properties"
+zone = "junior"
+language = "typescript"
+tags = ["readonly", "immutability"]
+difficulty = 3
+
+[code]
+content = """
+interface ImmutablePoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+interface ImmutableConfig {
+  readonly apiUrl: string;
+  readonly maxRetries: number;
+  readonly headers: Readonly<Record<string, string>>;
+}
+
+class ImmutableList<T> {
+  private readonly items: ReadonlyArray<T>;
+
+  constructor(items: T[]) {
+    this.items = Object.freeze([...items]);
+  }
+
+  get length(): number {
+    return this.items.length;
+  }
+
+  get(index: number): T {
+    return this.items[index];
+  }
+
+  append(item: T): ImmutableList<T> {
+    return new ImmutableList([...this.items, item]);
+  }
+
+  filter(predicate: (item: T) => boolean): ImmutableList<T> {
+    return new ImmutableList(this.items.filter(predicate));
+  }
+
+  map<U>(transform: (item: T) => U): ImmutableList<U> {
+    return new ImmutableList(this.items.map(transform));
+  }
+
+  toArray(): T[] {
+    return [...this.items];
+  }
+}
+
+const list = new ImmutableList([1, 2, 3, 4, 5]);
+const filtered = list.filter((n) => n % 2 === 0);
+const mapped = filtered.map((n) => n * 10);
+console.log(mapped.toArray());
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "ImmutablePoint", occurrence = 1 }
+description = "Move to 'ImmutablePoint'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "ImmutableList", occurrence = 1 }
+description = "Move to 'ImmutableList'"
+points = 100
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "predicate", occurrence = 1 }
+description = "Move to 'predicate'"
+points = 100
+optimal_keys = 8

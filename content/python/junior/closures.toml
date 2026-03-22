@@ -1,0 +1,73 @@
+[meta]
+id = "py-junior-closures"
+zone = "junior"
+language = "python"
+tags = ["closures", "scope", "functions"]
+difficulty = 4
+
+[code]
+content = """
+def make_counter(start=0):
+    \"\"\"Create a counter function with enclosed state.\"\"\"
+    count = start
+
+    def increment(step=1):
+        nonlocal count
+        count += step
+        return count
+
+    def get_value():
+        return count
+
+    def reset():
+        nonlocal count
+        count = start
+
+    increment.get = get_value
+    increment.reset = reset
+    return increment
+
+
+def make_multiplier(factor):
+    \"\"\"Return a function that multiplies by a fixed factor.\"\"\"
+    def multiply(x):
+        return x * factor
+    return multiply
+
+
+def make_validator(min_val, max_val):
+    \"\"\"Return a validation function for a numeric range.\"\"\"
+    def validate(value):
+        if not isinstance(value, (int, float)):
+            return False, "Must be numeric"
+        if value < min_val or value > max_val:
+            return False, f"Must be between {min_val} and {max_val}"
+        return True, "Valid"
+    return validate
+
+
+counter = make_counter(10)
+double = make_multiplier(2)
+check_age = make_validator(0, 150)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "make_counter", occurrence = 1 }
+description = "Move to 'make_counter'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "make_multiplier", occurrence = 1 }
+description = "Move to 'make_multiplier'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "make_validator", occurrence = 1 }
+description = "Move to 'make_validator'"
+points = 100
+optimal_keys = 6

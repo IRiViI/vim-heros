@@ -1,0 +1,63 @@
+[meta]
+id = "py-starter-constants-naming"
+zone = "starter"
+language = "python"
+tags = ["constants", "naming", "conventions"]
+difficulty = 1
+
+[code]
+content = """
+# Constants and Naming Conventions
+
+# Constants use UPPER_SNAKE_CASE
+MAX_RETRIES = 3
+PI = 3.14159
+BASE_URL = "https://api.example.com"
+DATABASE_NAME = "myapp_production"
+
+# Variables use lower_snake_case
+user_name = "alice"
+total_count = 0
+is_active = True
+
+# Function names use lower_snake_case
+def calculate_area(radius):
+    return PI * radius * radius
+
+def get_full_name(first, last):
+    return f"{first} {last}"
+
+# Class names use PascalCase (just showing naming)
+# class MyClass:
+#     pass
+
+# Avoid single letter names (except loops)
+# Bad: x = "Alice"
+# Good: user_name = "Alice"
+
+# Private convention uses leading underscore
+_internal_counter = 0
+_secret_key = "abc123"
+
+# Print examples
+area = calculate_area(5)
+print(f"Area: {area:.2f}")
+full = get_full_name("Alice", "Smith")
+print(f"Name: {full}")
+print(f"Max retries: {MAX_RETRIES}")
+print(f"Database: {DATABASE_NAME}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "UPPER_SNAKE_CASE", occurrence = 1 }
+description = "Move to 'UPPER_SNAKE_CASE'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "PascalCase", occurrence = 1 }
+description = "Move to 'PascalCase'"
+points = 75
+optimal_keys = 7

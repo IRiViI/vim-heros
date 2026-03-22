@@ -1,0 +1,53 @@
+[meta]
+id = "ts-starter-switch-case"
+zone = "starter"
+language = "typescript"
+tags = ["switch", "case", "control-flow"]
+difficulty = 1
+
+[code]
+content = """
+// Switch/Case Statements
+// VIM TIP: Use 'gg' to jump to the top of the file.
+
+const dayOfWeek = "Wednesday";
+let schedule: string;
+
+switch (dayOfWeek) {
+  case "Monday":
+    schedule = "Team standup at 9am";
+    break;
+  case "Tuesday":
+    schedule = "Code review session";
+    break;
+  case "Wednesday":
+    schedule = "Sprint planning";
+    break;
+  case "Thursday":
+    schedule = "Workshop afternoon";
+    break;
+  case "Friday":
+    schedule = "Demo and retro";
+    break;
+  default:
+    schedule = "Weekend - no meetings";
+    break;
+}
+
+console.log("Day:", dayOfWeek);
+console.log("Schedule:", schedule);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "dayOfWeek", occurrence = 1 }
+description = "Move to 'dayOfWeek'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "schedule", occurrence = 1 }
+description = "Move to 'schedule'"
+points = 75
+optimal_keys = 5

@@ -1,0 +1,67 @@
+[meta]
+id = "ts-junior-generic-constraints"
+zone = "junior"
+language = "typescript"
+tags = ["generics", "constraints", "extends"]
+difficulty = 3
+
+[code]
+content = """
+// VIM TIP: Use 'ci{' to change inside braces.
+interface HasLength {
+  length: number;
+}
+
+function logLength<T extends HasLength>(item: T): void {
+  console.log(`Length: ${item.length}`);
+}
+
+function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
+  return obj[key];
+}
+
+interface Identifiable {
+  id: string | number;
+}
+
+function mergeById<T extends Identifiable>(
+  items: T[],
+  updates: Partial<T>[]
+): T[] {
+  return items.map((item) => {
+    const update = updates.find(
+      (u) => (u as Identifiable).id === item.id
+    );
+    return update ? { ...item, ...update } : item;
+  });
+}
+
+const users = [
+  { id: 1, name: "Alice", role: "admin" },
+  { id: 2, name: "Bob", role: "user" },
+];
+
+const merged = mergeById(users, [{ id: 1, name: "Alicia" }]);
+console.log(merged);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "HasLength", occurrence = 1 }
+description = "Move to 'HasLength'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "getProperty", occurrence = 1 }
+description = "Move to 'getProperty'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "mergeById", occurrence = 1 }
+description = "Move to 'mergeById'"
+points = 100
+optimal_keys = 6

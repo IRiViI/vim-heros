@@ -1,0 +1,60 @@
+[meta]
+id = "py-starter-number-guessing"
+zone = "starter"
+language = "python"
+tags = ["game", "loops", "conditionals"]
+difficulty = 1
+
+[code]
+content = """
+# Number Guessing Game
+
+import random
+
+# VIM TIP: Use 'x' to delete the character under the cursor.
+
+secret = random.randint(1, 50)
+max_attempts = 7
+attempts = 0
+guessed = False
+
+print("Welcome to the Number Guessing Game!")
+print(f"I'm thinking of a number between 1 and 50")
+print(f"You have {max_attempts} attempts")
+
+while attempts < max_attempts:
+    attempts += 1
+    guess = random.randint(1, 50)
+
+    if guess == secret:
+        print(f"Correct! You got it in {attempts} attempts!")
+        guessed = True
+        break
+    elif guess < secret:
+        print(f"Attempt {attempts}: {guess} is too low")
+    else:
+        print(f"Attempt {attempts}: {guess} is too high")
+
+    remaining = max_attempts - attempts
+    if remaining > 0:
+        print(f"Attempts remaining: {remaining}")
+
+if not guessed:
+    print(f"Game over! The number was {secret}")
+
+print("Thanks for playing!")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "secret", occurrence = 1 }
+description = "Move to first 'secret'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "remaining", occurrence = 1 }
+description = "Move to 'remaining'"
+points = 75
+optimal_keys = 7

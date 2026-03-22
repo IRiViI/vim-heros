@@ -1,0 +1,62 @@
+[meta]
+id = "py-starter-while-loops"
+zone = "starter"
+language = "python"
+tags = ["while", "loops", "control-flow"]
+difficulty = 1
+
+[code]
+content = """
+# While Loops in Python
+
+# VIM TIP: Use 'b' to jump backward by word.
+
+count = 0
+while count < 5:
+    print(f"Count is {count}")
+    count += 1
+
+# Countdown timer
+seconds = 10
+while seconds > 0:
+    print(f"Time left: {seconds}")
+    seconds -= 1
+print("Blast off!")
+
+# User input simulation
+password = ""
+attempts = 3
+while attempts > 0:
+    password = "secret"
+    if password == "secret":
+        print("Access granted")
+        break
+    attempts -= 1
+
+# Doubling until threshold
+value = 1
+while value < 100:
+    value *= 2
+print(f"Final value: {value}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Countdown", occurrence = 1 }
+description = "Move to 'Countdown'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "threshold", occurrence = 1 }
+description = "Move to 'threshold'"
+points = 75
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "granted", occurrence = 1 }
+description = "Move to 'granted'"
+points = 50
+optimal_keys = 4

@@ -1,0 +1,63 @@
+[meta]
+id = "ts-starter-truthy-falsy"
+zone = "starter"
+language = "typescript"
+tags = ["truthy", "falsy", "boolean", "coercion"]
+difficulty = 2
+
+[code]
+content = """
+// Truthy and Falsy Values
+// VIM TIP: Use 'zz' to center the current line on screen.
+
+// Falsy values in JavaScript/TypeScript
+const falsyValues = [false, 0, "", null, undefined, NaN];
+
+for (const val of falsyValues) {
+  if (!val) {
+    console.log("Falsy:", val, typeof val);
+  }
+}
+
+// Truthy values
+const truthyExamples = [true, 1, "hello", [], {}, -1, Infinity];
+
+for (const val of truthyExamples) {
+  if (val) {
+    console.log("Truthy:", val);
+  }
+}
+
+// Practical usage
+const username = "";
+const displayName = username || "Anonymous";
+
+const items: string[] = [];
+const hasItems = items.length > 0;
+
+const config = { debug: false };
+const isDebug = Boolean(config.debug);
+
+// Double negation to convert to boolean
+const input = "hello";
+const exists = !!input;
+
+console.log("Display:", displayName);
+console.log("Has items:", hasItems);
+console.log("Debug:", isDebug);
+console.log("Exists:", exists);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "falsyValues", occurrence = 1 }
+description = "Move to 'falsyValues'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "displayName", occurrence = 1 }
+description = "Move to 'displayName'"
+points = 75
+optimal_keys = 7

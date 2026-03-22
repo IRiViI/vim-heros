@@ -1,0 +1,69 @@
+[meta]
+id = "py-starter-sets"
+zone = "starter"
+language = "python"
+tags = ["sets", "unique", "operations"]
+difficulty = 2
+
+[code]
+content = """
+# Sets in Python
+
+# VIM TIP: Use 'gg' to jump to the first line of the file.
+
+fruits = {"apple", "banana", "cherry"}
+print(f"Fruits: {fruits}")
+
+# Add and remove
+fruits.add("date")
+fruits.discard("banana")
+print(f"Updated: {fruits}")
+
+# No duplicates
+numbers = {1, 2, 2, 3, 3, 3, 4}
+print(f"Unique numbers: {numbers}")
+
+# Set operations
+set_a = {1, 2, 3, 4, 5}
+set_b = {4, 5, 6, 7, 8}
+
+union = set_a | set_b
+intersection = set_a & set_b
+difference = set_a - set_b
+symmetric = set_a ^ set_b
+
+print(f"Union: {union}")
+print(f"Intersection: {intersection}")
+print(f"Difference: {difference}")
+print(f"Symmetric: {symmetric}")
+
+# Membership testing
+print(3 in set_a)
+print(9 in set_b)
+
+# Convert list to set to remove duplicates
+names = ["alice", "bob", "alice", "charlie", "bob"]
+unique_names = set(names)
+print(f"Unique: {unique_names}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "duplicates", occurrence = 1 }
+description = "Move to 'duplicates'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "intersection", occurrence = 1 }
+description = "Move to 'intersection'"
+points = 75
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Membership", occurrence = 1 }
+description = "Move to 'Membership'"
+points = 75
+optimal_keys = 8

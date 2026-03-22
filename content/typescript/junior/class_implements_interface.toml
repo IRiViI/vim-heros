@@ -1,0 +1,79 @@
+[meta]
+id = "ts-junior-class-implements"
+zone = "junior"
+language = "typescript"
+tags = ["classes", "interfaces", "implements"]
+difficulty = 3
+
+[code]
+content = """
+interface Serializable {
+  serialize(): string;
+  deserialize(data: string): void;
+}
+
+interface Validatable {
+  validate(): boolean;
+  errors(): string[];
+}
+
+class UserForm implements Serializable, Validatable {
+  constructor(
+    public name: string,
+    public email: string,
+    public age: number
+  ) {}
+
+  serialize(): string {
+    return JSON.stringify({
+      name: this.name,
+      email: this.email,
+      age: this.age,
+    });
+  }
+
+  deserialize(data: string): void {
+    const parsed = JSON.parse(data);
+    this.name = parsed.name;
+    this.email = parsed.email;
+    this.age = parsed.age;
+  }
+
+  validate(): boolean {
+    return this.errors().length === 0;
+  }
+
+  errors(): string[] {
+    const errs: string[] = [];
+    if (!this.name.trim()) errs.push("Name is required");
+    if (!this.email.includes("@")) errs.push("Invalid email");
+    if (this.age < 0 || this.age > 150) errs.push("Invalid age");
+    return errs;
+  }
+}
+
+const form = new UserForm("Jane", "jane@dev.io", 28);
+console.log(form.validate());
+console.log(form.serialize());
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Serializable", occurrence = 1 }
+description = "Move to 'Serializable'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Validatable", occurrence = 1 }
+description = "Move to 'Validatable'"
+points = 100
+optimal_keys = 6
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "deserialize", occurrence = 1 }
+description = "Move to 'deserialize'"
+points = 100
+optimal_keys = 8

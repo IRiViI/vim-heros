@@ -1,0 +1,57 @@
+[meta]
+id = "ts-starter-rest-parameters"
+zone = "starter"
+language = "typescript"
+tags = ["rest", "parameters", "functions"]
+difficulty = 2
+
+[code]
+content = """
+// Rest Parameters
+
+function sumAll(...numbers: number[]): number {
+  let total = 0;
+  for (const num of numbers) {
+    total = total + num;
+  }
+  return total;
+}
+
+function joinWords(separator: string, ...words: string[]): string {
+  return words.join(separator);
+}
+
+function logMessages(prefix: string, ...messages: string[]): void {
+  for (const msg of messages) {
+    console.log(prefix + ": " + msg);
+  }
+}
+
+const result1 = sumAll(1, 2, 3);
+const result2 = sumAll(10, 20, 30, 40, 50);
+
+const sentence = joinWords(" ", "Hello", "World", "Today");
+const csvLine = joinWords(",", "name", "age", "email");
+
+logMessages("INFO", "Server started", "Port 3000");
+logMessages("WARN", "Disk space low");
+
+console.log("Sum1:", result1);
+console.log("Sum2:", result2);
+console.log("Sentence:", sentence);
+console.log("CSV:", csvLine);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "sumAll", occurrence = 1 }
+description = "Move to 'sumAll'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "joinWords", occurrence = 1 }
+description = "Move to 'joinWords'"
+points = 75
+optimal_keys = 5

@@ -26,6 +26,10 @@ pub fn render(frame: &mut ratatui::Frame, app: &App) {
     if matches!(app.engine.state, GameState::GameOver | GameState::LevelComplete) {
         render_results(frame, app, chunks[1]);
     }
+
+    if app.engine.state == GameState::Countdown {
+        render_countdown(frame, app, chunks[1]);
+    }
 }
 
 /// Render the HUD bar: stars, level, score, combo.
@@ -395,6 +399,63 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color))
         .title(border_title);
+
+    let paragraph = Paragraph::new(text)
+        .block(block)
+        .alignment(Alignment::Center);
+
+    frame.render_widget(Clear, popup_area);
+    frame.render_widget(paragraph, popup_area);
+}
+
+/// Render the countdown overlay (3... 2... 1...).
+fn render_countdown(frame: &mut ratatui::Frame, app: &App, area: Rect) {
+    let remaining = app.engine.countdown_remaining();
+    let num_str = if remaining == 0 {
+        "GO!".to_string()
+    } else {
+        format!("{}", remaining)
+    };
+
+    let color = match remaining {
+        3 => Color::Red,
+        2 => Color::Yellow,
+        1 => Color::Green,
+        _ => Color::Green,
+    };
+
+    let text = vec![
+        Line::from(""),
+        Line::from(Span::styled(
+            format!(" Level {} ", app.level.display_id()),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            format!("\"{}\"", app.level.name),
+            Style::default().fg(Color::DarkGray),
+        )),
+        Line::from(""),
+        Line::from(Span::styled(
+            num_str,
+            Style::default()
+                .fg(color)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+    ];
+
+    let width: u16 = 28;
+    let height: u16 = text.len() as u16 + 2;
+    let x = area.x + (area.width.saturating_sub(width)) / 2;
+    let y = area.y + (area.height.saturating_sub(height)) / 2;
+    let popup_area = Rect::new(x, y, width, height);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan))
+        .title(" Get Ready ");
 
     let paragraph = Paragraph::new(text)
         .block(block)

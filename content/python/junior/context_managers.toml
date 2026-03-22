@@ -1,0 +1,70 @@
+[meta]
+id = "py-junior-context-managers"
+zone = "junior"
+language = "python"
+tags = ["context", "with", "resource"]
+difficulty = 4
+
+[code]
+content = """
+# Vim tip: Use ci" to change text inside double quotes
+import time
+from contextlib import contextmanager
+
+
+class DatabaseConnection:
+    \"\"\"Context manager for database connections.\"\"\"
+
+    def __init__(self, host, port=5432):
+        self.host = host
+        self.port = port
+        self.connected = False
+
+    def __enter__(self):
+        print(f"Connecting to {self.host}:{self.port}")
+        self.connected = True
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print("Closing connection")
+        self.connected = False
+        return False
+
+    def execute(self, query):
+        if not self.connected:
+            raise RuntimeError("Not connected")
+        return f"Result of: {query}"
+
+
+@contextmanager
+def timer_context(label):
+    start = time.perf_counter()
+    yield
+    elapsed = time.perf_counter() - start
+    print(f"{label}: {elapsed:.4f}s")
+
+
+with DatabaseConnection("localhost") as db:
+    result = db.execute("SELECT * FROM users")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "DatabaseConnection", occurrence = 1 }
+description = "Move to 'DatabaseConnection'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "contextmanager", occurrence = 1 }
+description = "Move to 'contextmanager'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "timer_context", occurrence = 1 }
+description = "Move to 'timer_context'"
+points = 100
+optimal_keys = 6

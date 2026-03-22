@@ -1,0 +1,65 @@
+[meta]
+id = "py-junior-sorting-key"
+zone = "junior"
+language = "python"
+tags = ["sorting", "key", "comparison"]
+difficulty = 3
+
+[code]
+content = """
+from operator import attrgetter, itemgetter
+
+
+students = [
+    {"name": "Alice", "gpa": 3.9, "credits": 90},
+    {"name": "Bob", "gpa": 3.2, "credits": 120},
+    {"name": "Carol", "gpa": 3.7, "credits": 100},
+    {"name": "Dave", "gpa": 3.5, "credits": 85},
+    {"name": "Eve", "gpa": 3.9, "credits": 110},
+]
+
+# Sort by single key
+by_gpa = sorted(students, key=itemgetter("gpa"), reverse=True)
+
+# Sort by multiple keys (gpa desc, then name asc)
+by_gpa_name = sorted(students, key=lambda s: (-s["gpa"], s["name"]))
+
+# Sort strings case-insensitively
+names = ["bob", "Alice", "carol", "Dave", "eve"]
+sorted_names = sorted(names, key=str.lower)
+
+# Custom sort: sort by last character
+words = ["banana", "apple", "cherry", "date", "elderberry"]
+by_last_char = sorted(words, key=lambda w: w[-1])
+
+# Stable sort demonstration: sort by length, preserve alpha order
+length_sorted = sorted(sorted(words), key=len)
+
+# Sort with None values handled
+mixed = [5, None, 3, None, 8, 1, None, 6]
+sorted_mixed = sorted(
+    mixed,
+    key=lambda x: (x is None, x if x is not None else 0),
+)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "attrgetter", occurrence = 1 }
+description = "Move to 'attrgetter'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "by_gpa_name", occurrence = 1 }
+description = "Move to 'by_gpa_name'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "sorted_mixed", occurrence = 1 }
+description = "Move to 'sorted_mixed'"
+points = 100
+optimal_keys = 6

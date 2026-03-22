@@ -1,0 +1,52 @@
+[meta]
+id = "ts-starter-variables"
+zone = "starter"
+language = "typescript"
+tags = ["variables", "let", "const"]
+difficulty = 1
+
+[code]
+content = """
+// Variables in TypeScript
+// VIM TIP: Use 'w' to jump forward by word.
+
+let username = "alice";
+let age = 25;
+let isActive = true;
+
+const maxRetries = 3;
+const appName = "MyApp";
+const version = "1.0.0";
+
+let score = 0;
+score = score + 10;
+score = score + 20;
+
+let greeting = "Hello, " + username;
+let message = greeting + "! Welcome to " + appName;
+
+console.log(message);
+console.log("Score:", score);
+console.log("Version:", version);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "username", occurrence = 1 }
+description = "Move to 'username'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "maxRetries", occurrence = 1 }
+description = "Move to 'maxRetries'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "greeting", occurrence = 1 }
+description = "Move to 'greeting'"
+points = 50
+optimal_keys = 4

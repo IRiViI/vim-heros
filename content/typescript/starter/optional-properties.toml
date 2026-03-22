@@ -1,0 +1,64 @@
+[meta]
+id = "ts-starter-optional-properties"
+zone = "starter"
+language = "typescript"
+tags = ["optional", "properties", "interfaces"]
+difficulty = 2
+
+[code]
+content = """
+// Optional Properties
+
+interface Config {
+  host: string;
+  port: number;
+  protocol?: string;
+  timeout?: number;
+  debug?: boolean;
+}
+
+const production: Config = {
+  host: "api.example.com",
+  port: 443,
+  protocol: "https"
+};
+
+const development: Config = {
+  host: "localhost",
+  port: 3000,
+  debug: true,
+  timeout: 5000
+};
+
+function createServer(config: Config): void {
+  const proto = config.protocol ?? "http";
+  const time = config.timeout ?? 3000;
+  console.log("Server:", proto + "://" + config.host + ":" + config.port);
+  console.log("Timeout:", time);
+  console.log("Debug:", config.debug ?? false);
+}
+
+createServer(production);
+createServer(development);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Config", occurrence = 1 }
+description = "Move to 'Config'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "production", occurrence = 1 }
+description = "Move to 'production'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "createServer", occurrence = 1 }
+description = "Move to 'createServer'"
+points = 75
+optimal_keys = 8

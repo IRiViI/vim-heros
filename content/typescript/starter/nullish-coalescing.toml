@@ -1,0 +1,54 @@
+[meta]
+id = "ts-starter-nullish-coalescing"
+zone = "starter"
+language = "typescript"
+tags = ["nullish-coalescing", "null", "undefined"]
+difficulty = 2
+
+[code]
+content = """
+// Nullish Coalescing (??)
+// VIM TIP: Use '*' to search for the word under your cursor.
+
+const input: string | null = null;
+const fallback = input ?? "default value";
+
+const userTheme: string | undefined = undefined;
+const theme = userTheme ?? "light";
+
+const port: number | null = null;
+const serverPort = port ?? 3000;
+
+const zero = 0;
+const emptyString = "";
+
+// ?? only falls back for null/undefined, not falsy values
+const keepZero = zero ?? 42;
+const keepEmpty = emptyString ?? "fallback";
+
+// Compare with || which treats falsy as fallback
+const loseZero = zero || 42;
+const loseEmpty = emptyString || "fallback";
+
+console.log("Fallback:", fallback);
+console.log("Theme:", theme);
+console.log("Port:", serverPort);
+console.log("Keep zero:", keepZero);
+console.log("Keep empty:", keepEmpty);
+console.log("Lose zero:", loseZero);
+console.log("Lose empty:", loseEmpty);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fallback", occurrence = 1 }
+description = "Move to 'fallback'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "serverPort", occurrence = 1 }
+description = "Move to 'serverPort'"
+points = 75
+optimal_keys = 6

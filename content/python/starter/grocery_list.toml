@@ -1,0 +1,62 @@
+[meta]
+id = "py-starter-grocery-list"
+zone = "starter"
+language = "python"
+tags = ["lists", "functions", "practical"]
+difficulty = 1
+
+[code]
+content = """
+# Grocery List Manager
+
+grocery_list = []
+
+def add_item(item):
+    grocery_list.append(item.lower())
+    print(f"Added '{item}' to the list")
+
+def remove_item(item):
+    if item.lower() in grocery_list:
+        grocery_list.remove(item.lower())
+        print(f"Removed '{item}' from the list")
+    else:
+        print(f"'{item}' not found in the list")
+
+def show_list():
+    if not grocery_list:
+        print("Your grocery list is empty!")
+        return
+    print("\\n--- Grocery List ---")
+    for i, item in enumerate(grocery_list, 1):
+        print(f"  {i}. {item}")
+    print(f"Total items: {len(grocery_list)}")
+
+# Build up a grocery list
+add_item("Bread")
+add_item("Milk")
+add_item("Eggs")
+add_item("Butter")
+add_item("Cheese")
+show_list()
+
+# Remove an item
+remove_item("Milk")
+show_list()
+
+# Try to remove something not in the list
+remove_item("Pizza")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "grocery_list", occurrence = 1 }
+description = "Move to 'grocery_list'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "remove_item", occurrence = 1 }
+description = "Move to 'remove_item'"
+points = 50
+optimal_keys = 5

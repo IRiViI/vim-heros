@@ -1,0 +1,75 @@
+[meta]
+id = "ts-junior-getters-setters"
+zone = "junior"
+language = "typescript"
+tags = ["classes", "getters", "setters"]
+difficulty = 3
+
+[code]
+content = """
+// VIM TIP: Use '/' to search for a word, then 'n' to jump to next occurrence.
+class Temperature {
+  private _celsius: number;
+
+  constructor(celsius: number) {
+    this._celsius = celsius;
+  }
+
+  get celsius(): number {
+    return this._celsius;
+  }
+
+  set celsius(value: number) {
+    if (value < -273.15) {
+      throw new RangeError("Below absolute zero");
+    }
+    this._celsius = value;
+  }
+
+  get fahrenheit(): number {
+    return this._celsius * 9 / 5 + 32;
+  }
+
+  set fahrenheit(value: number) {
+    this.celsius = (value - 32) * 5 / 9;
+  }
+
+  get kelvin(): number {
+    return this._celsius + 273.15;
+  }
+
+  set kelvin(value: number) {
+    this.celsius = value - 273.15;
+  }
+
+  toString(): string {
+    return `${this._celsius.toFixed(1)}C / ${this.fahrenheit.toFixed(1)}F / ${this.kelvin.toFixed(1)}K`;
+  }
+}
+
+const temp = new Temperature(100);
+console.log(temp.toString());
+temp.fahrenheit = 72;
+console.log(temp.celsius.toFixed(1));
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Temperature", occurrence = 1 }
+description = "Move to 'Temperature'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fahrenheit", occurrence = 1 }
+description = "Move to 'fahrenheit'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "toString", occurrence = 1 }
+description = "Move to 'toString'"
+points = 100
+optimal_keys = 6

@@ -1,0 +1,76 @@
+[meta]
+id = "ts-junior-weakmap-weakset"
+zone = "junior"
+language = "typescript"
+tags = ["weakmap", "weakset", "memory"]
+difficulty = 4
+
+[code]
+content = """
+class PrivateData {
+  private static secrets = new WeakMap<object, Map<string, unknown>>();
+
+  static setSecret(obj: object, key: string, value: unknown): void {
+    if (!this.secrets.has(obj)) {
+      this.secrets.set(obj, new Map());
+    }
+    this.secrets.get(obj)!.set(key, value);
+  }
+
+  static getSecret(obj: object, key: string): unknown {
+    return this.secrets.get(obj)?.get(key);
+  }
+}
+
+class DomNodeTracker {
+  private attached = new WeakSet<object>();
+  private metadata = new WeakMap<object, { addedAt: Date }>();
+
+  track(node: object): void {
+    this.attached.add(node);
+    this.metadata.set(node, { addedAt: new Date() });
+  }
+
+  isTracked(node: object): boolean {
+    return this.attached.has(node);
+  }
+
+  getMetadata(node: object): { addedAt: Date } | undefined {
+    return this.metadata.get(node);
+  }
+
+  untrack(node: object): void {
+    this.attached.delete(node);
+    this.metadata.delete(node);
+  }
+}
+
+const tracker = new DomNodeTracker();
+const element = { tagName: "div", id: "main" };
+tracker.track(element);
+console.log(tracker.isTracked(element));
+
+PrivateData.setSecret(element, "token", "abc123");
+console.log(PrivateData.getSecret(element, "token"));
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "PrivateData", occurrence = 1 }
+description = "Move to 'PrivateData'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "DomNodeTracker", occurrence = 1 }
+description = "Move to 'DomNodeTracker'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "untrack", occurrence = 1 }
+description = "Move to 'untrack'"
+points = 100
+optimal_keys = 7

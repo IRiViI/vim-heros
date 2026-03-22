@@ -12,6 +12,102 @@ pub struct AssembledLevel {
     pub tasks: Vec<Task>,
 }
 
+/// Import runway pools per language. Each entry is one import line.
+/// The assembler randomly picks 5–10 of these to prepend before the first segment.
+fn import_pool(language: &str) -> Vec<&'static str> {
+    match language {
+        "python" => vec![
+            "import os",
+            "import sys",
+            "import json",
+            "import math",
+            "import random",
+            "import datetime",
+            "import itertools",
+            "import functools",
+            "import collections",
+            "import pathlib",
+            "import re",
+            "import typing",
+            "from collections import defaultdict",
+            "from collections import Counter",
+            "from typing import List, Optional",
+            "from typing import Dict, Tuple",
+            "from dataclasses import dataclass",
+            "from pathlib import Path",
+            "from enum import Enum",
+            "from functools import lru_cache",
+        ],
+        "typescript" | "javascript" => vec![
+            "import fs from 'fs';",
+            "import path from 'path';",
+            "import { readFile } from 'fs/promises';",
+            "import { EventEmitter } from 'events';",
+            "import { Request, Response } from 'express';",
+            "import { useState, useEffect } from 'react';",
+            "import { z } from 'zod';",
+            "import { createClient } from '@supabase/supabase-js';",
+            "import type { Config } from './types';",
+            "import type { User, Session } from './models';",
+            "import { logger } from './utils/logger';",
+            "import { db } from './db';",
+            "import { validateInput } from './validation';",
+            "import { formatDate, parseISO } from 'date-fns';",
+            "import { clsx } from 'clsx';",
+            "import { v4 as uuidv4 } from 'uuid';",
+            "import { Router } from 'express';",
+            "import { PrismaClient } from '@prisma/client';",
+            "import { describe, it, expect } from 'vitest';",
+            "import { render, screen } from '@testing-library/react';",
+        ],
+        "rust" => vec![
+            "use std::collections::HashMap;",
+            "use std::collections::HashSet;",
+            "use std::io::{self, Read, Write};",
+            "use std::fs;",
+            "use std::path::PathBuf;",
+            "use std::sync::{Arc, Mutex};",
+            "use std::time::{Duration, Instant};",
+            "use serde::{Deserialize, Serialize};",
+            "use anyhow::{Context, Result};",
+            "use tokio::sync::mpsc;",
+        ],
+        "cpp" | "c" => vec![
+            "#include <iostream>",
+            "#include <vector>",
+            "#include <string>",
+            "#include <map>",
+            "#include <algorithm>",
+            "#include <memory>",
+            "#include <functional>",
+            "#include <optional>",
+            "#include <cassert>",
+            "#include <numeric>",
+        ],
+        _ => vec![],
+    }
+}
+
+/// Build an import runway: 5–10 randomly selected import lines for the language.
+fn build_runway(language: &str) -> String {
+    let pool = import_pool(language);
+    if pool.is_empty() {
+        return String::new();
+    }
+
+    let mut rng = thread_rng();
+    let count = 5 + (rand::random::<usize>() % 6); // 5..=10
+    let count = count.min(pool.len());
+
+    let mut selected: Vec<&str> = pool.clone();
+    selected.shuffle(&mut rng);
+    selected.truncate(count);
+
+    let mut runway = selected.join("\n");
+    runway.push('\n');
+    runway
+}
+
 /// Comment separator between segments, keyed by language.
 fn separator(language: &str) -> &'static str {
     match language {
@@ -46,6 +142,7 @@ pub fn select_segments<'a>(
 }
 
 /// Assemble selected segments into a single buffer with resolved tasks.
+/// Prepends an import runway (task-free lines) before the first segment.
 pub fn assemble(segments: &[&Segment]) -> AssembledLevel {
     if segments.is_empty() {
         return AssembledLevel {
@@ -57,7 +154,12 @@ pub fn assemble(segments: &[&Segment]) -> AssembledLevel {
     let language = &segments[0].meta.language;
     let sep = separator(language);
 
-    let mut full_code = String::new();
+    // Start with import runway
+    let mut full_code = build_runway(language);
+    if !full_code.is_empty() {
+        full_code.push_str(sep);
+    }
+
     let mut all_tasks: Vec<Task> = Vec::new();
 
     for (i, segment) in segments.iter().enumerate() {

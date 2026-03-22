@@ -1,0 +1,71 @@
+[meta]
+id = "ts-starter-type-narrowing"
+zone = "starter"
+language = "typescript"
+tags = ["type-narrowing", "guards", "typeof"]
+difficulty = 2
+
+[code]
+content = """
+// Type Narrowing
+
+function printValue(value: string | number): void {
+  if (typeof value === "string") {
+    console.log("String length:", value.length);
+    console.log("Uppercase:", value.toUpperCase());
+  } else {
+    console.log("Fixed:", value.toFixed(2));
+    console.log("Rounded:", Math.round(value));
+  }
+}
+
+function processInput(input: string | string[] | null): string {
+  if (input === null) {
+    return "No input provided";
+  }
+
+  if (Array.isArray(input)) {
+    return "Array with " + input.length + " items";
+  }
+
+  return "String: " + input;
+}
+
+function getLength(value: string | number[]): number {
+  if (typeof value === "string") {
+    return value.length;
+  }
+  return value.length;
+}
+
+printValue("hello");
+printValue(3.14159);
+
+console.log(processInput(null));
+console.log(processInput("test"));
+console.log(processInput(["a", "b", "c"]));
+
+console.log("Length:", getLength("TypeScript"));
+console.log("Length:", getLength([1, 2, 3]));
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "printValue", occurrence = 1 }
+description = "Move to 'printValue'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "processInput", occurrence = 1 }
+description = "Move to 'processInput'"
+points = 75
+optimal_keys = 6
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "getLength", occurrence = 1 }
+description = "Move to 'getLength'"
+points = 50
+optimal_keys = 4

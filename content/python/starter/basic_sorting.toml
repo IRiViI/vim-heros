@@ -1,0 +1,65 @@
+[meta]
+id = "py-starter-basic-sorting"
+zone = "starter"
+language = "python"
+tags = ["sorting", "lists", "sorted"]
+difficulty = 2
+
+[code]
+content = """
+# Basic Sorting
+
+# VIM TIP: Use 'J' to join the current line with the next one.
+
+numbers = [42, 8, 15, 23, 4, 16]
+
+# Sort in place
+numbers.sort()
+print(f"Sorted ascending: {numbers}")
+
+numbers.sort(reverse=True)
+print(f"Sorted descending: {numbers}")
+
+# sorted() returns a new list
+original = [5, 2, 8, 1, 9]
+ascending = sorted(original)
+descending = sorted(original, reverse=True)
+print(f"Original unchanged: {original}")
+print(f"Ascending: {ascending}")
+print(f"Descending: {descending}")
+
+# Sorting strings
+fruits = ["banana", "apple", "cherry", "date"]
+print(f"Alphabetical: {sorted(fruits)}")
+print(f"By length: {sorted(fruits, key=len)}")
+
+# Sort with custom key
+students = [
+    ("Alice", 88),
+    ("Bob", 95),
+    ("Charlie", 72),
+    ("Diana", 91)
+]
+by_score = sorted(students, key=lambda s: s[1], reverse=True)
+print("\\nRanked by score:")
+for rank, (name, score) in enumerate(by_score, 1):
+    print(f"  {rank}. {name}: {score}")
+
+# Min and max of sorted data
+print(f"\\nHighest: {by_score[0][0]}")
+print(f"Lowest: {by_score[-1][0]}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "ascending", occurrence = 1 }
+description = "Move to first 'ascending'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "lambda", occurrence = 1 }
+description = "Move to 'lambda'"
+points = 75
+optimal_keys = 7

@@ -1,0 +1,67 @@
+[meta]
+id = "py-junior-regex-basic"
+zone = "junior"
+language = "python"
+tags = ["regex", "pattern", "validation"]
+difficulty = 4
+
+[code]
+content = """
+import re
+
+
+def validate_email(email):
+    \"\"\"Check if a string looks like a valid email address.\"\"\"
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
+
+
+def extract_urls(text):
+    \"\"\"Extract all URLs from a block of text.\"\"\"
+    url_pattern = r'https?://[^\\s<>\"\\']+'
+    return re.findall(url_pattern, text)
+
+
+def parse_log_entry(line):
+    \"\"\"Parse a structured log line into components.\"\"\"
+    pattern = r'\\[(\\d{4}-\\d{2}-\\d{2})\\]\\s+(\\w+):\\s+(.+)'
+    match = re.match(pattern, line)
+    if match:
+        date, level, message = match.groups()
+        return {"date": date, "level": level, "message": message}
+    return None
+
+
+def replace_sensitive(text, placeholder="***"):
+    \"\"\"Mask phone numbers and SSNs in text.\"\"\"
+    phone_pattern = r'\\b\\d{3}[-.]\\d{3}[-.]\\d{4}\\b'
+    ssn_pattern = r'\\b\\d{3}-\\d{2}-\\d{4}\\b'
+    result = re.sub(phone_pattern, placeholder, text)
+    result = re.sub(ssn_pattern, placeholder, result)
+    return result
+
+
+sample_log = "[2024-01-15] ERROR: Connection timed out"
+parsed = parse_log_entry(sample_log)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "validate_email", occurrence = 1 }
+description = "Move to 'validate_email'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "extract_urls", occurrence = 1 }
+description = "Move to 'extract_urls'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "replace_sensitive", occurrence = 1 }
+description = "Move to 'replace_sensitive'"
+points = 100
+optimal_keys = 6

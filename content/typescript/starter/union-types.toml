@@ -1,0 +1,54 @@
+[meta]
+id = "ts-starter-union-types"
+zone = "starter"
+language = "typescript"
+tags = ["union-types", "types", "or"]
+difficulty = 2
+
+[code]
+content = """
+// Union Types
+
+let identifier: string | number;
+identifier = "abc-123";
+identifier = 42;
+
+type StringOrNumber = string | number;
+type Result = "success" | "error" | "pending";
+
+function formatValue(value: string | number): string {
+  if (typeof value === "string") {
+    return value.toUpperCase();
+  }
+  return value.toFixed(2);
+}
+
+function printStatus(status: Result): void {
+  console.log("Current status:", status);
+}
+
+const formatted1 = formatValue("hello");
+const formatted2 = formatValue(3.14159);
+
+let maybeNull: string | null = null;
+maybeNull = "now has a value";
+
+printStatus("success");
+console.log(formatted1);
+console.log(formatted2);
+console.log(maybeNull);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "identifier", occurrence = 1 }
+description = "Move to 'identifier'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "formatValue", occurrence = 1 }
+description = "Move to 'formatValue'"
+points = 75
+optimal_keys = 5

@@ -1,0 +1,59 @@
+[meta]
+id = "py-junior-classes-basic"
+zone = "junior"
+language = "python"
+tags = ["classes", "objects", "init"]
+difficulty = 3
+
+[code]
+content = """
+class BankAccount:
+    \"\"\"A simple bank account with deposit and withdraw.\"\"\"
+
+    def __init__(self, owner, balance=0.0):
+        self.owner = owner
+        self.balance = balance
+        self.transactions = []
+
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("Deposit amount must be positive")
+        self.balance += amount
+        self.transactions.append(("deposit", amount))
+        return self.balance
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            raise ValueError("Insufficient funds")
+        self.balance -= amount
+        self.transactions.append(("withdraw", amount))
+        return self.balance
+
+    def get_statement(self):
+        lines = [f"Account owner: {self.owner}"]
+        for kind, value in self.transactions:
+            lines.append(f"  {kind}: ${value:.2f}")
+        lines.append(f"Current balance: ${self.balance:.2f}")
+        return "\\n".join(lines)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "transactions", occurrence = 1 }
+description = "Move to 'transactions'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "withdraw", occurrence = 1 }
+description = "Move to 'withdraw'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "statement", occurrence = 1 }
+description = "Move to 'statement'"
+points = 100
+optimal_keys = 6

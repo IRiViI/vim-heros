@@ -1,0 +1,45 @@
+[meta]
+id = "ts-starter-basic-types"
+zone = "starter"
+language = "typescript"
+tags = ["types", "string", "number", "boolean"]
+difficulty = 1
+
+[code]
+content = """
+// Basic Types in TypeScript
+
+let firstName: string = "Bob";
+let lastName: string = "Smith";
+let fullName: string = firstName + " " + lastName;
+
+let temperature: number = 72.5;
+let count: number = 42;
+let negative: number = -10;
+
+let isOnline: boolean = true;
+let hasPermission: boolean = false;
+let isValid: boolean = count > 0;
+
+let nothing: null = null;
+let notDefined: undefined = undefined;
+
+console.log("Name:", fullName);
+console.log("Temperature:", temperature);
+console.log("Online:", isOnline);
+console.log("Valid:", isValid);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "firstName", occurrence = 1 }
+description = "Move to 'firstName'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "temperature", occurrence = 1 }
+description = "Move to 'temperature'"
+points = 75
+optimal_keys = 6

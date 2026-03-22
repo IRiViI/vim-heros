@@ -1,0 +1,72 @@
+[meta]
+id = "py-junior-type-hints"
+zone = "junior"
+language = "python"
+tags = ["typing", "annotations", "hints"]
+difficulty = 3
+
+[code]
+content = """
+# Vim tip: Use f{char} to jump to a character on the current line
+from typing import Optional, Union, Callable
+
+
+def greet(name: str, greeting: str = "Hello") -> str:
+    return f"{greeting}, {name}!"
+
+
+def find_max(numbers: list[int]) -> Optional[int]:
+    if not numbers:
+        return None
+    return max(numbers)
+
+
+def apply_operation(
+    values: list[float],
+    operation: Callable[[float], float],
+) -> list[float]:
+    return [operation(v) for v in values]
+
+
+def parse_input(raw: Union[str, bytes]) -> dict[str, str]:
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8")
+    pairs = raw.split("&")
+    result: dict[str, str] = {}
+    for pair in pairs:
+        key, _, value = pair.partition("=")
+        result[key] = value
+    return result
+
+
+type NumberList = list[int | float]
+
+
+def statistics(data: NumberList) -> dict[str, float]:
+    n = len(data)
+    mean = sum(data) / n
+    sorted_data = sorted(data)
+    median = sorted_data[n // 2]
+    return {"mean": mean, "median": median, "count": float(n)}
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Callable", occurrence = 1 }
+description = "Move to 'Callable'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "parse_input", occurrence = 1 }
+description = "Move to 'parse_input'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "statistics", occurrence = 1 }
+description = "Move to 'statistics'"
+points = 100
+optimal_keys = 6

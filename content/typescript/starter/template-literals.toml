@@ -1,0 +1,51 @@
+[meta]
+id = "ts-starter-template-literals"
+zone = "starter"
+language = "typescript"
+tags = ["template-literals", "strings", "interpolation"]
+difficulty = 1
+
+[code]
+content = """
+// Template Literals
+// VIM TIP: Use '$' to jump to the end of a line.
+
+const firstName = "Sarah";
+const lastName = "Connor";
+const age = 35;
+
+const fullName = `${firstName} ${lastName}`;
+const intro = `My name is ${fullName} and I am ${age} years old.`;
+
+const price = 29.99;
+const quantity = 3;
+const total = `Total: $${price * quantity}`;
+
+const multiline = `
+  Welcome to our store!
+  Today's special: Buy ${quantity} get 1 free.
+  Contact us at support@shop.com
+`;
+
+const padded = `Score: ${String(age).padStart(5, "0")}`;
+
+console.log(fullName);
+console.log(intro);
+console.log(total);
+console.log(multiline);
+console.log(padded);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fullName", occurrence = 1 }
+description = "Move to 'fullName'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "multiline", occurrence = 1 }
+description = "Move to 'multiline'"
+points = 75
+optimal_keys = 7

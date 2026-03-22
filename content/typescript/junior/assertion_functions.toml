@@ -1,0 +1,74 @@
+[meta]
+id = "ts-junior-assertion-functions"
+zone = "junior"
+language = "typescript"
+tags = ["assertion-functions", "type-narrowing"]
+difficulty = 4
+
+[code]
+content = """
+function assertDefined<T>(
+  value: T | undefined | null,
+  message?: string
+): asserts value is T {
+  if (value === undefined || value === null) {
+    throw new Error(message ?? "Value is not defined");
+  }
+}
+
+function assertString(
+  value: unknown
+): asserts value is string {
+  if (typeof value !== "string") {
+    throw new TypeError("Expected a string value");
+  }
+}
+
+interface UserSession {
+  userId: string;
+  token: string;
+  expiresAt: Date;
+}
+
+function assertValidSession(
+  session: unknown
+): asserts session is UserSession {
+  const s = session as Record<string, unknown>;
+  if (!s || typeof s.userId !== "string") {
+    throw new Error("Invalid session: missing userId");
+  }
+  if (typeof s.token !== "string") {
+    throw new Error("Invalid session: missing token");
+  }
+}
+
+function processRequest(session: unknown): void {
+  assertValidSession(session);
+  console.log(`Processing for user: ${session.userId}`);
+  console.log(`Token: ${session.token}`);
+}
+
+const rawSession = JSON.parse('{"userId":"abc","token":"xyz"}');
+processRequest(rawSession);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "assertDefined", occurrence = 1 }
+description = "Move to 'assertDefined'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "assertValidSession", occurrence = 1 }
+description = "Move to 'assertValidSession'"
+points = 100
+optimal_keys = 9
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "processRequest", occurrence = 1 }
+description = "Move to 'processRequest'"
+points = 100
+optimal_keys = 7

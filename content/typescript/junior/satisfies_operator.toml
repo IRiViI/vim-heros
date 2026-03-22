@@ -1,0 +1,65 @@
+[meta]
+id = "ts-junior-satisfies-operator"
+zone = "junior"
+language = "typescript"
+tags = ["satisfies", "type-checking"]
+difficulty = 3
+
+[code]
+content = """
+type ColorFormat = "hex" | "rgb" | "hsl";
+
+interface ColorDefinition {
+  value: string;
+  format: ColorFormat;
+  opacity?: number;
+}
+
+type Palette = Record<string, ColorDefinition>;
+
+const brandColors = {
+  primary: { value: "#3498db", format: "hex" },
+  secondary: { value: "rgb(46, 204, 113)", format: "rgb" },
+  accent: { value: "hsl(48, 89%, 50%)", format: "hsl" },
+  danger: { value: "#e74c3c", format: "hex", opacity: 0.9 },
+  muted: { value: "#95a5a6", format: "hex", opacity: 0.6 },
+} satisfies Palette;
+
+type Route = {
+  path: string;
+  method: "GET" | "POST" | "PUT" | "DELETE";
+  handler: string;
+};
+
+const apiRoutes = {
+  listUsers: { path: "/users", method: "GET", handler: "getUsers" },
+  createUser: { path: "/users", method: "POST", handler: "createUser" },
+  getUser: { path: "/users/:id", method: "GET", handler: "getUserById" },
+  updateUser: { path: "/users/:id", method: "PUT", handler: "updateUser" },
+  deleteUser: { path: "/users/:id", method: "DELETE", handler: "removeUser" },
+} satisfies Record<string, Route>;
+
+console.log(brandColors.primary.value);
+console.log(apiRoutes.listUsers.path);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "ColorDefinition", occurrence = 1 }
+description = "Move to 'ColorDefinition'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "brandColors", occurrence = 1 }
+description = "Move to 'brandColors'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "apiRoutes", occurrence = 1 }
+description = "Move to 'apiRoutes'"
+points = 100
+optimal_keys = 7

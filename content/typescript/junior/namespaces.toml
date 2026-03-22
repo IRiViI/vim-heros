@@ -1,0 +1,79 @@
+[meta]
+id = "ts-junior-namespaces"
+zone = "junior"
+language = "typescript"
+tags = ["namespaces", "organization"]
+difficulty = 3
+
+[code]
+content = """
+namespace Validation {
+  export interface Rule {
+    name: string;
+    validate(value: unknown): boolean;
+    message: string;
+  }
+
+  export function required(): Rule {
+    return {
+      name: "required",
+      validate: (value) => value !== null && value !== undefined,
+      message: "This field is required",
+    };
+  }
+
+  export function minLength(min: number): Rule {
+    return {
+      name: "minLength",
+      validate: (value) =>
+        typeof value === "string" && value.length >= min,
+      message: `Minimum length is ${min}`,
+    };
+  }
+
+  export function maxLength(max: number): Rule {
+    return {
+      name: "maxLength",
+      validate: (value) =>
+        typeof value === "string" && value.length <= max,
+      message: `Maximum length is ${max}`,
+    };
+  }
+
+  export function applyRules(value: unknown, rules: Rule[]): string[] {
+    return rules
+      .filter((rule) => !rule.validate(value))
+      .map((rule) => rule.message);
+  }
+}
+
+const rules = [
+  Validation.required(),
+  Validation.minLength(3),
+  Validation.maxLength(50),
+];
+
+const errors = Validation.applyRules("ab", rules);
+console.log(errors);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Validation", occurrence = 1 }
+description = "Move to 'Validation'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "minLength", occurrence = 1 }
+description = "Move to 'minLength'"
+points = 100
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "applyRules", occurrence = 1 }
+description = "Move to 'applyRules'"
+points = 100
+optimal_keys = 8

@@ -1,0 +1,55 @@
+[meta]
+id = "ts-starter-tuples"
+zone = "starter"
+language = "typescript"
+tags = ["tuples", "types", "fixed-length"]
+difficulty = 2
+
+[code]
+content = """
+// Tuples in TypeScript
+
+const coordinate: [number, number] = [45.5, -122.6];
+const nameAge: [string, number] = ["Alice", 30];
+const flag: [string, boolean] = ["active", true];
+
+// Accessing tuple elements
+const latitude = coordinate[0];
+const longitude = coordinate[1];
+
+// Tuple with more elements
+const record: [number, string, boolean] = [1, "admin", true];
+const userId = record[0];
+const role = record[1];
+const isActive = record[2];
+
+// Function returning a tuple
+function divide(a: number, b: number): [number, number] {
+  const quotient = Math.floor(a / b);
+  const remainder = a % b;
+  return [quotient, remainder];
+}
+
+const [quot, rem] = divide(17, 5);
+
+// Named context via destructuring
+const [lat, lng] = coordinate;
+
+console.log("Location:", lat, lng);
+console.log("User:", userId, role, isActive);
+console.log("17 / 5 =", quot, "remainder", rem);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "coordinate", occurrence = 1 }
+description = "Move to 'coordinate'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "divide", occurrence = 1 }
+description = "Move to 'divide'"
+points = 75
+optimal_keys = 7

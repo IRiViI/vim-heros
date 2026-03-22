@@ -1,0 +1,66 @@
+[meta]
+id = "py-junior-string-formatting"
+zone = "junior"
+language = "python"
+tags = ["strings", "formatting", "templates"]
+difficulty = 3
+
+[code]
+content = """
+from string import Template
+
+
+# f-string formatting
+name = "World"
+precision = 3.14159
+formatted = f"Pi is approximately {precision:.2f}"
+padded = f"{'centered':^20}"
+debug = f"{name!r} has {len(name)} characters"
+
+# Format specification mini-language
+for i in range(1, 11):
+    binary = f"{i:>4d} = {i:08b} = {i:#06x}"
+
+# String Template for user-provided templates
+template = Template("Hello $name, your balance is $$${amount:.2f}")
+safe_result = Template("Dear $title $name").safe_substitute(title="Dr.")
+
+# Multi-line formatting with alignment
+headers = ["Name", "Age", "City"]
+rows = [
+    ("Alice", 30, "New York"),
+    ("Bob", 25, "London"),
+    ("Carol", 35, "Tokyo"),
+]
+
+header_line = f"{headers[0]:<15}{headers[1]:>5}{headers[2]:>15}"
+separator = "-" * 35
+for row_name, age, city in rows:
+    line = f"{row_name:<15}{age:>5}{city:>15}"
+
+# Number formatting
+large = 1_234_567_890
+print(f"Comma: {large:,}")
+print(f"Percentage: {0.856:.1%}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Template", occurrence = 1 }
+description = "Move to 'Template'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "separator", occurrence = 1 }
+description = "Move to 'separator'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "header_line", occurrence = 1 }
+description = "Move to 'header_line'"
+points = 100
+optimal_keys = 6

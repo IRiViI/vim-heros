@@ -1,0 +1,76 @@
+[meta]
+id = "py-junior-recursive-functions"
+zone = "junior"
+language = "python"
+tags = ["recursion", "algorithms", "tree"]
+difficulty = 4
+
+[code]
+content = """
+# Vim tip: Use zz to center the current line on screen
+def factorial(n):
+    \"\"\"Calculate factorial recursively.\"\"\"
+    if n < 0:
+        raise ValueError("Factorial not defined for negatives")
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+
+def flatten_nested(structure):
+    \"\"\"Recursively flatten arbitrarily nested lists.\"\"\"
+    result = []
+    for element in structure:
+        if isinstance(element, (list, tuple)):
+            result.extend(flatten_nested(element))
+        else:
+            result.append(element)
+    return result
+
+
+def deep_merge(base, override):
+    \"\"\"Recursively merge two nested dictionaries.\"\"\"
+    merged = base.copy()
+    for key, value in override.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+            merged[key] = deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def power(base, exponent):
+    \"\"\"Fast exponentiation using recursion.\"\"\"
+    if exponent == 0:
+        return 1
+    if exponent % 2 == 0:
+        half = power(base, exponent // 2)
+        return half * half
+    return base * power(base, exponent - 1)
+
+
+nested = [1, [2, [3, 4]], [5, [6, [7]]]]
+flat = flatten_nested(nested)
+result = power(2, 10)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "factorial", occurrence = 1 }
+description = "Move to 'factorial'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "flatten_nested", occurrence = 1 }
+description = "Move to 'flatten_nested'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "deep_merge", occurrence = 1 }
+description = "Move to 'deep_merge'"
+points = 100
+optimal_keys = 6

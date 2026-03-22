@@ -1,0 +1,56 @@
+[meta]
+id = "ts-starter-if-else"
+zone = "starter"
+language = "typescript"
+tags = ["if-else", "conditionals", "control-flow"]
+difficulty = 1
+
+[code]
+content = """
+// If/Else Statements
+
+const temperature = 75;
+const isRaining = false;
+
+if (temperature > 80) {
+  console.log("It's hot outside!");
+} else if (temperature > 60) {
+  console.log("It's a nice day.");
+} else {
+  console.log("It's cold outside!");
+}
+
+const score = 85;
+let grade: string;
+
+if (score >= 90) {
+  grade = "A";
+} else if (score >= 80) {
+  grade = "B";
+} else if (score >= 70) {
+  grade = "C";
+} else {
+  grade = "F";
+}
+
+if (!isRaining) {
+  console.log("No umbrella needed.");
+}
+
+console.log("Temperature:", temperature);
+console.log("Grade:", grade);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "temperature", occurrence = 1 }
+description = "Move to 'temperature'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "grade", occurrence = 1 }
+description = "Move to 'grade'"
+points = 75
+optimal_keys = 7

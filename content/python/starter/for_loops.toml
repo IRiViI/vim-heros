@@ -1,0 +1,52 @@
+[meta]
+id = "py-starter-for-loops"
+zone = "starter"
+language = "python"
+tags = ["for", "loops", "iteration"]
+difficulty = 1
+
+[code]
+content = """
+# For Loops in Python
+
+fruits = ["apple", "banana", "cherry", "date"]
+
+for fruit in fruits:
+    print(f"I like {fruit}")
+
+# Loop through a string
+word = "Python"
+for letter in word:
+    print(letter)
+
+# Loop with index using range
+colors = ["red", "green", "blue"]
+for i in range(len(colors)):
+    print(f"Color {i}: {colors[i]}")
+
+# Nested iteration example
+for number in range(1, 6):
+    stars = "*" * number
+    print(stars)
+
+# Sum all elements
+total = 0
+numbers = [10, 20, 30, 40]
+for n in numbers:
+    total += n
+print(f"Total: {total}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "banana", occurrence = 1 }
+description = "Move to 'banana'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "stars", occurrence = 1 }
+description = "Move to 'stars'"
+points = 75
+optimal_keys = 6

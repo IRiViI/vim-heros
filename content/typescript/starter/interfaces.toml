@@ -1,0 +1,63 @@
+[meta]
+id = "ts-starter-interfaces"
+zone = "starter"
+language = "typescript"
+tags = ["interfaces", "types", "objects"]
+difficulty = 2
+
+[code]
+content = """
+// Interfaces in TypeScript
+
+interface User {
+  name: string;
+  email: string;
+  age: number;
+  isAdmin: boolean;
+}
+
+interface Product {
+  id: number;
+  title: string;
+  price: number;
+  description: string;
+}
+
+const alice: User = {
+  name: "Alice",
+  email: "alice@example.com",
+  age: 28,
+  isAdmin: false
+};
+
+const laptop: Product = {
+  id: 1,
+  title: "Laptop Pro",
+  price: 1299.99,
+  description: "A powerful laptop for developers"
+};
+
+console.log(alice.name, alice.email);
+console.log(laptop.title, laptop.price);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "User", occurrence = 1 }
+description = "Move to 'User'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Product", occurrence = 1 }
+description = "Move to 'Product'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "laptop", occurrence = 1 }
+description = "Move to 'laptop'"
+points = 75
+optimal_keys = 8

@@ -1,0 +1,82 @@
+[meta]
+id = "ts-junior-map-and-set"
+zone = "junior"
+language = "typescript"
+tags = ["map", "set", "collections"]
+difficulty = 3
+
+[code]
+content = """
+class BiDirectionalMap<K, V> {
+  private forward = new Map<K, V>();
+  private reverse = new Map<V, K>();
+
+  set(key: K, value: V): void {
+    this.forward.set(key, value);
+    this.reverse.set(value, key);
+  }
+
+  getByKey(key: K): V | undefined {
+    return this.forward.get(key);
+  }
+
+  getByValue(value: V): K | undefined {
+    return this.reverse.get(value);
+  }
+
+  get size(): number {
+    return this.forward.size;
+  }
+}
+
+function uniqueBy<T, K>(items: T[], keyFn: (item: T) => K): T[] {
+  const seen = new Set<K>();
+  return items.filter((item) => {
+    const key = keyFn(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function intersection<T>(setA: Set<T>, setB: Set<T>): Set<T> {
+  const result = new Set<T>();
+  for (const item of setA) {
+    if (setB.has(item)) result.add(item);
+  }
+  return result;
+}
+
+const codeMap = new BiDirectionalMap<string, number>();
+codeMap.set("OK", 200);
+codeMap.set("NOT_FOUND", 404);
+console.log(codeMap.getByKey("OK"));
+console.log(codeMap.getByValue(404));
+
+const fruits = uniqueBy(
+  [{ name: "apple" }, { name: "banana" }, { name: "apple" }],
+  (f) => f.name
+);
+console.log(fruits);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "BiDirectionalMap", occurrence = 1 }
+description = "Move to 'BiDirectionalMap'"
+points = 100
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "uniqueBy", occurrence = 1 }
+description = "Move to 'uniqueBy'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "intersection", occurrence = 1 }
+description = "Move to 'intersection'"
+points = 100
+optimal_keys = 8

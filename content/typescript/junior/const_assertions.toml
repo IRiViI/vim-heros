@@ -1,0 +1,75 @@
+[meta]
+id = "ts-junior-const-assertions"
+zone = "junior"
+language = "typescript"
+tags = ["const-assertions", "as-const"]
+difficulty = 3
+
+[code]
+content = """
+const DIRECTIONS = ["north", "south", "east", "west"] as const;
+type Direction = (typeof DIRECTIONS)[number];
+
+const STATUS_CODES = {
+  OK: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  NOT_FOUND: 404,
+  SERVER_ERROR: 500,
+} as const;
+
+type StatusCode = (typeof STATUS_CODES)[keyof typeof STATUS_CODES];
+
+function getStatusMessage(code: StatusCode): string {
+  switch (code) {
+    case 200: return "OK";
+    case 201: return "Created";
+    case 400: return "Bad Request";
+    case 404: return "Not Found";
+    case 500: return "Internal Server Error";
+  }
+}
+
+const THEME = {
+  colors: {
+    primary: "#3498db",
+    secondary: "#2ecc71",
+    danger: "#e74c3c",
+  },
+  spacing: {
+    small: 8,
+    medium: 16,
+    large: 32,
+  },
+} as const;
+
+type ThemeColor = (typeof THEME.colors)[keyof typeof THEME.colors];
+
+function applyColor(element: string, color: ThemeColor): void {
+  console.log(`Applying ${color} to ${element}`);
+}
+
+applyColor("button", THEME.colors.primary);
+console.log(getStatusMessage(STATUS_CODES.OK));
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "DIRECTIONS", occurrence = 1 }
+description = "Move to 'DIRECTIONS'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "STATUS_CODES", occurrence = 1 }
+description = "Move to 'STATUS_CODES'"
+points = 100
+optimal_keys = 7
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "applyColor", occurrence = 1 }
+description = "Move to 'applyColor'"
+points = 100
+optimal_keys = 8

@@ -1,0 +1,60 @@
+[meta]
+id = "py-starter-simple-counter"
+zone = "starter"
+language = "python"
+tags = ["counting", "loops", "accumulator"]
+difficulty = 1
+
+[code]
+content = """
+# Simple Counter Patterns
+
+# Count occurrences manually
+sentence = "the quick brown fox jumps over the lazy dog"
+words = sentence.split()
+count = 0
+for word in words:
+    if len(word) > 3:
+        count += 1
+print(f"Words longer than 3 chars: {count}")
+
+# Count vowels in a string
+text = "Hello World Python Programming"
+vowels = "aeiouAEIOU"
+vowel_count = 0
+for char in text:
+    if char in vowels:
+        vowel_count += 1
+print(f"Vowels: {vowel_count}")
+
+# Accumulator pattern for sum
+prices = [4.99, 2.50, 8.75, 1.25, 6.00]
+running_total = 0
+for price in prices:
+    running_total += price
+    print(f"Added ${price:.2f}, total: ${running_total:.2f}")
+
+# Count with a dictionary
+grades = ["A", "B", "A", "C", "B", "A", "B", "C", "A"]
+frequency = {}
+for grade in grades:
+    if grade in frequency:
+        frequency[grade] += 1
+    else:
+        frequency[grade] = 1
+print(f"Grade frequency: {frequency}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "occurrences", occurrence = 1 }
+description = "Move to 'occurrences'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Accumulator", occurrence = 1 }
+description = "Move to 'Accumulator'"
+points = 75
+optimal_keys = 7

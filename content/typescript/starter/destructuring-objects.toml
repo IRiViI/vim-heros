@@ -1,0 +1,62 @@
+[meta]
+id = "ts-starter-destructuring-objects"
+zone = "starter"
+language = "typescript"
+tags = ["destructuring", "objects", "assignment"]
+difficulty = 2
+
+[code]
+content = """
+// Object Destructuring
+
+const person = {
+  firstName: "Emma",
+  lastName: "Watson",
+  age: 33,
+  country: "England"
+};
+
+const { firstName, lastName, age } = person;
+console.log(firstName, lastName, age);
+
+// Destructuring with rename
+const { firstName: fName, lastName: lName } = person;
+console.log(fName, lName);
+
+// Destructuring with defaults
+const settings = {
+  volume: 80,
+  brightness: 50
+};
+
+const { volume, brightness, contrast = 70 } = settings;
+
+// Nested destructuring
+const response = {
+  status: 200,
+  data: {
+    userId: 1,
+    username: "emma_dev"
+  }
+};
+
+const { data: { userId, username } } = response;
+
+console.log("Volume:", volume);
+console.log("Contrast:", contrast);
+console.log("User:", userId, username);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "person", occurrence = 1 }
+description = "Move to 'person'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "response", occurrence = 1 }
+description = "Move to 'response'"
+points = 75
+optimal_keys = 8

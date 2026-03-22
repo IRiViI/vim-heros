@@ -1,0 +1,48 @@
+[meta]
+id = "ts-starter-array-map-filter"
+zone = "starter"
+language = "typescript"
+tags = ["arrays", "map", "filter", "methods"]
+difficulty = 2
+
+[code]
+content = """
+// Array .map() and .filter()
+
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+const doubled = numbers.map((n) => n * 2);
+const squared = numbers.map((n) => n * n);
+
+const evens = numbers.filter((n) => n % 2 === 0);
+const odds = numbers.filter((n) => n % 2 !== 0);
+const bigNumbers = numbers.filter((n) => n > 5);
+
+const names = ["Alice", "Bob", "Charlie", "Dave"];
+const lengths = names.map((name) => name.length);
+const longNames = names.filter((name) => name.length > 3);
+
+// Chaining map and filter
+const processed = numbers
+  .filter((n) => n % 2 === 0)
+  .map((n) => n * 10);
+
+console.log("Doubled:", doubled);
+console.log("Evens:", evens);
+console.log("Long names:", longNames);
+console.log("Processed:", processed);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "doubled", occurrence = 1 }
+description = "Move to 'doubled'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "processed", occurrence = 1 }
+description = "Move to 'processed'"
+points = 75
+optimal_keys = 8

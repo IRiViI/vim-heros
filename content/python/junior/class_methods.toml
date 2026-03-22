@@ -1,0 +1,66 @@
+[meta]
+id = "py-junior-class-methods"
+zone = "junior"
+language = "python"
+tags = ["classmethod", "staticmethod", "factory"]
+difficulty = 3
+
+[code]
+content = """
+class Temperature:
+    def __init__(self, celsius):
+        self.celsius = celsius
+
+    @classmethod
+    def from_fahrenheit(cls, fahrenheit):
+        celsius = (fahrenheit - 32) * 5 / 9
+        return cls(celsius)
+
+    @classmethod
+    def from_kelvin(cls, kelvin):
+        celsius = kelvin - 273.15
+        return cls(celsius)
+
+    @staticmethod
+    def is_boiling(temp_celsius):
+        return temp_celsius >= 100.0
+
+    @staticmethod
+    def is_freezing(temp_celsius):
+        return temp_celsius <= 0.0
+
+    def to_fahrenheit(self):
+        return self.celsius * 9 / 5 + 32
+
+    def to_kelvin(self):
+        return self.celsius + 273.15
+
+    def __repr__(self):
+        return f"Temperature({self.celsius:.1f}C)"
+
+    def __eq__(self, other):
+        if not isinstance(other, Temperature):
+            return NotImplemented
+        return abs(self.celsius - other.celsius) < 0.01
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fahrenheit", occurrence = 1 }
+description = "Move to 'fahrenheit'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "is_boiling", occurrence = 1 }
+description = "Move to 'is_boiling'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "NotImplemented", occurrence = 1 }
+description = "Move to 'NotImplemented'"
+points = 100
+optimal_keys = 6

@@ -1,0 +1,82 @@
+[meta]
+id = "py-junior-abstract-base-classes"
+zone = "junior"
+language = "python"
+tags = ["abc", "abstract", "interface"]
+difficulty = 4
+
+[code]
+content = """
+# Vim tip: Use gg to jump to the first line, G to jump to the last
+from abc import ABC, abstractmethod
+
+
+class Shape(ABC):
+    \"\"\"Abstract base class for geometric shapes.\"\"\"
+
+    @abstractmethod
+    def area(self) -> float:
+        pass
+
+    @abstractmethod
+    def perimeter(self) -> float:
+        pass
+
+    def describe(self) -> str:
+        return (
+            f"{self.__class__.__name__}: "
+            f"area={self.area():.2f}, "
+            f"perimeter={self.perimeter():.2f}"
+        )
+
+
+class Triangle(Shape):
+    def __init__(self, a, b, c):
+        self.a = a
+        self.b = b
+        self.c = c
+
+    def area(self) -> float:
+        s = self.perimeter() / 2
+        return (s * (s - self.a) * (s - self.b) * (s - self.c)) ** 0.5
+
+    def perimeter(self) -> float:
+        return self.a + self.b + self.c
+
+
+class Square(Shape):
+    def __init__(self, side):
+        self.side = side
+
+    def area(self) -> float:
+        return self.side ** 2
+
+    def perimeter(self) -> float:
+        return 4 * self.side
+
+
+shapes = [Triangle(3, 4, 5), Square(6)]
+for shape in shapes:
+    print(shape.describe())
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "abstractmethod", occurrence = 1 }
+description = "Move to 'abstractmethod'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Triangle", occurrence = 1 }
+description = "Move to 'Triangle'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "describe", occurrence = 1 }
+description = "Move to 'describe'"
+points = 100
+optimal_keys = 6

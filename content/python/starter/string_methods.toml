@@ -1,0 +1,61 @@
+[meta]
+id = "py-starter-string-methods"
+zone = "starter"
+language = "python"
+tags = ["strings", "methods", "manipulation"]
+difficulty = 1
+
+[code]
+content = """
+# String Methods
+
+message = "  Hello, World!  "
+
+# Case methods
+print(message.upper())
+print(message.lower())
+print(message.title())
+print(message.swapcase())
+
+# Whitespace removal
+print(message.strip())
+print(message.lstrip())
+print(message.rstrip())
+
+# Searching
+sentence = "the quick brown fox jumps over the lazy dog"
+print(sentence.find("fox"))
+print(sentence.count("the"))
+print(sentence.startswith("the"))
+print(sentence.endswith("dog"))
+
+# Splitting and joining
+words = sentence.split(" ")
+print(words)
+joined = " - ".join(words)
+print(joined)
+
+# Replacing
+updated = sentence.replace("fox", "cat")
+print(updated)
+
+# Checking content
+code = "abc123"
+print(code.isalpha())
+print(code.isdigit())
+print(code.isalnum())
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "swapcase", occurrence = 1 }
+description = "Move to 'swapcase'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Replacing", occurrence = 1 }
+description = "Move to 'Replacing'"
+points = 75
+optimal_keys = 7

@@ -1,0 +1,73 @@
+[meta]
+id = "ts-junior-mapped-types"
+zone = "junior"
+language = "typescript"
+tags = ["mapped-types", "generics"]
+difficulty = 4
+
+[code]
+content = """
+// VIM TIP: Use 'f<char>' to jump forward to a character on the current line.
+type Readonly<T> = {
+  readonly [P in keyof T]: T[P];
+};
+
+type Optional<T> = {
+  [P in keyof T]?: T[P];
+};
+
+type Nullable<T> = {
+  [P in keyof T]: T[P] | null;
+};
+
+interface FormFields {
+  username: string;
+  password: string;
+  rememberMe: boolean;
+}
+
+type FormValidation<T> = {
+  [K in keyof T]: {
+    value: T[K];
+    error: string | null;
+    touched: boolean;
+  };
+};
+
+type ValidatedForm = FormValidation<FormFields>;
+
+const formState: ValidatedForm = {
+  username: { value: "admin", error: null, touched: true },
+  password: { value: "", error: "Required", touched: true },
+  rememberMe: { value: false, error: null, touched: false },
+};
+
+function hasErrors<T>(form: FormValidation<T>): boolean {
+  return Object.values(form).some(
+    (field: any) => field.error !== null
+  );
+}
+
+console.log(hasErrors(formState));
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Nullable", occurrence = 1 }
+description = "Move to 'Nullable'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "FormValidation", occurrence = 1 }
+description = "Move to 'FormValidation'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "hasErrors", occurrence = 1 }
+description = "Move to 'hasErrors'"
+points = 100
+optimal_keys = 7

@@ -1,0 +1,53 @@
+[meta]
+id = "ts-starter-string-methods"
+zone = "starter"
+language = "typescript"
+tags = ["strings", "methods", "manipulation"]
+difficulty = 1
+
+[code]
+content = """
+// String Methods
+// VIM TIP: Use '/' to search for text in the file.
+
+const message = "  Hello, TypeScript World!  ";
+
+const trimmed = message.trim();
+const upper = message.toUpperCase();
+const lower = message.toLowerCase();
+
+const hasTypeScript = message.includes("TypeScript");
+const position = message.indexOf("World");
+
+const replaced = message.replace("World", "Developer");
+const words = trimmed.split(" ");
+
+const sliced = trimmed.slice(0, 5);
+const sub = trimmed.substring(7, 17);
+const length = trimmed.length;
+
+const padded = "42".padStart(6, "0");
+const ending = trimmed.endsWith("!");
+const starting = trimmed.startsWith("Hello");
+
+console.log("Trimmed:", trimmed);
+console.log("Upper:", upper);
+console.log("Includes TS:", hasTypeScript);
+console.log("Position:", position);
+console.log("Words:", words);
+console.log("Padded:", padded);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "trimmed", occurrence = 1 }
+description = "Move to 'trimmed'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "replaced", occurrence = 1 }
+description = "Move to 'replaced'"
+points = 75
+optimal_keys = 6

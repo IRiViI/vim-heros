@@ -1,0 +1,62 @@
+[meta]
+id = "ts-starter-comparison-operators"
+zone = "starter"
+language = "typescript"
+tags = ["comparison", "operators", "equality"]
+difficulty = 1
+
+[code]
+content = """
+// Comparison Operators
+
+const score = 85;
+const threshold = 70;
+const maxScore = 100;
+
+// Equality
+const isEqual = score === 85;
+const isNotEqual = score !== 100;
+
+// Greater/Less than
+const isPassing = score >= threshold;
+const isPerfect = score === maxScore;
+const needsWork = score < threshold;
+
+// String comparison
+const nameA = "Alice";
+const nameB = "Bob";
+const alphabetical = nameA < nameB;
+
+// Strict vs loose equality
+const numVal = 42;
+const strVal = "42";
+
+const strictEqual = numVal === 42;
+const strictNotEqual = numVal !== 43;
+
+// Comparing with null and undefined
+const value: string | null = null;
+const isNull = value === null;
+const isNullish = value == null;
+
+console.log("Is equal:", isEqual);
+console.log("Passing:", isPassing);
+console.log("Alphabetical:", alphabetical);
+console.log("Strict equal:", strictEqual);
+console.log("Is null:", isNull);
+console.log("Is nullish:", isNullish);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "score", occurrence = 1 }
+description = "Move to 'score'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "alphabetical", occurrence = 1 }
+description = "Move to 'alphabetical'"
+points = 75
+optimal_keys = 7

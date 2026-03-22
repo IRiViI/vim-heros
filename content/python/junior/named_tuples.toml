@@ -1,0 +1,71 @@
+[meta]
+id = "py-junior-named-tuples"
+zone = "junior"
+language = "python"
+tags = ["namedtuple", "immutable", "structured"]
+difficulty = 3
+
+[code]
+content = """
+from collections import namedtuple
+from typing import NamedTuple
+
+
+# Classic namedtuple style
+Point = namedtuple("Point", ["x", "y"])
+Color = namedtuple("Color", "red green blue alpha")
+
+
+# Typed NamedTuple style (preferred in modern Python)
+class Rectangle(NamedTuple):
+    width: float
+    height: float
+    label: str = "unnamed"
+
+    @property
+    def area(self):
+        return self.width * self.height
+
+    @property
+    def perimeter(self):
+        return 2 * (self.width + self.height)
+
+    def scale(self, factor):
+        return Rectangle(
+            width=self.width * factor,
+            height=self.height * factor,
+            label=self.label,
+        )
+
+
+origin = Point(0, 0)
+corner = Point(x=10, y=20)
+distance = ((corner.x - origin.x) ** 2 + (corner.y - origin.y) ** 2) ** 0.5
+
+red = Color(255, 0, 0, 1.0)
+transparent_blue = Color(red=0, green=0, blue=255, alpha=0.5)
+
+box = Rectangle(width=4.0, height=3.0, label="small box")
+scaled = box.scale(2.0)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Rectangle", occurrence = 1 }
+description = "Move to 'Rectangle'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "perimeter", occurrence = 1 }
+description = "Move to 'perimeter'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "transparent_blue", occurrence = 1 }
+description = "Move to 'transparent_blue'"
+points = 100
+optimal_keys = 6

@@ -1,0 +1,76 @@
+[meta]
+id = "py-junior-higher-order-functions"
+zone = "junior"
+language = "python"
+tags = ["higher-order", "functional", "pipeline"]
+difficulty = 4
+
+[code]
+content = """
+def pipeline(*steps):
+    \"\"\"Create a data processing pipeline from functions.\"\"\"
+    def process(data):
+        result = data
+        for step in steps:
+            result = step(result)
+        return result
+    return process
+
+
+def apply_to_each(func, items):
+    \"\"\"Apply a function to each item, return results.\"\"\"
+    return [func(item) for item in items]
+
+
+def find_where(predicate, items):
+    \"\"\"Return the first item matching predicate, or None.\"\"\"
+    for item in items:
+        if predicate(item):
+            return item
+    return None
+
+
+def partition(predicate, items):
+    \"\"\"Split items into two lists: matching and not matching.\"\"\"
+    matching = []
+    non_matching = []
+    for item in items:
+        if predicate(item):
+            matching.append(item)
+        else:
+            non_matching.append(item)
+    return matching, non_matching
+
+
+# Build a text processing pipeline
+normalize = pipeline(
+    str.strip,
+    str.lower,
+    lambda s: s.replace("  ", " "),
+)
+
+numbers = [15, 3, 42, 7, 28, 11, 36]
+evens, odds = partition(lambda n: n % 2 == 0, numbers)
+first_big = find_where(lambda n: n > 30, numbers)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "pipeline", occurrence = 1 }
+description = "Move to 'pipeline'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "partition", occurrence = 1 }
+description = "Move to 'partition'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "normalize", occurrence = 1 }
+description = "Move to 'normalize'"
+points = 100
+optimal_keys = 6

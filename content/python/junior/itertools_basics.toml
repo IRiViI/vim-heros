@@ -1,0 +1,67 @@
+[meta]
+id = "py-junior-itertools-basics"
+zone = "junior"
+language = "python"
+tags = ["itertools", "chain", "combinations"]
+difficulty = 4
+
+[code]
+content = """
+# Vim tip: Use da( to delete around parentheses including the parens
+from itertools import chain, product, combinations, groupby, islice
+
+
+# chain: concatenate iterables
+letters = ["a", "b", "c"]
+numbers = [1, 2, 3]
+symbols = ["!", "@", "#"]
+everything = list(chain(letters, numbers, symbols))
+
+# product: cartesian product
+colors = ["red", "blue"]
+sizes = ["S", "M", "L"]
+variants = list(product(colors, sizes))
+
+# combinations: choose k items from n
+team_members = ["Alice", "Bob", "Carol", "Dave", "Eve"]
+pairs = list(combinations(team_members, 2))
+trios = list(combinations(team_members, 3))
+
+# groupby: group consecutive matching elements
+data = sorted([
+    ("Engineering", "Alice"),
+    ("Marketing", "Bob"),
+    ("Engineering", "Carol"),
+    ("Marketing", "Dave"),
+    ("Support", "Eve"),
+])
+departments = {
+    dept: [name for _, name in members]
+    for dept, members in groupby(data, key=lambda x: x[0])
+}
+
+# islice: slice an iterator
+from itertools import count
+first_ten_squares = list(islice((x**2 for x in count(1)), 10))
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "everything", occurrence = 1 }
+description = "Move to 'everything'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "combinations", occurrence = 1 }
+description = "Move to 'combinations'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "departments", occurrence = 1 }
+description = "Move to 'departments'"
+points = 100
+optimal_keys = 6

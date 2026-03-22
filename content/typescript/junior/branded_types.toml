@@ -1,0 +1,75 @@
+[meta]
+id = "ts-junior-branded-types"
+zone = "junior"
+language = "typescript"
+tags = ["branded-types", "type-safety"]
+difficulty = 4
+
+[code]
+content = """
+declare const brand: unique symbol;
+
+type Brand<T, B extends string> = T & { readonly [brand]: B };
+
+type UserId = Brand<string, "UserId">;
+type OrderId = Brand<string, "OrderId">;
+type Email = Brand<string, "Email">;
+
+function createUserId(id: string): UserId {
+  if (!id.startsWith("usr_")) {
+    throw new Error("User ID must start with usr_");
+  }
+  return id as UserId;
+}
+
+function createOrderId(id: string): OrderId {
+  if (!id.startsWith("ord_")) {
+    throw new Error("Order ID must start with ord_");
+  }
+  return id as OrderId;
+}
+
+function createEmail(value: string): Email {
+  if (!value.includes("@")) {
+    throw new Error("Invalid email format");
+  }
+  return value as Email;
+}
+
+function getUser(id: UserId): { id: UserId; name: string } {
+  return { id, name: "Test User" };
+}
+
+function getOrder(id: OrderId): { id: OrderId; total: number } {
+  return { id, total: 99.99 };
+}
+
+const userId = createUserId("usr_123");
+const orderId = createOrderId("ord_456");
+const email = createEmail("user@example.com");
+
+const user = getUser(userId);
+const order = getOrder(orderId);
+console.log(user, order, email);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Brand", occurrence = 1 }
+description = "Move to 'Brand'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "createUserId", occurrence = 1 }
+description = "Move to 'createUserId'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "createEmail", occurrence = 1 }
+description = "Move to 'createEmail'"
+points = 100
+optimal_keys = 7

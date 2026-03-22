@@ -1,0 +1,71 @@
+[meta]
+id = "py-junior-pathlib"
+zone = "junior"
+language = "python"
+tags = ["pathlib", "filesystem", "paths"]
+difficulty = 3
+
+[code]
+content = """
+from pathlib import Path
+
+
+def organize_directory(source_dir):
+    \"\"\"Organize files into subdirectories by extension.\"\"\"
+    source = Path(source_dir)
+    if not source.is_dir():
+        raise ValueError(f"Not a directory: {source}")
+
+    for filepath in source.iterdir():
+        if filepath.is_file():
+            extension = filepath.suffix.lower() or ".noext"
+            target_dir = source / extension.lstrip(".")
+            target_dir.mkdir(exist_ok=True)
+            destination = target_dir / filepath.name
+            filepath.rename(destination)
+
+
+def find_large_files(directory, min_size_mb=10):
+    \"\"\"Find all files larger than min_size_mb in a directory tree.\"\"\"
+    threshold = min_size_mb * 1024 * 1024
+    root = Path(directory)
+    large_files = []
+    for item in root.rglob("*"):
+        if item.is_file() and item.stat().st_size > threshold:
+            size_mb = item.stat().st_size / (1024 * 1024)
+            large_files.append((item, round(size_mb, 2)))
+    return sorted(large_files, key=lambda x: x[1], reverse=True)
+
+
+def build_project_tree(root_path, indent=0):
+    \"\"\"Print a directory tree structure.\"\"\"
+    root = Path(root_path)
+    prefix = "  " * indent
+    print(f"{prefix}{root.name}/")
+    for child in sorted(root.iterdir()):
+        if child.is_dir():
+            build_project_tree(child, indent + 1)
+        else:
+            print(f"{'  ' * (indent + 1)}{child.name}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "organize_directory", occurrence = 1 }
+description = "Move to 'organize_directory'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "find_large_files", occurrence = 1 }
+description = "Move to 'find_large_files'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "build_project_tree", occurrence = 1 }
+description = "Move to 'build_project_tree'"
+points = 100
+optimal_keys = 6

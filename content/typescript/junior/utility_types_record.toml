@@ -1,0 +1,64 @@
+[meta]
+id = "ts-junior-utility-record"
+zone = "junior"
+language = "typescript"
+tags = ["utility-types", "record"]
+difficulty = 3
+
+[code]
+content = """
+type LogLevel = "debug" | "info" | "warn" | "error";
+
+interface LogConfig {
+  enabled: boolean;
+  color: string;
+  prefix: string;
+}
+
+const logSettings: Record<LogLevel, LogConfig> = {
+  debug: { enabled: false, color: "gray", prefix: "[DBG]" },
+  info: { enabled: true, color: "blue", prefix: "[INF]" },
+  warn: { enabled: true, color: "yellow", prefix: "[WRN]" },
+  error: { enabled: true, color: "red", prefix: "[ERR]" },
+};
+
+function log(level: LogLevel, message: string): void {
+  const config = logSettings[level];
+  if (config.enabled) {
+    console.log(`${config.prefix} ${message}`);
+  }
+}
+
+type HttpStatus = 200 | 301 | 404 | 500;
+
+const statusMessages: Record<HttpStatus, string> = {
+  200: "OK",
+  301: "Moved Permanently",
+  404: "Not Found",
+  500: "Internal Server Error",
+};
+
+log("info", statusMessages[200]);
+log("error", statusMessages[500]);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "LogLevel", occurrence = 1 }
+description = "Move to 'LogLevel'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "logSettings", occurrence = 1 }
+description = "Move to 'logSettings'"
+points = 100
+optimal_keys = 9
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "statusMessages", occurrence = 1 }
+description = "Move to 'statusMessages'"
+points = 100
+optimal_keys = 7

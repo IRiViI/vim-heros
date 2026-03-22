@@ -1,0 +1,59 @@
+[meta]
+id = "py-starter-min-max-sum-len"
+zone = "starter"
+language = "python"
+tags = ["builtins", "min", "max", "sum", "len"]
+difficulty = 1
+
+[code]
+content = """
+# Built-in Functions: min, max, sum, len
+
+scores = [88, 92, 75, 95, 83, 67, 91]
+
+# Length of a collection
+print(f"Number of scores: {len(scores)}")
+
+# Minimum and maximum
+lowest = min(scores)
+highest = max(scores)
+print(f"Lowest score: {lowest}")
+print(f"Highest score: {highest}")
+
+# Sum and average
+total = sum(scores)
+average = total / len(scores)
+print(f"Total: {total}")
+print(f"Average: {average:.1f}")
+
+# Works with strings too
+names = ["Charlie", "Alice", "Bob", "Dave"]
+print(f"First alphabetically: {min(names)}")
+print(f"Last alphabetically: {max(names)}")
+print(f"Number of names: {len(names)}")
+
+# With different iterables
+word = "Python"
+print(f"Length of word: {len(word)}")
+
+# Min/max with key function
+words = ["banana", "pie", "strawberry", "kiwi"]
+shortest = min(words, key=len)
+longest = max(words, key=len)
+print(f"Shortest: {shortest}")
+print(f"Longest: {longest}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "average", occurrence = 1 }
+description = "Move to 'average'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "alphabetically", occurrence = 1 }
+description = "Move to first 'alphabetically'"
+points = 75
+optimal_keys = 7

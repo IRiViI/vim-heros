@@ -1,0 +1,71 @@
+[meta]
+id = "py-junior-json-handling"
+zone = "junior"
+language = "python"
+tags = ["json", "serialization", "api"]
+difficulty = 3
+
+[code]
+content = """
+import json
+from datetime import datetime
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    \"\"\"Custom encoder that handles datetime objects.\"\"\"
+
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+
+def load_config(filepath):
+    \"\"\"Load and validate a JSON configuration file.\"\"\"
+    with open(filepath) as fh:
+        config = json.load(fh)
+    required_keys = {"host", "port", "database"}
+    missing = required_keys - set(config.keys())
+    if missing:
+        raise KeyError(f"Missing config keys: {missing}")
+    return config
+
+
+def save_snapshot(data, filepath):
+    \"\"\"Save a data snapshot with metadata.\"\"\"
+    snapshot = {
+        "timestamp": datetime.now(),
+        "version": "1.0",
+        "record_count": len(data),
+        "payload": data,
+    }
+    with open(filepath, "w") as fh:
+        json.dump(snapshot, fh, cls=DateTimeEncoder, indent=2)
+
+
+def pretty_print(obj):
+    \"\"\"Display JSON with nice formatting.\"\"\"
+    formatted = json.dumps(obj, indent=4, sort_keys=True)
+    print(formatted)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "DateTimeEncoder", occurrence = 1 }
+description = "Move to 'DateTimeEncoder'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "load_config", occurrence = 1 }
+description = "Move to 'load_config'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "save_snapshot", occurrence = 1 }
+description = "Move to 'save_snapshot'"
+points = 100
+optimal_keys = 6

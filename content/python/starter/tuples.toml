@@ -1,0 +1,56 @@
+[meta]
+id = "py-starter-tuples"
+zone = "starter"
+language = "python"
+tags = ["tuples", "immutable", "packing"]
+difficulty = 1
+
+[code]
+content = """
+# Tuples in Python
+
+# A tuple is an immutable sequence
+coordinates = (10, 20)
+print(f"X: {coordinates[0]}, Y: {coordinates[1]}")
+
+# Tuple packing and unpacking
+person = ("Alice", 30, "Engineer")
+name, age, job = person
+print(f"{name} is {age} and works as {job}")
+
+# Single element tuple needs trailing comma
+singleton = (42,)
+not_a_tuple = (42)
+print(type(singleton))
+print(type(not_a_tuple))
+
+# Tuple methods
+numbers = (1, 2, 3, 2, 4, 2, 5)
+print(f"Count of 2: {numbers.count(2)}")
+print(f"Index of 4: {numbers.index(4)}")
+
+# Tuples as dictionary keys
+locations = {}
+locations[(0, 0)] = "origin"
+locations[(1, 2)] = "point A"
+print(locations)
+
+# Nested tuples
+matrix = ((1, 2), (3, 4), (5, 6))
+for row in matrix:
+    print(row)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "immutable", occurrence = 1 }
+description = "Move to 'immutable'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "singleton", occurrence = 1 }
+description = "Move to 'singleton'"
+points = 75
+optimal_keys = 6

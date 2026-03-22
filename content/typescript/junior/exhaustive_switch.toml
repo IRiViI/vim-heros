@@ -1,0 +1,80 @@
+[meta]
+id = "ts-junior-exhaustive-switch"
+zone = "junior"
+language = "typescript"
+tags = ["exhaustive-switch", "never", "pattern-matching"]
+difficulty = 4
+
+[code]
+content = """
+type Shape =
+  | { kind: "circle"; radius: number }
+  | { kind: "rectangle"; width: number; height: number }
+  | { kind: "triangle"; base: number; height: number }
+  | { kind: "ellipse"; a: number; b: number };
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled case: ${JSON.stringify(value)}`);
+}
+
+function calculateArea(shape: Shape): number {
+  switch (shape.kind) {
+    case "circle":
+      return Math.PI * shape.radius ** 2;
+    case "rectangle":
+      return shape.width * shape.height;
+    case "triangle":
+      return (shape.base * shape.height) / 2;
+    case "ellipse":
+      return Math.PI * shape.a * shape.b;
+    default:
+      return assertNever(shape);
+  }
+}
+
+function describeShape(shape: Shape): string {
+  switch (shape.kind) {
+    case "circle":
+      return `Circle with radius ${shape.radius}`;
+    case "rectangle":
+      return `Rectangle ${shape.width}x${shape.height}`;
+    case "triangle":
+      return `Triangle base=${shape.base} h=${shape.height}`;
+    case "ellipse":
+      return `Ellipse a=${shape.a} b=${shape.b}`;
+    default:
+      return assertNever(shape);
+  }
+}
+
+const shapes: Shape[] = [
+  { kind: "circle", radius: 5 },
+  { kind: "rectangle", width: 4, height: 6 },
+  { kind: "triangle", base: 3, height: 8 },
+];
+
+shapes.forEach((s) => {
+  console.log(`${describeShape(s)}: area = ${calculateArea(s).toFixed(2)}`);
+});
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "assertNever", occurrence = 1 }
+description = "Move to 'assertNever'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "calculateArea", occurrence = 1 }
+description = "Move to 'calculateArea'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "describeShape", occurrence = 1 }
+description = "Move to 'describeShape'"
+points = 100
+optimal_keys = 7

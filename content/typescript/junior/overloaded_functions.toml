@@ -1,0 +1,69 @@
+[meta]
+id = "ts-junior-overloaded-functions"
+zone = "junior"
+language = "typescript"
+tags = ["function-overloads", "signatures"]
+difficulty = 4
+
+[code]
+content = """
+function createElement(tag: "a"): HTMLAnchorElement;
+function createElement(tag: "canvas"): HTMLCanvasElement;
+function createElement(tag: "div"): HTMLDivElement;
+function createElement(tag: string): HTMLElement;
+function createElement(tag: string): HTMLElement {
+  return document.createElement(tag);
+}
+
+function formatValue(value: string): string;
+function formatValue(value: number): string;
+function formatValue(value: Date): string;
+function formatValue(value: string | number | Date): string {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  if (typeof value === "number") {
+    return value.toLocaleString();
+  }
+  return value.toISOString();
+}
+
+function combine(a: string, b: string): string;
+function combine(a: number, b: number): number;
+function combine(a: string | number, b: string | number): string | number {
+  if (typeof a === "string" && typeof b === "string") {
+    return a + b;
+  }
+  if (typeof a === "number" && typeof b === "number") {
+    return a + b;
+  }
+  throw new Error("Types must match");
+}
+
+const link = createElement("a");
+const formatted = formatValue(42000);
+const sum = combine(10, 20);
+const greeting = combine("Hello, ", "World");
+console.log(formatted, sum, greeting);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "createElement", occurrence = 1 }
+description = "Move to 'createElement'"
+points = 75
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "formatValue", occurrence = 1 }
+description = "Move to 'formatValue'"
+points = 100
+optimal_keys = 8
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "combine", occurrence = 1 }
+description = "Move to 'combine'"
+points = 100
+optimal_keys = 6

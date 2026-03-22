@@ -1,0 +1,73 @@
+[meta]
+id = "py-starter-try-except"
+zone = "starter"
+language = "python"
+tags = ["errors", "try", "except", "handling"]
+difficulty = 2
+
+[code]
+content = """
+# Basic Error Handling
+
+# VIM TIP: Use 'n' to jump to the next search result after '/'.
+
+# Simple try/except
+try:
+    result = 10 / 0
+except ZeroDivisionError:
+    print("Cannot divide by zero!")
+
+# Handling multiple errors
+try:
+    number = int("hello")
+except ValueError:
+    print("That's not a valid number!")
+
+# Multiple except blocks
+def safe_divide(a, b):
+    try:
+        return a / b
+    except ZeroDivisionError:
+        print("Division by zero!")
+        return None
+    except TypeError:
+        print("Invalid types for division!")
+        return None
+
+print(safe_divide(10, 3))
+print(safe_divide(10, 0))
+
+# Try/except/else/finally
+try:
+    value = int("42")
+except ValueError:
+    print("Conversion failed")
+else:
+    print(f"Conversion succeeded: {value}")
+finally:
+    print("This always runs")
+
+# Practical example
+scores = ["90", "abc", "75", "82"]
+valid_scores = []
+for s in scores:
+    try:
+        valid_scores.append(int(s))
+    except ValueError:
+        print(f"Skipping invalid score: {s}")
+print(f"Valid scores: {valid_scores}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "ZeroDivisionError", occurrence = 1 }
+description = "Move to 'ZeroDivisionError'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "finally", occurrence = 1 }
+description = "Move to 'finally'"
+points = 75
+optimal_keys = 7

@@ -1,0 +1,60 @@
+[meta]
+id = "py-junior-set-comprehensions"
+zone = "junior"
+language = "python"
+tags = ["set", "comprehensions", "dedup"]
+difficulty = 3
+
+[code]
+content = """
+import string
+
+sentence = "the quick brown fox jumps over the lazy dog"
+words = sentence.split()
+
+# Unique word lengths
+unique_lengths = {len(w) for w in words}
+
+# Unique first characters
+first_chars = {w[0] for w in words}
+
+# Letters used in the sentence
+letters_used = {ch for ch in sentence if ch in string.ascii_lowercase}
+
+# Letters NOT used
+alphabet = set(string.ascii_lowercase)
+unused_letters = alphabet - letters_used
+
+# Find common elements between two sequences
+primes = {2, 3, 5, 7, 11, 13, 17, 19}
+fibonacci_set = {1, 1, 2, 3, 5, 8, 13, 21}
+common = primes & fibonacci_set
+
+# Unique absolute values from mixed list
+numbers = [-3, -1, 0, 1, 2, 3, -2, 4, -4]
+unique_abs = {abs(n) for n in numbers}
+
+print(f"Unique lengths: {unique_lengths}")
+print(f"Common primes and fibonacci: {common}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "unique_lengths", occurrence = 1 }
+description = "Move to 'unique_lengths'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "unused_letters", occurrence = 1 }
+description = "Move to 'unused_letters'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fibonacci_set", occurrence = 1 }
+description = "Move to 'fibonacci_set'"
+points = 100
+optimal_keys = 6

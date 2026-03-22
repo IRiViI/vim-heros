@@ -1,0 +1,71 @@
+[meta]
+id = "ts-starter-optional-chaining"
+zone = "starter"
+language = "typescript"
+tags = ["optional-chaining", "null-safety", "access"]
+difficulty = 2
+
+[code]
+content = """
+// Optional Chaining (?.)
+
+interface Address {
+  street: string;
+  city: string;
+  zip?: string;
+}
+
+interface Customer {
+  name: string;
+  email?: string;
+  address?: Address;
+}
+
+const customer1: Customer = {
+  name: "Alice",
+  email: "alice@test.com",
+  address: {
+    street: "123 Oak Ave",
+    city: "Portland",
+    zip: "97201"
+  }
+};
+
+const customer2: Customer = {
+  name: "Bob"
+};
+
+const zip1 = customer1.address?.zip;
+const zip2 = customer2.address?.zip;
+const city = customer2.address?.city ?? "Unknown";
+
+const emailLength = customer1.email?.length;
+const missing = customer2.email?.toUpperCase();
+
+console.log("Zip1:", zip1);
+console.log("Zip2:", zip2);
+console.log("City:", city);
+console.log("Email length:", emailLength);
+console.log("Missing:", missing);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Address", occurrence = 1 }
+description = "Move to 'Address'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Customer", occurrence = 1 }
+description = "Move to 'Customer'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "emailLength", occurrence = 1 }
+description = "Move to 'emailLength'"
+points = 75
+optimal_keys = 8

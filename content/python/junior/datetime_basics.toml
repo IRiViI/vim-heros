@@ -1,0 +1,82 @@
+[meta]
+id = "py-junior-datetime-basics"
+zone = "junior"
+language = "python"
+tags = ["datetime", "time", "date"]
+difficulty = 3
+
+[code]
+content = """
+from datetime import datetime, timedelta, date
+
+
+def days_until_birthday(birth_month, birth_day):
+    \"\"\"Calculate days until next birthday.\"\"\"
+    today = date.today()
+    birthday = date(today.year, birth_month, birth_day)
+    if birthday < today:
+        birthday = date(today.year + 1, birth_month, birth_day)
+    delta = birthday - today
+    return delta.days
+
+
+def parse_timestamps(raw_dates):
+    \"\"\"Parse various date format strings into datetime objects.\"\"\"
+    formats = [
+        "%Y-%m-%d",
+        "%d/%m/%Y",
+        "%B %d, %Y",
+        "%Y-%m-%dT%H:%M:%S",
+    ]
+    parsed = []
+    for raw in raw_dates:
+        for fmt in formats:
+            try:
+                parsed.append(datetime.strptime(raw, fmt))
+                break
+            except ValueError:
+                continue
+    return parsed
+
+
+def generate_date_range(start_date, end_date):
+    \"\"\"Generate all dates between start and end (inclusive).\"\"\"
+    current = start_date
+    dates = []
+    while current <= end_date:
+        dates.append(current)
+        current += timedelta(days=1)
+    return dates
+
+
+def working_days_between(start, end):
+    \"\"\"Count working days (Mon-Fri) between two dates.\"\"\"
+    count = 0
+    current = start
+    while current <= end:
+        if current.weekday() < 5:
+            count += 1
+        current += timedelta(days=1)
+    return count
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "days_until_birthday", occurrence = 1 }
+description = "Move to 'days_until_birthday'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "parse_timestamps", occurrence = 1 }
+description = "Move to 'parse_timestamps'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "working_days_between", occurrence = 1 }
+description = "Move to 'working_days_between'"
+points = 100
+optimal_keys = 6

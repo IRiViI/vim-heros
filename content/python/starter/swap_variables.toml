@@ -1,0 +1,74 @@
+[meta]
+id = "py-starter-swap-variables"
+zone = "starter"
+language = "python"
+tags = ["variables", "swap", "tricks"]
+difficulty = 1
+
+[code]
+content = """
+# Swapping Variables
+
+# VIM TIP: Use 'W' to jump forward by WORD (ignores punctuation).
+
+# Traditional swap with temp variable
+a = "hello"
+b = "world"
+temp = a
+a = b
+b = temp
+print(f"a={a}, b={b}")
+
+# Pythonic swap (no temp needed!)
+x = 100
+y = 200
+x, y = y, x
+print(f"x={x}, y={y}")
+
+# Swap elements in a list
+colors = ["red", "blue", "green"]
+colors[0], colors[2] = colors[2], colors[0]
+print(f"Swapped: {colors}")
+
+# Rotate three variables
+first = 1
+second = 2
+third = 3
+first, second, third = second, third, first
+print(f"Rotated: {first}, {second}, {third}")
+
+# Practical: sort two variables
+p = 50
+q = 30
+if p > q:
+    p, q = q, p
+print(f"Ordered: {p}, {q}")
+
+# Swap in a sorting context
+numbers = [5, 2, 8, 1, 9]
+for i in range(len(numbers) - 1):
+    if numbers[i] > numbers[i + 1]:
+        numbers[i], numbers[i + 1] = numbers[i + 1], numbers[i]
+print(f"One pass: {numbers}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Traditional", occurrence = 1 }
+description = "Move to 'Traditional'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Pythonic", occurrence = 1 }
+description = "Move to 'Pythonic'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Rotate", occurrence = 1 }
+description = "Move to 'Rotate'"
+points = 75
+optimal_keys = 7

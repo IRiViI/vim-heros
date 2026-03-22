@@ -1,0 +1,55 @@
+[meta]
+id = "ts-starter-ternary-operator"
+zone = "starter"
+language = "typescript"
+tags = ["ternary", "conditional", "operator"]
+difficulty = 1
+
+[code]
+content = """
+// Ternary Operator
+
+const age = 20;
+const canVote = age >= 18 ? "Yes" : "No";
+
+const score = 85;
+const grade = score >= 90 ? "A" : score >= 80 ? "B" : "C";
+
+const temperature = 32;
+const weather = temperature > 70 ? "warm" : "cold";
+
+const items = ["apple", "banana"];
+const message = items.length > 0 ? "Cart has items" : "Cart is empty";
+
+function formatPrice(price: number, currency: string = "USD"): string {
+  const symbol = currency === "USD" ? "$" : "?";
+  return symbol + price.toFixed(2);
+}
+
+const isLoggedIn = true;
+const greeting = isLoggedIn ? "Welcome back!" : "Please sign in";
+
+const count = 0;
+const label = count === 1 ? "item" : "items";
+
+console.log("Can vote:", canVote);
+console.log("Grade:", grade);
+console.log("Weather:", weather);
+console.log("Price:", formatPrice(29.99));
+console.log("Greeting:", greeting);
+console.log(count, label);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "canVote", occurrence = 1 }
+description = "Move to 'canVote'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "formatPrice", occurrence = 1 }
+description = "Move to 'formatPrice'"
+points = 75
+optimal_keys = 6

@@ -1,0 +1,66 @@
+[meta]
+id = "py-starter-if-elif-else"
+zone = "starter"
+language = "python"
+tags = ["conditionals", "if", "elif", "else"]
+difficulty = 1
+
+[code]
+content = """
+# If, Elif, and Else Statements
+
+temperature = 75
+
+if temperature > 90:
+    print("It's hot outside!")
+elif temperature > 70:
+    print("It's warm and pleasant")
+elif temperature > 50:
+    print("It's a bit cool")
+else:
+    print("It's cold outside!")
+
+# Grade checker
+score = 85
+if score >= 90:
+    grade = "A"
+elif score >= 80:
+    grade = "B"
+elif score >= 70:
+    grade = "C"
+elif score >= 60:
+    grade = "D"
+else:
+    grade = "F"
+
+print(f"Your grade is: {grade}")
+
+# Multiple conditions
+age = 20
+has_license = True
+if age >= 16 and has_license:
+    print("You can drive")
+else:
+    print("You cannot drive yet")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "temperature", occurrence = 1 }
+description = "Move to 'temperature'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "grade", occurrence = 1 }
+description = "Move to first 'grade'"
+points = 50
+optimal_keys = 6
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "license", occurrence = 1 }
+description = "Move to 'license'"
+points = 75
+optimal_keys = 8

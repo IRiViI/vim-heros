@@ -1,0 +1,58 @@
+[meta]
+id = "ts-starter-objects"
+zone = "starter"
+language = "typescript"
+tags = ["objects", "properties", "types"]
+difficulty = 1
+
+[code]
+content = """
+// Objects and Object Types
+// VIM TIP: Use 'f' followed by a character to jump to it on the current line.
+
+let person = {
+  name: "Alice",
+  age: 30,
+  email: "alice@example.com",
+  isActive: true
+};
+
+let product = {
+  title: "Keyboard",
+  price: 79.99,
+  inStock: true,
+  category: "Electronics"
+};
+
+let address = {
+  street: "123 Main St",
+  city: "Seattle",
+  state: "WA",
+  zip: "98101"
+};
+
+console.log(person.name);
+console.log(product.title, product.price);
+console.log(address.city, address.state);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "person", occurrence = 1 }
+description = "Move to 'person'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "product", occurrence = 1 }
+description = "Move to 'product'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "address", occurrence = 1 }
+description = "Move to 'address'"
+points = 75
+optimal_keys = 7

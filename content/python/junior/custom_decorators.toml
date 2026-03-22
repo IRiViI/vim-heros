@@ -1,0 +1,73 @@
+[meta]
+id = "py-junior-custom-decorators"
+zone = "junior"
+language = "python"
+tags = ["decorators", "cache", "validation"]
+difficulty = 4
+
+[code]
+content = """
+# Vim tip: Use * to search forward for the word under the cursor
+import functools
+
+
+def validate_types(**expected):
+    \"\"\"Decorator to validate argument types at runtime.\"\"\"
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            import inspect
+            sig = inspect.signature(func)
+            bound = sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+            for param, value in bound.arguments.items():
+                if param in expected:
+                    if not isinstance(value, expected[param]):
+                        raise TypeError(
+                            f"{param} must be {expected[param].__name__}"
+                        )
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def memoize(func):
+    \"\"\"Simple memoization decorator using a dictionary cache.\"\"\"
+    cache = {}
+    @functools.wraps(func)
+    def wrapper(*args):
+        if args not in cache:
+            cache[args] = func(*args)
+        return cache[args]
+    wrapper.cache = cache
+    return wrapper
+
+
+@validate_types(n=int)
+@memoize
+def fibonacci(n):
+    if n < 2:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "inspect", occurrence = 1 }
+description = "Move to 'inspect'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "memoize", occurrence = 1 }
+description = "Move to 'memoize'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fibonacci", occurrence = 1 }
+description = "Move to 'fibonacci'"
+points = 100
+optimal_keys = 6

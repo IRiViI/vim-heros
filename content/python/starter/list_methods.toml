@@ -1,0 +1,57 @@
+[meta]
+id = "py-starter-list-methods"
+zone = "starter"
+language = "python"
+tags = ["lists", "methods", "append", "sort"]
+difficulty = 1
+
+[code]
+content = """
+# List Methods
+
+# VIM TIP: Use 'f' followed by a character to jump to it on the current line.
+
+shopping = ["bread", "milk", "eggs"]
+
+# Adding items
+shopping.append("butter")
+shopping.insert(1, "cheese")
+print(f"After adding: {shopping}")
+
+# Removing items
+shopping.remove("milk")
+popped = shopping.pop()
+print(f"Popped: {popped}")
+print(f"After removing: {shopping}")
+
+# Sorting and reversing
+numbers = [42, 8, 15, 23, 4, 16]
+numbers.sort()
+print(f"Sorted: {numbers}")
+numbers.reverse()
+print(f"Reversed: {numbers}")
+
+# Other useful methods
+print(f"Index of 15: {numbers.index(15)}")
+print(f"Count of 8: {numbers.count(8)}")
+
+# Copy and clear
+backup = numbers.copy()
+numbers.clear()
+print(f"Original: {numbers}")
+print(f"Backup: {backup}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "shopping", occurrence = 1 }
+description = "Move to 'shopping'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Sorting", occurrence = 1 }
+description = "Move to 'Sorting'"
+points = 75
+optimal_keys = 6

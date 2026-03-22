@@ -1,0 +1,54 @@
+[meta]
+id = "ts-starter-array-methods-basic"
+zone = "starter"
+language = "typescript"
+tags = ["arrays", "push", "pop", "methods"]
+difficulty = 1
+
+[code]
+content = """
+// Array Methods: push, pop, shift, unshift
+
+const stack: number[] = [];
+
+stack.push(10);
+stack.push(20);
+stack.push(30);
+console.log("After pushes:", stack);
+
+const popped = stack.pop();
+console.log("Popped:", popped);
+console.log("After pop:", stack);
+
+const queue: string[] = ["first", "second", "third"];
+
+const shifted = queue.shift();
+console.log("Shifted:", shifted);
+console.log("After shift:", queue);
+
+queue.unshift("new-first");
+console.log("After unshift:", queue);
+
+const items = [1, 2, 3, 4, 5];
+const sliced = items.slice(1, 4);
+const joined = items.join(", ");
+const reversed = [...items].reverse();
+
+console.log("Sliced:", sliced);
+console.log("Joined:", joined);
+console.log("Reversed:", reversed);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "stack", occurrence = 1 }
+description = "Move to 'stack'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "queue", occurrence = 1 }
+description = "Move to 'queue'"
+points = 75
+optimal_keys = 6

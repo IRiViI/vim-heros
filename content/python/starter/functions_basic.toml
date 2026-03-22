@@ -1,0 +1,63 @@
+[meta]
+id = "py-starter-functions-basic"
+zone = "starter"
+language = "python"
+tags = ["functions", "def", "basics"]
+difficulty = 1
+
+[code]
+content = """
+# Basic Functions in Python
+
+def greet(name):
+    print(f"Hello, {name}!")
+
+greet("Alice")
+greet("Bob")
+
+# Function with no parameters
+def display_menu():
+    print("=== Main Menu ===")
+    print("1. Start Game")
+    print("2. Settings")
+    print("3. Quit")
+
+display_menu()
+
+# Function that performs a calculation
+def add_numbers(a, b):
+    result = a + b
+    print(f"{a} + {b} = {result}")
+
+add_numbers(5, 3)
+add_numbers(10, 20)
+
+# Function with a docstring
+def square(number):
+    \"\"\"Return the square of a number.\"\"\"
+    print(f"The square of {number} is {number * number}")
+
+square(7)
+square(12)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "greet", occurrence = 1 }
+description = "Move to 'greet'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "display_menu", occurrence = 1 }
+description = "Move to 'display_menu'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "docstring", occurrence = 1 }
+description = "Move to 'docstring'"
+points = 75
+optimal_keys = 7

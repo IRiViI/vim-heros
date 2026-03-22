@@ -1,0 +1,61 @@
+[meta]
+id = "ts-starter-console-log-formatting"
+zone = "starter"
+language = "typescript"
+tags = ["console", "logging", "debugging"]
+difficulty = 1
+
+[code]
+content = """
+// Console.log Formatting
+// VIM TIP: Use 'ci"' to change the text inside double quotes.
+
+const appName = "TaskManager";
+const version = "2.1.0";
+
+console.log("Starting", appName, "v" + version);
+
+// Multiple values
+const x = 10;
+const y = 20;
+console.log("Coordinates:", x, y);
+
+// Template literals in logs
+const userName = "developer";
+console.log(`User ${userName} logged in at ${new Date().toISOString()}`);
+
+// Logging objects
+const config = { port: 3000, env: "dev" };
+console.log("Config:", config);
+
+// Console methods
+console.warn("This is a warning message");
+console.error("Something went wrong!");
+console.info("Server is running");
+
+// Table-like output
+const users = ["Alice", "Bob", "Charlie"];
+console.log("Users:", users.join(", "));
+
+// Conditional logging
+const debug = true;
+if (debug) {
+  console.log("[DEBUG] Verbose output enabled");
+}
+
+console.log("Done!");
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "appName", occurrence = 1 }
+description = "Move to 'appName'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "config", occurrence = 1 }
+description = "Move to 'config'"
+points = 75
+optimal_keys = 7

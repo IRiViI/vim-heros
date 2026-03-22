@@ -69,6 +69,53 @@ mod tests {
     }
 
     #[test]
+    fn test_load_python_junior() {
+        let segments = load_segments("python", "junior");
+        assert!(
+            segments.len() >= 30,
+            "Expected at least 30 Python junior segments, got {}",
+            segments.len()
+        );
+        for seg in &segments {
+            assert_eq!(seg.meta.language, "python");
+            assert_eq!(seg.meta.zone, "junior");
+            assert!(!seg.code.content.is_empty());
+            assert!(!seg.tasks.is_empty(), "Segment {} has no tasks", seg.meta.id);
+        }
+    }
+
+    #[test]
+    fn test_load_typescript_starter() {
+        let segments = load_segments("typescript", "starter");
+        assert!(
+            segments.len() >= 30,
+            "Expected at least 30 TypeScript starter segments, got {}",
+            segments.len()
+        );
+        for seg in &segments {
+            assert_eq!(seg.meta.language, "typescript");
+            assert_eq!(seg.meta.zone, "starter");
+            assert!(!seg.code.content.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_load_typescript_junior() {
+        let segments = load_segments("typescript", "junior");
+        assert!(
+            segments.len() >= 30,
+            "Expected at least 30 TypeScript junior segments, got {}",
+            segments.len()
+        );
+        for seg in &segments {
+            assert_eq!(seg.meta.language, "typescript");
+            assert_eq!(seg.meta.zone, "junior");
+            assert!(!seg.code.content.is_empty());
+            assert!(!seg.tasks.is_empty(), "Segment {} has no tasks", seg.meta.id);
+        }
+    }
+
+    #[test]
     fn test_load_nonexistent_returns_empty() {
         let segments = load_segments("haskell", "starter");
         assert!(segments.is_empty());

@@ -1,0 +1,81 @@
+[meta]
+id = "py-junior-enum-classes"
+zone = "junior"
+language = "python"
+tags = ["enum", "constants", "state"]
+difficulty = 3
+
+[code]
+content = """
+from enum import Enum, auto, IntEnum
+
+
+class Direction(Enum):
+    NORTH = auto()
+    SOUTH = auto()
+    EAST = auto()
+    WEST = auto()
+
+    def opposite(self):
+        opposites = {
+            Direction.NORTH: Direction.SOUTH,
+            Direction.SOUTH: Direction.NORTH,
+            Direction.EAST: Direction.WEST,
+            Direction.WEST: Direction.EAST,
+        }
+        return opposites[self]
+
+
+class HttpStatus(IntEnum):
+    OK = 200
+    CREATED = 201
+    BAD_REQUEST = 400
+    NOT_FOUND = 404
+    SERVER_ERROR = 500
+
+    @property
+    def is_success(self):
+        return 200 <= self.value < 300
+
+    @property
+    def is_error(self):
+        return self.value >= 400
+
+
+class Color(Enum):
+    RED = (255, 0, 0)
+    GREEN = (0, 255, 0)
+    BLUE = (0, 0, 255)
+
+    @property
+    def hex_code(self):
+        r, g, b = self.value
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+
+heading = Direction.NORTH
+turned = heading.opposite()
+status = HttpStatus.NOT_FOUND
+print(f"{status.name}: error={status.is_error}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Direction", occurrence = 1 }
+description = "Move to 'Direction'"
+points = 75
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "HttpStatus", occurrence = 1 }
+description = "Move to 'HttpStatus'"
+points = 100
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "hex_code", occurrence = 1 }
+description = "Move to 'hex_code'"
+points = 100
+optimal_keys = 6

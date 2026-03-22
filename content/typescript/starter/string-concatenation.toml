@@ -1,0 +1,62 @@
+[meta]
+id = "ts-starter-string-concatenation"
+zone = "starter"
+language = "typescript"
+tags = ["strings", "concatenation", "joining"]
+difficulty = 1
+
+[code]
+content = """
+// String Concatenation
+
+const first = "John";
+const last = "Doe";
+
+// Using + operator
+const fullName = first + " " + last;
+const greeting = "Hello, " + fullName + "!";
+
+// Building strings incrementally
+let output = "";
+output = output + "Name: " + fullName + "\\n";
+output = output + "Role: Developer\\n";
+output = output + "Team: Frontend\\n";
+
+// Using concat method
+const part1 = "Good";
+const part2 = "Morning";
+const combined = part1.concat(" ", part2, "!");
+
+// Joining array elements
+const words = ["TypeScript", "is", "great"];
+const sentence = words.join(" ");
+
+const path = ["home", "user", "documents"];
+const filePath = path.join("/");
+
+// Number to string concatenation
+const count = 5;
+const label = "Items: " + count;
+const explicit = "Items: " + String(count);
+
+console.log(greeting);
+console.log(output);
+console.log(combined);
+console.log(sentence);
+console.log(filePath);
+console.log(label);
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fullName", occurrence = 1 }
+description = "Move to 'fullName'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "sentence", occurrence = 1 }
+description = "Move to 'sentence'"
+points = 75
+optimal_keys = 7
