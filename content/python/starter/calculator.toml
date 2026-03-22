@@ -1,0 +1,38 @@
+[meta]
+id = "py-starter-calculator"
+zone = "starter"
+language = "python"
+tags = ["functions", "arithmetic"]
+difficulty = 2
+
+[code]
+content = """
+def add(a, b):
+    return a + b
+
+def subtract(a, b):
+    return a - b
+
+def multiply(a, b):
+    return a * b
+
+result = add(10, 5)
+print(f"Sum: {result}")
+
+result = multiply(3, 7)
+print(f"Product: {result}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "subtract", occurrence = 1 }
+description = "Move to 'subtract'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "multiply", occurrence = 1 }
+description = "Move to 'multiply'"
+points = 50
+optimal_keys = 3

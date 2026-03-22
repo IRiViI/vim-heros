@@ -1,0 +1,38 @@
+[meta]
+id = "py-starter-dictionary"
+zone = "starter"
+language = "python"
+tags = ["dictionaries", "loops"]
+difficulty = 2
+
+[code]
+content = """
+student = {
+    "name": "Bob",
+    "grade": 85,
+    "subject": "Math",
+}
+
+if student["grade"] >= 90:
+    status = "excellent"
+elif student["grade"] >= 70:
+    status = "passing"
+else:
+    status = "needs improvement"
+
+print(f"{student['name']}: {status}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "subject", occurrence = 1 }
+description = "Move to 'subject'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "excellent", occurrence = 1 }
+description = "Move to 'excellent'"
+points = 75
+optimal_keys = 5

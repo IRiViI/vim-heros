@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 pub enum GameState {
     Playing,
     GameOver,
+    LevelComplete,
 }
 
 /// Drives scroll ticking, scoring, and game state.

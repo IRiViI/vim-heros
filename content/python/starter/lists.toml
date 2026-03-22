@@ -1,0 +1,35 @@
+[meta]
+id = "py-starter-lists"
+zone = "starter"
+language = "python"
+tags = ["lists", "loops"]
+difficulty = 1
+
+[code]
+content = """
+# VIM TIP: Use 'h' and 'l' to move left and right on a line.
+fruits = ["apple", "banana", "cherry", "date"]
+prices = [1.20, 0.50, 2.00, 3.50]
+
+total = 0
+for price in prices:
+    total += price
+
+print(f"Total: ${total:.2f}")
+average = total / len(prices)
+print(f"Average: ${average:.2f}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "cherry", occurrence = 1 }
+description = "Move to 'cherry'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "average", occurrence = 1 }
+description = "Move to 'average'"
+points = 75
+optimal_keys = 6

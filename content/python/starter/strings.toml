@@ -1,0 +1,35 @@
+[meta]
+id = "py-starter-strings"
+zone = "starter"
+language = "python"
+tags = ["strings", "methods"]
+difficulty = 2
+
+[code]
+content = """
+message = "hello world"
+uppercase = message.upper()
+words = message.split()
+
+first_word = words[0]
+last_word = words[-1]
+capitalized = message.capitalize()
+
+print(f"Original: {message}")
+print(f"Upper: {uppercase}")
+print(f"Capitalized: {capitalized}")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "uppercase", occurrence = 1 }
+description = "Move to 'uppercase'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "capitalized", occurrence = 1 }
+description = "Move to 'capitalized'"
+points = 75
+optimal_keys = 5

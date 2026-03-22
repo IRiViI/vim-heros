@@ -23,8 +23,8 @@ pub fn render(frame: &mut ratatui::Frame, app: &App) {
     render_buffer(frame, app, chunks[1]);
     render_status_bar(frame, app, chunks[2]);
 
-    if app.engine.state == GameState::GameOver {
-        render_game_over(frame, app, chunks[1]);
+    if matches!(app.engine.state, GameState::GameOver | GameState::LevelComplete) {
+        render_results(frame, app, chunks[1]);
     }
 }
 
@@ -43,11 +43,11 @@ fn render_hud(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
         ),
         Span::styled(
-            " Level 1-1 ",
+            format!(" Level {} ", app.level.display_id()),
             Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
         ),
         Span::styled(
-            format!("\"First Steps\""),
+            format!("\"{}\" ", app.level.name),
             Style::default().fg(Color::DarkGray),
         ),
         Span::styled(score, Style::default().fg(Color::Green)),
@@ -72,21 +72,33 @@ fn render_hud(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     frame.render_widget(hud, area);
 }
 
-/// Get the style info for a task line: (background color, annotation text, annotation color).
-fn task_line_style(task: &Task) -> (Color, String, Color) {
+/// Task highlight style for the single target character.
+fn task_char_style(task: &Task) -> Style {
+    match task.state {
+        TaskState::Pending | TaskState::Active => {
+            Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD)
+        }
+        TaskState::Completed => {
+            Style::default().bg(Color::Green).fg(Color::Black).add_modifier(Modifier::BOLD)
+        }
+        TaskState::Missed => {
+            Style::default().bg(Color::Yellow).fg(Color::Black)
+        }
+    }
+}
+
+/// Gutter annotation for a task.
+fn task_annotation(task: &Task) -> (String, Color) {
     match task.state {
         TaskState::Pending | TaskState::Active => (
-            Color::Rgb(60, 20, 20),
             format!("  \u{25c0} {} ", task.gutter_text),
             Color::Red,
         ),
         TaskState::Completed => (
-            Color::Rgb(20, 60, 20),
             " \u{2713} DONE ".to_string(),
             Color::Green,
         ),
         TaskState::Missed => (
-            Color::Rgb(60, 60, 20),
             " \u{2717} MISSED ".to_string(),
             Color::Yellow,
         ),
@@ -130,69 +142,98 @@ fn render_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
 
         // Check if this line has a task
         let task = task_for_line(&app.tasks, line_idx);
-        let task_bg = task.map(|t| task_line_style(t));
+        let is_cursor_line = line_idx == cursor.line;
 
-        if line_idx == cursor.line {
-            // Cursor line — build span by span
-            let mut spans = vec![Span::styled(
-                line_num,
-                Style::default().fg(Color::Yellow),
-            )];
+        let line_num_style = if is_cursor_line {
+            Style::default().fg(Color::Yellow)
+        } else {
+            Style::default().fg(Color::DarkGray)
+        };
 
-            let cursor_style = Style::default().bg(Color::White).fg(Color::Black);
-            // Task background for non-cursor characters on this line
-            let content_style = match &task_bg {
-                Some((bg, _, _)) => Style::default().bg(*bg),
-                None => Style::default(),
+        let mut spans = vec![Span::styled(line_num, line_num_style)];
+
+        if line_content.is_empty() {
+            if is_cursor_line {
+                let cursor_style = Style::default().bg(Color::White).fg(Color::Black);
+                spans.push(Span::styled(" ".to_string(), cursor_style));
+            }
+        } else {
+            let cursor_col = if is_cursor_line {
+                Some(cursor.col.min(line_content.len().saturating_sub(1)))
+            } else {
+                None
             };
 
-            if line_content.is_empty() {
-                spans.push(Span::styled(" ".to_string(), cursor_style));
-            } else {
-                let cursor_col = cursor.col.min(line_content.len().saturating_sub(1));
+            let task_col = task.map(|t| t.target_col);
+            let task_style = task.map(|t| task_char_style(t));
 
-                if cursor_col > 0 {
-                    spans.push(Span::styled(
-                        line_content[..cursor_col].to_string(),
-                        content_style,
-                    ));
-                }
+            // Build spans character by character only when needed,
+            // otherwise use sliced spans for performance.
+            if task_col.is_some() || cursor_col.is_some() {
+                // We need character-level control
+                let chars: Vec<char> = line_content.chars().collect();
+                let mut col = 0;
+                let mut run_start = 0;
 
-                let cursor_char = if cursor_col < line_content.len() {
-                    line_content[cursor_col..cursor_col + 1].to_string()
-                } else {
-                    " ".to_string()
+                // Helper: flush a run of normal characters
+                let flush_run = |spans: &mut Vec<Span>, content: &str, start: usize, end: usize| {
+                    if end > start {
+                        spans.push(Span::raw(content[start..end].to_string()));
+                    }
                 };
-                spans.push(Span::styled(cursor_char, cursor_style));
 
-                if cursor_col + 1 < line_content.len() {
-                    spans.push(Span::styled(
-                        line_content[cursor_col + 1..].to_string(),
-                        content_style,
-                    ));
+                for (i, _ch) in chars.iter().enumerate() {
+                    let byte_pos = line_content
+                        .char_indices()
+                        .nth(i)
+                        .map(|(b, _)| b)
+                        .unwrap_or(0);
+                    let next_byte = line_content
+                        .char_indices()
+                        .nth(i + 1)
+                        .map(|(b, _)| b)
+                        .unwrap_or(line_content.len());
+
+                    let is_cursor = cursor_col == Some(i);
+                    let is_task_target = task_col == Some(i) && task_style.is_some();
+
+                    if is_cursor || is_task_target {
+                        // Flush any accumulated normal text
+                        flush_run(&mut spans, &line_content, run_start, byte_pos);
+
+                        let ch_str = line_content[byte_pos..next_byte].to_string();
+                        if is_cursor {
+                            // Cursor always wins visually
+                            spans.push(Span::styled(
+                                ch_str,
+                                Style::default().bg(Color::White).fg(Color::Black),
+                            ));
+                        } else {
+                            // Task target character
+                            spans.push(Span::styled(ch_str, task_style.unwrap()));
+                        }
+                        run_start = next_byte;
+                    }
+                    col = i;
                 }
+                // Flush remaining
+                if run_start < line_content.len() {
+                    spans.push(Span::raw(line_content[run_start..].to_string()));
+                }
+                let _ = col; // suppress unused warning
+            } else {
+                // No cursor, no task — simple raw span
+                spans.push(Span::raw(line_content.clone()));
             }
-
-            // Append task annotation if present
-            if let Some((_, ref annotation, ann_color)) = task_bg {
-                spans.push(Span::styled(annotation.clone(), Style::default().fg(ann_color)));
-            }
-
-            lines.push(Line::from(spans));
-        } else if let Some((bg, ref annotation, ann_color)) = task_bg {
-            // Task line (no cursor)
-            lines.push(Line::from(vec![
-                Span::styled(line_num, Style::default().fg(Color::DarkGray)),
-                Span::styled(line_content, Style::default().bg(bg)),
-                Span::styled(annotation.clone(), Style::default().fg(ann_color)),
-            ]));
-        } else {
-            // Normal line
-            lines.push(Line::from(vec![
-                Span::styled(line_num, Style::default().fg(Color::DarkGray)),
-                Span::raw(line_content),
-            ]));
         }
+
+        // Append task annotation
+        if let Some(t) = task {
+            let (annotation, ann_color) = task_annotation(t);
+            spans.push(Span::styled(annotation, Style::default().fg(ann_color)));
+        }
+
+        lines.push(Line::from(spans));
     }
 
     let title = " Vim Heroes ";
@@ -268,18 +309,25 @@ fn render_status_bar(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     frame.render_widget(status_line, area);
 }
 
-/// Render the game over / results overlay.
-fn render_game_over(frame: &mut ratatui::Frame, app: &App, area: Rect) {
+/// Render the results overlay (game over or level complete).
+fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     let s = &app.scoring;
     let stars = s.star_display();
     let tasks_missed = app.tasks.iter().filter(|t| t.state == TaskState::Missed).count();
+    let is_complete = app.engine.state == GameState::LevelComplete;
+
+    let (title_text, title_color, border_color, border_title) = if is_complete {
+        ("LEVEL COMPLETE!", Color::Green, Color::Green, " Results ")
+    } else {
+        ("GAME OVER", Color::Red, Color::Red, " Results ")
+    };
 
     let text = vec![
         Line::from(""),
         Line::from(Span::styled(
-            "GAME OVER",
+            title_text,
             Style::default()
-                .fg(Color::Red)
+                .fg(title_color)
                 .add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
@@ -345,8 +393,8 @@ fn render_game_over(frame: &mut ratatui::Frame, app: &App, area: Rect) {
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Red))
-        .title(" Results ");
+        .border_style(Style::default().fg(border_color))
+        .title(border_title);
 
     let paragraph = Paragraph::new(text)
         .block(block)

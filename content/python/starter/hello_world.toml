@@ -1,0 +1,30 @@
+[meta]
+id = "py-starter-hello-world"
+zone = "starter"
+language = "python"
+tags = ["variables", "print"]
+difficulty = 1
+
+[code]
+content = """
+name = "Alice"
+greeting = "Hello, " + name
+print(greeting)
+
+age = 30
+print(f"{name} is {age} years old")
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Alice", occurrence = 1 }
+description = "Move to 'Alice'"
+points = 50
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "greeting", occurrence = 2 }
+description = "Move to 'greeting' (print line)"
+points = 50
+optimal_keys = 4

@@ -47,6 +47,37 @@ game over. Fewer keystrokes = more points. Powered by real Vim commands.
   6 lines forward instantly. The auto-scroll timer resets after a boost so the
   player isn't immediately punished.
 
+### 1.1b Level Start: Countdown & Import Runway
+
+Every level starts with two grace mechanisms so the player isn't thrown straight
+into tasks:
+
+**1. Import runway** — The assembler prepends 5–10 lines of language-appropriate
+import statements before the first code segment. These lines never contain tasks.
+They give the player a visual "runway" to orient themselves in the code while the
+viewport scrolls through harmless content.
+
+```python
+import os
+import sys
+from collections import defaultdict
+from typing import List, Optional
+
+# ---
+# (first code segment with tasks starts here)
+```
+
+The imports are randomly selected from a pool per language so they don't feel
+repetitive. They also double as realistic code context.
+
+**2. Countdown** — A 3-second countdown (`3... 2... 1...`) is displayed as an
+overlay before scrolling begins. During the countdown the viewport is frozen and
+no keystrokes are penalized. After "1" disappears, scrolling starts and the game
+is live. This mirrors Guitar Hero / Rock Band's pre-song countdown.
+
+Combined, these mean the first task is always at least ~10 lines into the buffer
+and the player has 3 seconds of orientation time before anything moves.
+
 ### 1.2 Scoring
 
 | Source              | Points      | Notes                                    |
@@ -1341,7 +1372,7 @@ end-of-level screen shows meaningful results with star rating.
 
 ---
 
-### Phase 7 — Content System & Segment Loader
+### Phase 7 — Content System & Segment Loader ✅
 
 **Goal**: Levels are assembled from content segments, not hardcoded.
 
@@ -1373,9 +1404,14 @@ zone/language pool. Replaying gives different content.
 - Post-level insight: compare player's keystrokes to optimal and suggest commands
 - Language selection in menu
 - Tasks cover: `move_to`, `delete_line`, `delete_word`, `change_word`, `insert_text`
+- **Import runway**: assembler prepends 5–10 lines of language-appropriate imports
+  before the first segment (see Section 1.1b). These lines never contain tasks.
+- **3-second countdown**: overlay displayed before scrolling starts. Viewport is
+  frozen and keystrokes are not penalized during countdown (see Section 1.1b).
 
 **Exit criteria**: Worlds 1–4 are fully playable in Python and TypeScript with
 varied content on each replay. Hints are visible in code and on level screens.
+Countdown plays before each level. Import runway gives breathing room.
 
 ---
 

@@ -9,3 +9,7 @@ license = "MIT"
 ropey = "1.6"
 ratatui = "0.29"
 crossterm = "0.28"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+include_dir = "0.7"
+rand = "0.8"

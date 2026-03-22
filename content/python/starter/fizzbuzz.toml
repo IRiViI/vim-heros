@@ -1,0 +1,34 @@
+[meta]
+id = "py-starter-fizzbuzz"
+zone = "starter"
+language = "python"
+tags = ["loops", "conditionals"]
+difficulty = 2
+
+[code]
+content = """
+# VIM TIP: 'j' moves down, 'k' moves up. Stay on the home row!
+for i in range(1, 21):
+    if i % 15 == 0:
+        print("FizzBuzz")
+    elif i % 3 == 0:
+        print("Fizz")
+    elif i % 5 == 0:
+        print("Buzz")
+    else:
+        print(i)
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "FizzBuzz", occurrence = 1 }
+description = "Move to 'FizzBuzz'"
+points = 50
+optimal_keys = 4
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Buzz", occurrence = 2 }
+description = "Move to the standalone 'Buzz'"
+points = 75
+optimal_keys = 6

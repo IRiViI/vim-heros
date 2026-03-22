@@ -1,4 +1,5 @@
 mod app;
+mod content;
 mod game;
 mod ui;
 mod vim;

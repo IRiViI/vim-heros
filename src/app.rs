@@ -1,6 +1,8 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use std::time::Duration;
 
+use crate::content::assembler;
+use crate::content::loader;
 use crate::game::engine::{Engine, GameState};
 use crate::game::scoring::Scoring;
 use crate::game::task::{self, Task, TaskKind, TaskState};
@@ -100,6 +102,35 @@ impl Shape {
 }"#;
 
 const DEFAULT_SCROLL_SPEED_MS: u64 = 2000;
+const SEGMENTS_PER_LEVEL: usize = 4;
+
+/// Level metadata.
+pub struct LevelInfo {
+    pub world: usize,
+    pub level: usize,
+    pub name: String,
+    pub zone: String,
+    pub language: String,
+    pub scroll_speed_ms: u64,
+}
+
+impl LevelInfo {
+    pub fn display_id(&self) -> String {
+        format!("{}-{}", self.world, self.level)
+    }
+}
+
+/// The default (and currently only) level.
+fn default_level() -> LevelInfo {
+    LevelInfo {
+        world: 1,
+        level: 1,
+        name: "First Steps".to_string(),
+        zone: "starter".to_string(),
+        language: "python".to_string(),
+        scroll_speed_ms: DEFAULT_SCROLL_SPEED_MS,
+    }
+}
 
 pub struct App {
     pub buffer: Buffer,
@@ -110,13 +141,15 @@ pub struct App {
     pub engine: Engine,
     pub scoring: Scoring,
     pub tasks: Vec<Task>,
+    pub level: LevelInfo,
     parser: CommandParser,
+    recently_seen: Vec<String>,
 }
 
 impl App {
     pub fn new(viewport_height: usize) -> Self {
-        let buffer = Buffer::from_str(SAMPLE_CODE);
-        let tasks = task::hardcoded_tasks(&buffer);
+        let level = default_level();
+        let (buffer, tasks, seen) = Self::load_level(&level, &[]);
         let tasks_total = tasks.len();
         Self {
             buffer,
@@ -124,11 +157,33 @@ impl App {
             mode: Mode::Normal,
             running: true,
             viewport: Viewport::new(viewport_height),
-            engine: Engine::new(DEFAULT_SCROLL_SPEED_MS),
+            engine: Engine::new(level.scroll_speed_ms),
             scoring: Scoring::new(tasks_total),
             tasks,
+            level,
             parser: CommandParser::new(),
+            recently_seen: seen,
         }
+    }
+
+    /// Load a level from content segments. Returns (buffer, tasks, segment IDs used).
+    fn load_level(
+        level: &LevelInfo,
+        recently_seen: &[String],
+    ) -> (Buffer, Vec<Task>, Vec<String>) {
+        let pool = loader::load_segments(&level.language, &level.zone);
+
+        if pool.is_empty() {
+            // Fallback to hardcoded SAMPLE_CODE
+            let buffer = Buffer::from_str(SAMPLE_CODE);
+            let tasks = task::hardcoded_tasks(&buffer);
+            return (buffer, tasks, Vec::new());
+        }
+
+        let selected = assembler::select_segments(&pool, SEGMENTS_PER_LEVEL, recently_seen);
+        let ids: Vec<String> = selected.iter().map(|s| s.meta.id.clone()).collect();
+        let assembled = assembler::assemble(&selected);
+        (assembled.buffer, assembled.tasks, ids)
     }
 
     /// Update viewport height when terminal is resized.
@@ -142,7 +197,7 @@ impl App {
     pub fn tick(&mut self) -> bool {
         match self.engine.state {
             GameState::Playing => self.tick_playing(),
-            GameState::GameOver => self.tick_game_over(),
+            GameState::GameOver | GameState::LevelComplete => self.tick_game_over(),
         }
     }
 
@@ -216,6 +271,16 @@ impl App {
             }
         }
 
+        // Check level complete: all tasks resolved (completed or missed)
+        // and viewport has scrolled past the buffer
+        let all_resolved = self.tasks.iter().all(|t| !t.is_completable());
+        let buffer_done = self.viewport.top_line + self.viewport.height
+            >= self.buffer.line_count();
+        if all_resolved && buffer_done {
+            self.engine.state = GameState::LevelComplete;
+            needs_render = true;
+        }
+
         needs_render
     }
 
@@ -254,8 +319,10 @@ impl App {
     }
 
     fn restart(&mut self) {
-        self.buffer = Buffer::from_str(SAMPLE_CODE);
-        self.tasks = task::hardcoded_tasks(&self.buffer);
+        let (buffer, tasks, seen) = Self::load_level(&self.level, &self.recently_seen);
+        self.buffer = buffer;
+        self.tasks = tasks;
+        self.recently_seen = seen;
         self.cursor = Cursor::new(0, 0);
         self.mode = Mode::Normal;
         self.viewport = Viewport::new(self.viewport.height);
