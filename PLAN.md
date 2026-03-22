@@ -1479,6 +1479,7 @@ Config file changes are picked up on next launch.
 - Track per-level: best score, stars earned, keystroke counts
 - Track globally: total play time, commands used histogram
 - `ui/menu.rs`: main menu (New Game, Continue, Level Select, Settings, Quit)
+- New Game screen: choose game mode — **Story Mode** or **Free Play** (see Phase 13)
 - Level select screen showing stars, locked/unlocked worlds
 - World unlock: earn N stars in previous world to unlock next
 - Settings screen: language picker, keybind preset, theme, hint toggle
@@ -1507,10 +1508,22 @@ and cosmetics, replay levels for better scores.
   motion would solve, show a tip on the results screen
 - Starter kit (Tier 0) available from first launch, no purchase needed
 - `ui/results.rs`: add "credits earned" breakdown and "Visit Shop" option
+- **Game mode toggle: Story Mode vs Free Play**
+  - Selectable from main menu (added in Phase 12) and new game screen
+  - **Story Mode**: default experience — start with Tier 0 starter kit, earn
+    credits, buy motions progressively. The intended path for learners.
+  - **Free Play**: all Vim motions unlocked from the start, no credit/shop
+    gating. Designed for experienced vimmers who want to jump straight into
+    the challenge. Credits and shop still function (for cosmetics), but all
+    motions and buffer commands are pre-unlocked.
+  - `progress/game_mode.rs`: mode enum, persisted per save slot
+  - `vim/command.rs`: skip unlock check when mode is Free Play
+  - Mode is set at save creation and displayed in the level select / HUD
 
 **Exit criteria**: Player earns credits after every level, can browse and buy
 motions/cosmetics in the shop, newly purchased motions work immediately in all
 levels. Replaying earlier levels with better motions yields higher scores.
+Free Play mode skips all motion gating — every command works from level one.
 
 ---
 
