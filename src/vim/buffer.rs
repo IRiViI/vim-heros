@@ -108,6 +108,11 @@ impl Buffer {
         self.rope.to_string()
     }
 
+    /// Get the character at a specific (line, col) position.
+    pub fn char_at(&self, line: usize, col: usize) -> Option<char> {
+        self.line(line)?.chars().nth(col)
+    }
+
     /// Convert a (line, col) position to an absolute char index in the rope.
     fn line_col_to_char_idx(&self, line: usize, col: usize) -> usize {
         let line_start = self.rope.line_to_char(line.min(self.rope.len_lines().saturating_sub(1)));

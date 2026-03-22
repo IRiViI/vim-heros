@@ -65,7 +65,7 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> 
 #[cfg(test)]
 mod integration_tests {
     use crate::vim::buffer::Buffer;
-    use crate::vim::command::{execute, parse_keystroke};
+    use crate::vim::command::{self, Action, CommandParser, ParseResult};
     use crate::vim::cursor::Cursor;
     use crate::vim::mode::Mode;
 
@@ -77,10 +77,22 @@ mod integration_tests {
         mode: &mut Mode,
     ) -> usize {
         let mut keystroke_count = 0;
+        let mut parser = CommandParser::new();
         for ch in keys.chars() {
-            let action = parse_keystroke(ch, *mode);
-            execute(action, buffer, cursor, mode);
             keystroke_count += 1;
+            if mode.is_insert() {
+                let action = match ch {
+                    '\x1b' => Action::EnterNormalMode,
+                    _ => Action::InsertChar(ch),
+                };
+                command::execute(action, buffer, cursor, mode);
+            } else {
+                if let ParseResult::Action(action, count) = parser.feed(ch) {
+                    for _ in 0..count {
+                        command::execute(action, buffer, cursor, mode);
+                    }
+                }
+            }
         }
         keystroke_count
     }

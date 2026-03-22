@@ -4,7 +4,7 @@ use std::time::Duration;
 use crate::game::engine::{Engine, GameState};
 use crate::game::viewport::Viewport;
 use crate::vim::buffer::Buffer;
-use crate::vim::command::{self, Action};
+use crate::vim::command::{self, Action, CommandParser, ParseResult};
 use crate::vim::cursor::Cursor;
 use crate::vim::mode::Mode;
 
@@ -107,6 +107,7 @@ pub struct App {
     pub keystroke_count: usize,
     pub viewport: Viewport,
     pub engine: Engine,
+    parser: CommandParser,
 }
 
 impl App {
@@ -119,6 +120,7 @@ impl App {
             keystroke_count: 0,
             viewport: Viewport::new(viewport_height),
             engine: Engine::new(DEFAULT_SCROLL_SPEED_MS),
+            parser: CommandParser::new(),
         }
     }
 
@@ -232,6 +234,7 @@ impl App {
         self.keystroke_count = 0;
         self.viewport = Viewport::new(self.viewport.height);
         self.engine.reset();
+        self.parser = CommandParser::new();
     }
 
     fn handle_key(&mut self, key: KeyEvent) -> bool {
@@ -240,39 +243,60 @@ impl App {
             return true;
         }
 
-        let action = match self.mode {
+        match self.mode {
             Mode::Normal => self.handle_normal_key(key),
             Mode::Insert => self.handle_insert_key(key),
-        };
-
-        if action != Action::None {
-            self.keystroke_count += 1;
-            self.engine.penalize_keystroke();
-            command::execute(action, &mut self.buffer, &mut self.cursor, &mut self.mode);
         }
-
-        true
     }
 
-    fn handle_normal_key(&mut self, key: KeyEvent) -> Action {
+    fn handle_normal_key(&mut self, key: KeyEvent) -> bool {
         match key.code {
-            KeyCode::Char('q') => {
-                self.running = false;
-                Action::None
+            KeyCode::Esc => {
+                self.parser.cancel();
+                true
             }
-            KeyCode::Char(ch) => command::parse_keystroke(ch, Mode::Normal),
-            KeyCode::Esc => Action::None,
-            _ => Action::None,
+            KeyCode::Char(ch) => {
+                // 'q' quits the game, but only when not in a pending sequence
+                if ch == 'q' && !self.parser.is_pending() {
+                    self.running = false;
+                    return true;
+                }
+
+                self.keystroke_count += 1;
+                self.engine.penalize_keystroke();
+
+                match self.parser.feed(ch) {
+                    ParseResult::Action(action, count) => {
+                        for _ in 0..count {
+                            command::execute(
+                                action,
+                                &mut self.buffer,
+                                &mut self.cursor,
+                                &mut self.mode,
+                            );
+                        }
+                    }
+                    ParseResult::Pending => {}
+                    ParseResult::None => {}
+                }
+                true
+            }
+            _ => false,
         }
     }
 
-    fn handle_insert_key(&mut self, key: KeyEvent) -> Action {
-        match key.code {
+    fn handle_insert_key(&mut self, key: KeyEvent) -> bool {
+        let action = match key.code {
             KeyCode::Esc => Action::EnterNormalMode,
             KeyCode::Char(ch) => Action::InsertChar(ch),
             KeyCode::Enter => Action::InsertChar('\n'),
             KeyCode::Backspace => Action::Backspace,
-            _ => Action::None,
-        }
+            _ => return false,
+        };
+
+        self.keystroke_count += 1;
+        self.engine.penalize_keystroke();
+        command::execute(action, &mut self.buffer, &mut self.cursor, &mut self.mode);
+        true
     }
 }

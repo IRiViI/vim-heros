@@ -13,7 +13,9 @@ game over. Fewer keystrokes = more points. Powered by real Vim commands.
 3. [Content System](#3-content-system)
 4. [Keybinding / Config System](#4-keybinding--config-system)
 5. [Technical Architecture](#5-technical-architecture)
-6. [Phased Implementation Plan](#6-phased-implementation-plan)
+6. [Credit Shop & Progression](#6-credit-shop--progression)
+7. [Multi-Buffer System](#7-multi-buffer-system)
+8. [Phased Implementation Plan](#8-phased-implementation-plan)
 
 ---
 
@@ -817,7 +819,8 @@ vim-heroes/
 │   │   ├── operators.rs         # d/c/y + motion/text-object combinations
 │   │   ├── text_objects.rs      # iw/aw/i"/a(/i{ etc.
 │   │   ├── registers.rs         # Yank/delete registers ("a-z, unnamed, etc.)
-│   │   └── macros.rs            # Macro record/replay
+│   │   ├── macros.rs            # Macro record/replay
+│   │   └── buffers.rs           # Multi-buffer manager (list, switch, active index)
 │   │
 │   ├── game/                    # Game mechanics
 │   │   ├── mod.rs
@@ -847,11 +850,14 @@ vim-heroes/
 │   │   ├── hud.rs               # Score, combo, stars, level info
 │   │   ├── task_overlay.rs      # Red/green/yellow highlights + gutter annotations
 │   │   ├── results.rs           # End-of-level results screen
+│   │   ├── shop.rs              # Credit shop: motions, buffer cmds, cosmetics
 │   │   └── theme.rs             # Color themes
 │   │
 │   └── progress/                # Player progress
 │       ├── mod.rs
-│       └── save.rs              # Stars, high scores, unlocks → ~/.vim-heroes/save.dat
+│       ├── save.rs              # Stars, high scores, unlocks → ~/.vim-heroes/save.dat
+│       ├── credits.rs           # Credit balance, earn/spend logic
+│       └── unlocks.rs           # Unlocked motions, cosmetics, buffer commands
 │
 ├── content/                     # Code segments (embedded at compile time)
 │   ├── python/
@@ -950,13 +956,287 @@ loop {
 
 ---
 
-## 6. Phased Implementation Plan
+## 6. Credit Shop & Progression
+
+The game uses a Tony Hawk Pro Skater–style unlock system. Players earn credits
+after every level and spend them on new Vim motions, buffer commands, and
+cosmetics. This aligns the game mechanic with how people actually learn Vim —
+layering on commands over time — but gives the player agency over *what* to
+learn next.
+
+### 6.1 Earning Credits
+
+| Source                    | Credits | Notes                                      |
+|---------------------------|---------|---------------------------------------------|
+| Level completed           | 50      | Baseline reward for surviving               |
+| Per task completed        | 10–30   | Scales with task complexity                 |
+| Star bonus (per star)     | 25      | Up to 75 bonus for a 3-star run             |
+| Optimal solution bonus    | 15      | Per task solved within optimal keystrokes   |
+| First-time level clear    | 100     | One-time bonus per level                    |
+
+Credits are tracked in the save file alongside stars and scores.
+
+### 6.2 Motion Unlock Tree
+
+Players start with a minimal kit and buy new commands. Levels are designed so
+the starter kit can always *complete* them (even if the score is low), but
+unlocked motions enable higher scores and stars — the Tony Hawk loop of "same
+park, new tricks, better score."
+
+#### Tier 0 — Free Starter Kit
+
+These are always available from the start:
+
+| Command       | Description                      |
+|---------------|----------------------------------|
+| `h` `j` `k` `l` | Basic movement                |
+| `i`           | Enter insert mode                |
+| `Esc`         | Return to normal mode            |
+| `x`           | Delete character under cursor    |
+
+#### Tier 1 — Essentials (25–50 credits each)
+
+| Command       | Cost | Description                      |
+|---------------|------|----------------------------------|
+| `w` `b`       | 25   | Word forward / back              |
+| `e`           | 25   | End of word                      |
+| `0` `$`       | 30   | Line start / end                 |
+| `dd`          | 40   | Delete line                      |
+| `yy` `p`      | 50   | Yank line / paste                |
+
+#### Tier 2 — Bread & Butter (75–125 credits each)
+
+| Command       | Cost | Description                      |
+|---------------|------|----------------------------------|
+| `^`           | 75   | First non-blank character        |
+| `gg` `G`      | 75   | Top / bottom of file             |
+| `o` `O`       | 80   | Open line below / above          |
+| `a` `A`       | 80   | Append after cursor / end of line|
+| `I`           | 80   | Insert at line start             |
+| `dw` `db`     | 100  | Delete word forward / back       |
+| `cw`          | 100  | Change word                      |
+| `d$` `d0`     | 100  | Delete to end / start of line    |
+| `P`           | 75   | Paste before cursor              |
+| `u`           | 125  | Undo                             |
+
+#### Tier 3 — Precision (150–250 credits each)
+
+| Command         | Cost | Description                      |
+|-----------------|------|----------------------------------|
+| `f` `t` `F` `T` | 150  | Find / till character           |
+| `;` `,`         | 100  | Repeat find forward / back      |
+| `.`             | 200  | Dot repeat                       |
+| `r`             | 150  | Replace character                |
+| `/` `?`         | 200  | Search forward / back            |
+| `n` `N`         | 150  | Next / previous search match     |
+| `*` `#`         | 175  | Search word under cursor         |
+| `c$` `C`        | 175  | Change to end of line            |
+| `{num}G`        | 150  | Jump to line number              |
+
+#### Tier 4 — Power Moves (300–500 credits each)
+
+| Command              | Cost | Description                      |
+|----------------------|------|----------------------------------|
+| `ciw` `diw` `yiw`   | 300  | Inner word text objects          |
+| `ci"` `di"` `ci(`   | 350  | Inside quotes / brackets         |
+| `v` `V`             | 300  | Visual mode (char / line)        |
+| `Ctrl-v`            | 400  | Visual block mode                |
+| `%`                 | 300  | Match bracket                    |
+| `>` `<`             | 350  | Indent / dedent                  |
+| `gU` `gu`           | 300  | Uppercase / lowercase            |
+
+#### Tier 5 — Endgame (500–750 credits each)
+
+| Command              | Cost | Description                      |
+|----------------------|------|----------------------------------|
+| `q{reg}` `@{reg}`   | 500  | Record / replay macros           |
+| `"{reg}y` `"{reg}p`  | 500  | Named registers                  |
+| `@@`                 | 300  | Replay last macro                |
+| `:s/old/new/g`       | 750  | Substitution                     |
+
+#### Unlock Rules
+
+- Unlocked motions are persisted in the save file and available across all levels.
+- The shop is accessible from the main menu and from the end-of-level results screen.
+- Levels display a "tip" when the player uses many keystrokes on something an
+  unlockable motion would solve: *"This would be 2 keystrokes with `cw` — available
+  in the shop for 100 credits."*
+- The unlock tree is **not gated by tiers** — a player can save up and buy a Tier 4
+  command early if they want to. Tiers just indicate pricing.
+- Replaying earlier levels with newly unlocked motions is the primary way to improve
+  scores and earn more credits (the Tony Hawk loop).
+
+### 6.3 Cosmetics Shop
+
+Cosmetics are purely visual. Keep the catalog small and focused.
+
+#### Cursor Styles (50–150 credits each)
+
+| Item              | Cost | Description                                 |
+|-------------------|------|---------------------------------------------|
+| Green cursor      | 50   | Green block cursor                          |
+| Blue cursor       | 50   | Blue block cursor                           |
+| Amber cursor      | 75   | Retro amber terminal look                   |
+| Underscore cursor | 100  | `_` style instead of block                  |
+| Pipe cursor       | 100  | `|` style (thin line)                       |
+| Blinking cursor   | 150  | Block with blink animation                  |
+
+#### Color Themes (100–200 credits each)
+
+| Theme         | Cost | Description                                    |
+|---------------|------|------------------------------------------------|
+| Default       | Free | Ships with the game                            |
+| Gruvbox       | 100  | Warm retro theme                               |
+| Catppuccin    | 100  | Pastel modern theme                            |
+| Solarized     | 150  | Classic solarized palette                      |
+| Dracula       | 150  | Dark purple theme                              |
+
+#### HUD Skins (200–400 credits each)
+
+| Skin           | Cost | Description                                   |
+|----------------|------|-----------------------------------------------|
+| Stock Vim      | Free | Default — minimal, classic Vim aesthetic       |
+| NeoVim         | 200  | Inspired by NeoVim's modern look              |
+| SpaceVim       | 300  | SpaceVim's status line style with icons        |
+| LazyVim        | 400  | LazyVim-inspired UI with rounded borders       |
+
+#### Other Unlockables (100–250 credits each)
+
+| Item                  | Cost | Description                               |
+|-----------------------|------|-------------------------------------------|
+| Relative line numbers | 100  | Show relative line numbers (useful for `5j`, `12G` etc.) |
+| Nerd Font icons       | 150  | Use nerd font icons in HUD (requires nerd font installed) |
+| Task complete sparkle | 250  | Animated flash effect when completing a task |
+
+---
+
+## 7. Multi-Buffer System
+
+Starting from World 2, levels use multiple code files (buffers). This teaches
+real-world multi-file Vim workflow and adds a context-switching challenge.
+
+### 7.1 Buffer Count Progression
+
+| World   | Buffers | Switch Trigger        | Notes                           |
+|---------|---------|----------------------|---------------------------------|
+| 1 (1-1 to 1-5)  | 1 | —                  | Single file, learn the basics   |
+| 2 (2-1 to 2-5)  | 2 | Event-driven       | Game forces swaps at set points |
+| 3–4              | 2–3 | Event-driven      | More frequent swaps             |
+| 5–6              | 3–4 | Event + player-initiated | Cross-file tasks (yank from A, paste in B) |
+| 7–8              | 4+  | Player-initiated   | Register juggling across files  |
+
+### 7.2 Buffer Command Unlock Tree
+
+Buffer commands are part of the credit shop (Section 6.2) but listed separately
+because they form their own progression.
+
+Players start with the most primitive method and unlock faster commands:
+
+| Command              | Cost | Tier | Description                              |
+|----------------------|------|------|------------------------------------------|
+| `:e {filename}`      | Free | 0    | Open file by typing full name — slow but always available |
+| `:bn` `:bp`          | 150  | 2    | Next / previous buffer                   |
+| `:ls`                | 100  | 2    | List open buffers                        |
+| `:b {partial}`       | 200  | 3    | Switch buffer by partial name match      |
+| `Ctrl-^`             | 300  | 3    | Toggle to last buffer — instant swap     |
+| `:b{num}`            | 250  | 3    | Switch to buffer by number               |
+
+### 7.3 HUD: Buffer Line
+
+When multiple buffers are active, the HUD shows a buffer line (standard Vim
+concept — `:ls` output visualized):
+
+```
+┌──────────────────────────────────────────────────┐
+│ [1] main.py  │  2  utils.py  │  3  config.py    │  ← buffer line
+├──────────────────────────────────────────────────┤
+│ ★★☆  Level 3-2  "Multi-File"    Score: 2,100  ×2│  ← HUD
+├──────────────────────────────────────────────────┤
+│  14 │   for item in items:                       │
+│  ...                                             │
+```
+
+- Active buffer is highlighted (e.g., `[1]` with brackets and bold).
+- Buffer line is always visible when there are 2+ buffers.
+- Modified buffers show a `+` indicator: `[1+] main.py`.
+
+### 7.4 Event-Driven Swaps (Early Levels)
+
+In Worlds 2–4, the game controls when swaps happen. A swap event scrolls into
+view as a visual marker in the code:
+
+```
+  24 │ }
+  25 │
+  26 │ ══════════════════════════════════════
+  27 │  ▸ SWITCH TO: utils.py
+  28 │ ══════════════════════════════════════
+  29 │
+```
+
+When the viewport reaches the swap marker, the buffer switches automatically.
+The player needs to orient themselves in the new file and continue completing
+tasks. This teaches context-switching without requiring buffer commands.
+
+### 7.5 Player-Initiated Swaps (Later Levels)
+
+In Worlds 5+, tasks require the player to actively switch buffers:
+
+- *"Yank the function signature from `utils.py` and paste it in `main.py`"*
+- *"The variable name in `config.py` is wrong — switch there and fix it, then come back"*
+
+These tasks have no swap marker — the player decides when and how to switch
+using their unlocked buffer commands. This is where `:bn`, `Ctrl-^`, and
+`:b {name}` become essential.
+
+### 7.6 Segment Format Addition
+
+Multi-buffer levels use an extended segment format:
+
+```toml
+[meta]
+id = "py-junior-multi-api"
+zone = "junior"
+language = "python"
+buffers = ["main.py", "utils.py"]       # declares multiple files
+
+[code.main_py]                           # one [code.*] section per buffer
+content = """
+from utils import fetch_data
+..."""
+
+[code.utils_py]
+content = """
+import requests
+..."""
+
+[[tasks]]
+buffer = "main.py"                       # which buffer the task is in
+type = "change_word"
+anchor = { pattern = "fetch_data", occurrence = 1 }
+...
+
+[[tasks]]
+buffer = "utils.py"
+type = "delete_line"
+anchor = { pattern = "# TODO", occurrence = 1 }
+...
+
+[[swap_events]]                          # event-driven swap points
+after_line = 24                          # swap triggers when viewport passes this line
+from = "main.py"
+to = "utils.py"
+```
+
+---
+
+## 8. Phased Implementation Plan
 
 Each phase is a self-contained deliverable. Complete one before starting the next.
 Phases are designed so the game becomes playable as early as possible, then gains
 features incrementally.
 
-### Phase 1 — Project Skeleton & Vim Buffer
+### Phase 1 — Project Skeleton & Vim Buffer ✅
 
 **Goal**: A Rust project that can hold text in a buffer and move a cursor with
 basic Vim motions.
@@ -977,7 +1257,7 @@ and cursor stays clamped within buffer bounds.
 
 ---
 
-### Phase 2 — Terminal Rendering & Input
+### Phase 2 — Terminal Rendering & Input ✅
 
 **Goal**: See the buffer on screen, move the cursor with real keystrokes.
 
@@ -993,7 +1273,7 @@ in real-time, quit with `q` or `Ctrl-c`.
 
 ---
 
-### Phase 3 — Scrolling Viewport & Game Over
+### Phase 3 — Scrolling Viewport & Game Over ✅
 
 **Goal**: The core Guitar Hero mechanic — viewport scrolls, cursor must keep up.
 
@@ -1172,7 +1452,55 @@ unlock new worlds by earning stars.
 
 ---
 
-### Phase 13 — Polish & Extra Modes
+### Phase 13 — Credit Shop & Motion Unlocks
+
+**Goal**: The Tony Hawk Pro Skater progression loop — earn credits, buy motions
+and cosmetics, replay levels for better scores.
+
+**Deliverables**:
+- `progress/credits.rs`: credit balance tracking, earn/spend logic
+- `progress/unlocks.rs`: unlocked motions and cosmetics, persisted in save file
+- `ui/shop.rs`: shop screen accessible from main menu and results screen
+  - Motion unlock tree (Tier 0–5 from Section 6.2)
+  - Buffer command unlocks (Section 7.2)
+  - Cosmetics catalog (Section 6.3)
+- Credit rewards integrated into scoring (Section 6.1)
+- `vim/command.rs`: gate command execution behind unlock checks — if the player
+  presses an un-purchased motion, show a brief "locked" indicator
+- Shop tip system: when a player uses many keystrokes on something an unlockable
+  motion would solve, show a tip on the results screen
+- Starter kit (Tier 0) available from first launch, no purchase needed
+- `ui/results.rs`: add "credits earned" breakdown and "Visit Shop" option
+
+**Exit criteria**: Player earns credits after every level, can browse and buy
+motions/cosmetics in the shop, newly purchased motions work immediately in all
+levels. Replaying earlier levels with better motions yields higher scores.
+
+---
+
+### Phase 14 — Multi-Buffer Levels
+
+**Goal**: Levels with multiple code files and buffer-switching mechanics.
+
+**Deliverables**:
+- `vim/buffers.rs`: multi-buffer manager (list of buffers, active buffer index)
+- `:e {filename}` command (free, always available) for manual file switching
+- Unlockable buffer commands: `:bn`, `:bp`, `:ls`, `:b {partial}`, `Ctrl-^`, `:b{num}`
+- `content/segment.rs`: extended TOML format with multi-buffer support (Section 7.6)
+- `content/assembler.rs`: assemble multi-buffer levels from segments
+- Event-driven swap markers (Section 7.4): visual markers that auto-switch buffers
+- `ui/hud.rs`: buffer line showing open buffers with active indicator (Section 7.3)
+- `game/engine.rs`: handle buffer switches mid-level, maintain per-buffer cursor/viewport
+- Cross-file tasks: tasks that reference specific buffers (Section 7.5)
+- World 2+ content segments updated to use multi-buffer format
+
+**Exit criteria**: World 2 levels swap between 2 files via event markers. Later
+worlds support player-initiated swaps. Buffer line in HUD shows active file.
+Cross-file tasks (yank from A, paste in B) work in World 5+.
+
+---
+
+### Phase 15 — Polish & Extra Modes
 
 **Goal**: Ship-quality experience.
 
@@ -1180,17 +1508,17 @@ unlock new worlds by earning stars.
 - Ghost replay: after level, show optimal keystrokes as a ghost cursor
 - Practice mode: no scrolling, just tasks
 - Endless mode: infinite random content, escalating speed
-- Color themes: default, gruvbox, solarized, catppuccin
 - Sound effects (optional, terminal bell or off)
 - Stats dashboard: command usage, accuracy trends, time played
 - Tutorial: interactive first-launch walkthrough of game mechanics
+- Cosmetics rendering: cursor styles, color themes, HUD skins from shop
 
 **Exit criteria**: The game feels complete and polished. A new player can
 pick it up, understand the mechanics, and progress through all worlds.
 
 ---
 
-### Phase 14 — Distribution & Release
+### Phase 16 — Distribution & Release
 
 **Goal**: Players can install the game easily on any platform.
 
@@ -1208,7 +1536,7 @@ downloading a binary from GitHub Releases all work.
 
 ---
 
-### Phase 15 — Personal Code: GitHub Integration
+### Phase 17 — Personal Code: GitHub Integration
 
 **Goal**: Let players practice Vim on their own code from their public GitHub repos.
 
@@ -1251,3 +1579,5 @@ GitHub tooling installed.
 - **Community content**: submit segments via PR, curated into releases
 - **Boss battles**: multi-phase refactoring challenges
 - **Achievements**: "Used 0 arrow keys", "100 combo", "All stars World 1", etc.
+- **Replay analysis**: unlock ability to view the optimal solution for completed levels (shop item)
+- **Seasonal cosmetics**: limited-time cursor/theme unlocks
