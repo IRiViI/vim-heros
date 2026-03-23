@@ -3,3 +3,6 @@ pub mod command;
 pub mod cursor;
 pub mod mode;
 pub mod motions;
+pub mod range;
+pub mod register;
+pub mod undo;

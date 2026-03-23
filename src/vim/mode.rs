@@ -3,6 +3,7 @@
 pub enum Mode {
     Normal,
     Insert,
+    Replace,
 }
 
 impl Mode {
@@ -12,6 +13,10 @@ impl Mode {
 
     pub fn is_normal(self) -> bool {
         self == Mode::Normal
+    }
+
+    pub fn is_replace(self) -> bool {
+        self == Mode::Replace
     }
 }
 

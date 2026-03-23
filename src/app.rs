@@ -11,6 +11,8 @@ use crate::vim::buffer::Buffer;
 use crate::vim::command::{self, Action, CommandParser, ParseResult};
 use crate::vim::cursor::Cursor;
 use crate::vim::mode::Mode;
+use crate::vim::register::RegisterFile;
+use crate::vim::undo::UndoHistory;
 
 const SAMPLE_CODE: &str = r#"use std::collections::HashMap;
 
@@ -120,16 +122,24 @@ impl LevelInfo {
     }
 }
 
-/// The default (and currently only) level.
+/// All available levels.
+fn level_list() -> Vec<LevelInfo> {
+    vec![
+        LevelInfo { world: 1, level: 1, name: "First Steps".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2500 },
+        LevelInfo { world: 1, level: 2, name: "Word Jumps".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2500 },
+        LevelInfo { world: 1, level: 3, name: "Line Moves".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2500 },
+        LevelInfo { world: 2, level: 1, name: "First Edits".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2200 },
+        LevelInfo { world: 2, level: 2, name: "Cut & Paste".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2200 },
+        LevelInfo { world: 3, level: 1, name: "Precision".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 2000 },
+        LevelInfo { world: 3, level: 2, name: "Operator Combos".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 2000 },
+        LevelInfo { world: 3, level: 3, name: "Find & Delete".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 2000 },
+        LevelInfo { world: 4, level: 1, name: "Speed Run".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1800 },
+        LevelInfo { world: 4, level: 2, name: "TS Speed".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1800 },
+    ]
+}
+
 fn default_level() -> LevelInfo {
-    LevelInfo {
-        world: 1,
-        level: 1,
-        name: "First Steps".to_string(),
-        zone: "starter".to_string(),
-        language: "python".to_string(),
-        scroll_speed_ms: DEFAULT_SCROLL_SPEED_MS,
-    }
+    level_list().into_iter().next().unwrap()
 }
 
 pub struct App {
@@ -144,6 +154,9 @@ pub struct App {
     pub level: LevelInfo,
     parser: CommandParser,
     recently_seen: Vec<String>,
+    registers: RegisterFile,
+    undo: UndoHistory,
+    level_index: usize,
 }
 
 impl App {
@@ -163,6 +176,9 @@ impl App {
             level,
             parser: CommandParser::new(),
             recently_seen: seen,
+            registers: RegisterFile::new(),
+            undo: UndoHistory::new(),
+            level_index: 0,
         }
     }
 
@@ -338,6 +354,10 @@ impl App {
                         self.restart();
                         true
                     }
+                    KeyCode::Char('n') => {
+                        self.next_level();
+                        true
+                    }
                     _ => false,
                 }
             }
@@ -356,6 +376,28 @@ impl App {
         self.engine.reset();
         self.scoring.reset(self.tasks.len());
         self.parser = CommandParser::new();
+        self.registers = RegisterFile::new();
+        self.undo = UndoHistory::new();
+    }
+
+    /// Move cursor (and viewport) by `lines` in a direction.
+    fn scroll_cursor(&mut self, lines: usize, down: bool) {
+        let max_line = self.buffer.line_count().saturating_sub(1);
+        if down {
+            self.cursor.line = (self.cursor.line + lines).min(max_line);
+        } else {
+            self.cursor.line = self.cursor.line.saturating_sub(lines);
+        }
+        self.cursor.clamp(&self.buffer, false);
+        self.check_task_completion();
+    }
+
+    fn next_level(&mut self) {
+        let levels = level_list();
+        self.level_index = (self.level_index + 1) % levels.len();
+        self.level = levels.into_iter().nth(self.level_index).unwrap();
+        self.recently_seen.clear();
+        self.restart();
     }
 
     fn handle_key(&mut self, key: KeyEvent) -> bool {
@@ -367,10 +409,46 @@ impl App {
         match self.mode {
             Mode::Normal => self.handle_normal_key(key),
             Mode::Insert => self.handle_insert_key(key),
+            Mode::Replace => self.handle_replace_key(key),
         }
     }
 
     fn handle_normal_key(&mut self, key: KeyEvent) -> bool {
+        // Ctrl key combos
+        if key.modifiers.contains(KeyModifiers::CONTROL) {
+            match key.code {
+                KeyCode::Char('r') => {
+                    self.scoring.penalize_keystroke();
+                    if let Some((rope, cursor)) = self.undo.redo() {
+                        self.buffer.set_rope(rope);
+                        self.cursor = cursor;
+                    }
+                    return true;
+                }
+                KeyCode::Char('d') => {
+                    self.scoring.penalize_keystroke();
+                    self.scroll_cursor(self.viewport.height / 2, true);
+                    return true;
+                }
+                KeyCode::Char('u') => {
+                    self.scoring.penalize_keystroke();
+                    self.scroll_cursor(self.viewport.height / 2, false);
+                    return true;
+                }
+                KeyCode::Char('f') => {
+                    self.scoring.penalize_keystroke();
+                    self.scroll_cursor(self.viewport.height.saturating_sub(2), true);
+                    return true;
+                }
+                KeyCode::Char('b') => {
+                    self.scoring.penalize_keystroke();
+                    self.scroll_cursor(self.viewport.height.saturating_sub(2), false);
+                    return true;
+                }
+                _ => {}
+            }
+        }
+
         match key.code {
             KeyCode::Esc => {
                 self.parser.cancel();
@@ -383,16 +461,30 @@ impl App {
                     return true;
                 }
 
-                                self.scoring.penalize_keystroke();
+                self.scoring.penalize_keystroke();
 
                 match self.parser.feed(ch) {
                     ParseResult::Action(action, count) => {
+                        // Handle undo specially
+                        if matches!(action, Action::Undo) {
+                            if let Some((rope, cursor)) = self.undo.undo(self.buffer.rope(), self.cursor) {
+                                self.buffer.set_rope(rope);
+                                self.cursor = cursor;
+                            }
+                            return true;
+                        }
+
+                        // Push undo snapshot before editing actions
+                        if action.is_edit() {
+                            self.undo.push(self.buffer.rope(), self.cursor);
+                        }
                         for _ in 0..count {
                             command::execute(
                                 action,
                                 &mut self.buffer,
                                 &mut self.cursor,
                                 &mut self.mode,
+                                &mut self.registers,
                             );
                         }
                         self.check_task_completion();
@@ -416,7 +508,28 @@ impl App {
         };
 
                 self.scoring.penalize_keystroke();
-        command::execute(action, &mut self.buffer, &mut self.cursor, &mut self.mode);
+        if action.is_edit() {
+            self.undo.push(self.buffer.rope(), self.cursor);
+        }
+        command::execute(action, &mut self.buffer, &mut self.cursor, &mut self.mode, &mut self.registers);
+        self.check_task_completion();
+        true
+    }
+
+    fn handle_replace_key(&mut self, key: KeyEvent) -> bool {
+        let action = match key.code {
+            KeyCode::Esc => Action::EnterNormalMode,
+            KeyCode::Char(ch) => Action::ReplaceOverwrite(ch),
+            KeyCode::Enter => Action::ReplaceOverwrite('\n'),
+            KeyCode::Backspace => Action::Backspace,
+            _ => return false,
+        };
+
+        self.scoring.penalize_keystroke();
+        if action.is_edit() {
+            self.undo.push(self.buffer.rope(), self.cursor);
+        }
+        command::execute(action, &mut self.buffer, &mut self.cursor, &mut self.mode, &mut self.registers);
         self.check_task_completion();
         true
     }
@@ -426,10 +539,38 @@ impl App {
             if !task.is_completable() {
                 continue;
             }
-            let completed = match task.kind {
+            let completed = match &task.kind {
                 TaskKind::MoveTo => {
                     self.cursor.line == task.target_line
                         && self.cursor.col == task.target_col
+                }
+                TaskKind::DeleteLine { original_content } => {
+                    // Line is deleted if the content at that line no longer matches
+                    match self.buffer.line(task.target_line) {
+                        Some(line) => line.trim() != original_content.trim(),
+                        None => true, // line doesn't exist anymore = deleted
+                    }
+                }
+                TaskKind::DeleteWord { word } => {
+                    // Word is deleted if the line no longer contains it
+                    match self.buffer.line(task.target_line) {
+                        Some(line) => !line.contains(word.as_str()),
+                        None => true,
+                    }
+                }
+                TaskKind::ChangeWord { new_text, .. } => {
+                    // Completed when the line contains the new_text
+                    match self.buffer.line(task.target_line) {
+                        Some(line) => line.contains(new_text.as_str()),
+                        None => false,
+                    }
+                }
+                TaskKind::ReplaceChar { expected } => {
+                    // Completed when the char at position matches expected
+                    self.buffer
+                        .char_at(task.target_line, task.target_col)
+                        .map(|ch| ch == *expected)
+                        .unwrap_or(false)
                 }
             };
             if completed {

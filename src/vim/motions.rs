@@ -508,6 +508,81 @@ pub fn match_bracket(cursor: &Cursor, buffer: &Buffer) -> Cursor {
     }
 }
 
+// ===== Motion enum for operator+motion combos =====
+
+/// Motions that can be combined with operators (d, c, y).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Motion {
+    Left,
+    Down,
+    Up,
+    Right,
+    WordForward,
+    WordBackward,
+    WordEnd,
+    BigWordForward,
+    BigWordBackward,
+    BigWordEnd,
+    LineStart,
+    LineFirstChar,
+    LineEnd,
+    GotoFirstLine,
+    GotoLastLine,
+    GotoLine(usize),
+    FindCharForward(char),
+    FindCharBackward(char),
+    TillCharForward(char),
+    TillCharBackward(char),
+    ParagraphForward,
+    ParagraphBackward,
+    MatchBracket,
+}
+
+impl Motion {
+    /// Whether this motion produces a linewise range when used with an operator.
+    pub fn is_linewise(&self) -> bool {
+        matches!(
+            self,
+            Motion::Down
+                | Motion::Up
+                | Motion::GotoFirstLine
+                | Motion::GotoLastLine
+                | Motion::GotoLine(_)
+                | Motion::ParagraphForward
+                | Motion::ParagraphBackward
+        )
+    }
+}
+
+/// Apply a motion to a cursor, returning the new cursor position.
+pub fn apply_motion(motion: Motion, cursor: &Cursor, buffer: &Buffer) -> Cursor {
+    match motion {
+        Motion::Left => move_left(cursor, buffer),
+        Motion::Down => move_down(cursor, buffer),
+        Motion::Up => move_up(cursor, buffer),
+        Motion::Right => move_right(cursor, buffer),
+        Motion::WordForward => word_forward(cursor, buffer),
+        Motion::WordBackward => word_backward(cursor, buffer),
+        Motion::WordEnd => word_end(cursor, buffer),
+        Motion::BigWordForward => big_word_forward(cursor, buffer),
+        Motion::BigWordBackward => big_word_backward(cursor, buffer),
+        Motion::BigWordEnd => big_word_end(cursor, buffer),
+        Motion::LineStart => line_start(cursor, buffer),
+        Motion::LineFirstChar => line_first_char(cursor, buffer),
+        Motion::LineEnd => line_end(cursor, buffer),
+        Motion::GotoFirstLine => goto_first_line(cursor, buffer),
+        Motion::GotoLastLine => goto_last_line(cursor, buffer),
+        Motion::GotoLine(n) => goto_line(cursor, buffer, n),
+        Motion::FindCharForward(ch) => find_char_forward(cursor, buffer, ch),
+        Motion::FindCharBackward(ch) => find_char_backward(cursor, buffer, ch),
+        Motion::TillCharForward(ch) => till_char_forward(cursor, buffer, ch),
+        Motion::TillCharBackward(ch) => till_char_backward(cursor, buffer, ch),
+        Motion::ParagraphForward => paragraph_forward(cursor, buffer),
+        Motion::ParagraphBackward => paragraph_backward(cursor, buffer),
+        Motion::MatchBracket => match_bracket(cursor, buffer),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

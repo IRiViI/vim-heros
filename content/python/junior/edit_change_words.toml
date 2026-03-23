@@ -1,0 +1,49 @@
+[meta]
+id = "py-junior-edit-change-words"
+zone = "junior"
+language = "python"
+tags = ["editing", "change", "cw"]
+difficulty = 3
+
+[code]
+content = """
+# Vim tip: cw deletes a word and enters insert mode
+def process_data(raw_input):
+    cleaned = raw_input.strip()
+    tokens = cleaned.split(",")
+    result = []
+    for token in tokens:
+        value = int(token.strip())
+        result.append(value)
+    return result
+
+
+def greet_user(nme):
+    message = f"Hello, {nme}!"
+    print(message)
+    return message
+"""
+
+[[tasks]]
+type = "change_word"
+anchor = { pattern = "token", occurrence = 1 }
+description = "Fix typo: change 'token' to 'token' (cw)"
+points = 75
+optimal_keys = 7
+new_text = "token"
+
+[[tasks]]
+type = "change_word"
+anchor = { pattern = "token", occurrence = 2 }
+description = "Fix second 'token' too (cw)"
+points = 75
+optimal_keys = 7
+new_text = "token"
+
+[[tasks]]
+type = "change_word"
+anchor = { pattern = "nme", occurrence = 1 }
+description = "Fix param name: 'nme' -> 'name' (cw)"
+points = 100
+optimal_keys = 6
+new_text = "name"

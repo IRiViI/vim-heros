@@ -208,28 +208,68 @@ fn resolve_segment_task(
         seg_task.anchor.occurrence,
     )?;
 
-    let gutter = match seg_task.task_type.as_str() {
-        "move_to" => "MOVE".to_string(),
-        "delete_line" => "DEL".to_string(),
-        "delete_word" => "DEL".to_string(),
-        "change_word" => {
-            if let Some(ref new) = seg_task.new_text {
-                format!("CHG \u{2192} {}", new)
-            } else {
-                "CHG".to_string()
-            }
-        }
-        "replace_char" => "FIX".to_string(),
-        other => other.to_uppercase(),
-    };
+    let abs_line = line + line_offset;
 
-    Some(Task::move_to(
-        line + line_offset,
-        col,
-        &seg_task.description,
-        gutter,
-        seg_task.points,
-    ))
+    match seg_task.task_type.as_str() {
+        "delete_line" => {
+            let original = code_buffer.line(line).unwrap_or_default();
+            Some(Task::delete_line(
+                abs_line,
+                original,
+                &seg_task.description,
+                "DEL LINE",
+                seg_task.points,
+            ))
+        }
+        "delete_word" => {
+            Some(Task::delete_word(
+                abs_line,
+                col,
+                &seg_task.anchor.pattern,
+                &seg_task.description,
+                "DEL",
+                seg_task.points,
+            ))
+        }
+        "change_word" => {
+            let new_text = seg_task.new_text.as_deref().unwrap_or("???");
+            let gutter = format!("CHG \u{2192} {}", new_text);
+            Some(Task::change_word(
+                abs_line,
+                col,
+                &seg_task.anchor.pattern,
+                new_text,
+                &seg_task.description,
+                gutter,
+                seg_task.points,
+            ))
+        }
+        "replace_char" => {
+            let expected = seg_task
+                .replace_with
+                .as_ref()
+                .and_then(|s| s.chars().next())
+                .unwrap_or('?');
+            Some(Task::replace_char(
+                abs_line,
+                col,
+                expected,
+                &seg_task.description,
+                "FIX",
+                seg_task.points,
+            ))
+        }
+        _ => {
+            // Default: move_to
+            Some(Task::move_to(
+                abs_line,
+                col,
+                &seg_task.description,
+                "MOVE",
+                seg_task.points,
+            ))
+        }
+    }
 }
 
 #[cfg(test)]

@@ -103,6 +103,99 @@ impl Buffer {
         self.rope.remove(start..end);
     }
 
+    /// Get a reference to the underlying Rope (for undo snapshots).
+    pub fn rope(&self) -> &Rope {
+        &self.rope
+    }
+
+    /// Restore the buffer from a Rope (for undo/redo).
+    pub fn set_rope(&mut self, rope: Rope) {
+        self.rope = rope;
+    }
+
+    /// Extract text from a (start_line, start_col) to (end_line, end_col) range.
+    /// The end position is exclusive.
+    pub fn text_range(
+        &self,
+        start_line: usize,
+        start_col: usize,
+        end_line: usize,
+        end_col: usize,
+    ) -> String {
+        let start = self.line_col_to_char_idx(start_line, start_col);
+        let end = self.line_col_to_char_idx(end_line, end_col);
+        if start >= end {
+            return String::new();
+        }
+        self.rope.slice(start..end).to_string()
+    }
+
+    /// Delete a range and return the deleted text.
+    /// Range is from (start_line, start_col) to (end_line, end_col), end exclusive.
+    pub fn delete_range(
+        &mut self,
+        start_line: usize,
+        start_col: usize,
+        end_line: usize,
+        end_col: usize,
+    ) -> String {
+        let start = self.line_col_to_char_idx(start_line, start_col);
+        let end = self.line_col_to_char_idx(end_line, end_col);
+        if start >= end {
+            return String::new();
+        }
+        let text = self.rope.slice(start..end).to_string();
+        self.rope.remove(start..end);
+        text
+    }
+
+    /// Delete entire lines from start_line to end_line (inclusive), including newlines.
+    /// Returns the deleted text.
+    pub fn delete_lines(&mut self, start_line: usize, end_line: usize) -> String {
+        let start_line = start_line.min(self.line_count().saturating_sub(1));
+        let end_line = end_line.min(self.line_count().saturating_sub(1));
+        if start_line > end_line {
+            return String::new();
+        }
+
+        let start = self.rope.line_to_char(start_line);
+        let end = if end_line + 1 < self.rope.len_lines() {
+            self.rope.line_to_char(end_line + 1)
+        } else {
+            let buf_end = self.rope.len_chars();
+            // If deleting from a line that isn't the first, also remove preceding newline
+            if start > 0 {
+                let text = self.rope.slice(start..buf_end).to_string();
+                self.rope.remove(start - 1..buf_end);
+                return text;
+            }
+            buf_end
+        };
+
+        let text = self.rope.slice(start..end).to_string();
+        self.rope.remove(start..end);
+        text
+    }
+
+    /// Replace a range with new text.
+    pub fn replace_range(
+        &mut self,
+        start_line: usize,
+        start_col: usize,
+        end_line: usize,
+        end_col: usize,
+        replacement: &str,
+    ) {
+        let start = self.line_col_to_char_idx(start_line, start_col);
+        let end = self.line_col_to_char_idx(end_line, end_col);
+        if start < end {
+            self.rope.remove(start..end);
+        }
+        if !replacement.is_empty() {
+            self.rope.insert(start, replacement);
+        }
+    }
+
     /// Get the full buffer content as a string.
     pub fn to_string(&self) -> String {
         self.rope.to_string()
@@ -208,5 +301,102 @@ mod tests {
         let buf = Buffer::from_str("");
         assert_eq!(buf.line_len(0), 0);
         assert!(buf.line(0).is_some()); // empty line exists
+    }
+
+    // -- text_range tests --
+
+    #[test]
+    fn test_text_range_single_line() {
+        let buf = Buffer::from_str("hello world");
+        assert_eq!(buf.text_range(0, 6, 0, 11), "world");
+    }
+
+    #[test]
+    fn test_text_range_multi_line() {
+        let buf = Buffer::from_str("aaa\nbbb\nccc");
+        let text = buf.text_range(0, 0, 1, 3);
+        assert_eq!(text, "aaa\nbbb");
+    }
+
+    #[test]
+    fn test_text_range_empty() {
+        let buf = Buffer::from_str("hello");
+        assert_eq!(buf.text_range(0, 3, 0, 3), "");
+    }
+
+    // -- delete_range tests --
+
+    #[test]
+    fn test_delete_range_single_line() {
+        let mut buf = Buffer::from_str("hello world");
+        let deleted = buf.delete_range(0, 5, 0, 11);
+        assert_eq!(deleted, " world");
+        assert_eq!(buf.line(0), Some("hello".to_string()));
+    }
+
+    #[test]
+    fn test_delete_range_multi_line() {
+        let mut buf = Buffer::from_str("aaa\nbbb\nccc");
+        let deleted = buf.delete_range(0, 3, 1, 3);
+        assert_eq!(deleted, "\nbbb");
+        assert_eq!(buf.line_count(), 2);
+        assert_eq!(buf.line(0), Some("aaa".to_string()));
+        assert_eq!(buf.line(1), Some("ccc".to_string()));
+    }
+
+    // -- delete_lines tests --
+
+    #[test]
+    fn test_delete_lines_middle() {
+        let mut buf = Buffer::from_str("aaa\nbbb\nccc\nddd");
+        let deleted = buf.delete_lines(1, 2);
+        assert_eq!(deleted, "bbb\nccc\n");
+        assert_eq!(buf.line_count(), 2);
+        assert_eq!(buf.line(0), Some("aaa".to_string()));
+        assert_eq!(buf.line(1), Some("ddd".to_string()));
+    }
+
+    #[test]
+    fn test_delete_lines_last() {
+        let mut buf = Buffer::from_str("aaa\nbbb\nccc");
+        let deleted = buf.delete_lines(2, 2);
+        assert_eq!(deleted, "ccc");
+        assert_eq!(buf.line_count(), 2);
+        assert_eq!(buf.line(1), Some("bbb".to_string()));
+    }
+
+    #[test]
+    fn test_delete_lines_all() {
+        let mut buf = Buffer::from_str("aaa\nbbb");
+        let deleted = buf.delete_lines(0, 1);
+        assert_eq!(deleted, "aaa\nbbb");
+        assert!(buf.is_empty() || buf.line_count() == 1);
+    }
+
+    // -- replace_range tests --
+
+    #[test]
+    fn test_replace_range() {
+        let mut buf = Buffer::from_str("hello world");
+        buf.replace_range(0, 6, 0, 11, "rust");
+        assert_eq!(buf.line(0), Some("hello rust".to_string()));
+    }
+
+    #[test]
+    fn test_replace_range_empty_replacement() {
+        let mut buf = Buffer::from_str("hello world");
+        buf.replace_range(0, 5, 0, 11, "");
+        assert_eq!(buf.line(0), Some("hello".to_string()));
+    }
+
+    // -- rope access --
+
+    #[test]
+    fn test_rope_roundtrip() {
+        let buf = Buffer::from_str("test content");
+        let cloned = buf.rope().clone();
+        let mut buf2 = Buffer::from_str("");
+        buf2.set_rope(cloned);
+        assert_eq!(buf2.line(0), Some("test content".to_string()));
     }
 }

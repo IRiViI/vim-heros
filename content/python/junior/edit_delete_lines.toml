@@ -1,0 +1,46 @@
+[meta]
+id = "py-junior-edit-delete-lines"
+zone = "junior"
+language = "python"
+tags = ["editing", "delete", "dd"]
+difficulty = 3
+
+[code]
+content = """
+# Vim tip: dd deletes the entire current line
+def calculate_total(items):
+    # DEBUG: print raw items
+    print("DEBUG:", items)
+    total = sum(item.price for item in items)
+    # TODO: remove this debug line
+    print("DEBUG total:", total)
+    return total
+
+
+def format_output(value):
+    # FIXME: temporary workaround
+    temp = str(value)
+    result = f"Total: {temp}"
+    return result
+"""
+
+[[tasks]]
+type = "delete_line"
+anchor = { pattern = "DEBUG:", occurrence = 1 }
+description = "Delete the debug print (use dd)"
+points = 75
+optimal_keys = 2
+
+[[tasks]]
+type = "delete_line"
+anchor = { pattern = "DEBUG total:", occurrence = 1 }
+description = "Delete this debug line too (dd)"
+points = 75
+optimal_keys = 2
+
+[[tasks]]
+type = "delete_line"
+anchor = { pattern = "FIXME:", occurrence = 1 }
+description = "Remove the FIXME comment (dd)"
+points = 100
+optimal_keys = 2

@@ -41,9 +41,12 @@ pub struct SegmentTask {
     pub points: i64,
     #[serde(default)]
     pub optimal_keys: usize,
-    /// For change_word tasks: the new text.
+    /// For change_word tasks: the new text to change to.
     #[serde(default)]
     pub new_text: Option<String>,
+    /// For replace_char tasks: the expected character after replacement.
+    #[serde(default)]
+    pub replace_with: Option<String>,
 }
 
 fn default_points() -> i64 {

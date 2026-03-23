@@ -1,0 +1,57 @@
+[meta]
+id = "py-junior-edit-replace-chars"
+zone = "junior"
+language = "python"
+tags = ["editing", "replace", "r"]
+difficulty = 2
+
+[code]
+content = """
+# Vim tip: r{char} replaces the character under the cursor
+def add_numbers(a, b):
+    return a + b
+
+
+def multiply(x, y):
+    return x * y
+
+
+# Fix the operator: should be subtraction
+def wrong_op(a, b):
+    return a + b
+
+
+# Fix the comparison
+def check_value(val):
+    if val < 10:
+        return True
+    return False
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "wrong_op", occurrence = 1 }
+description = "Move to 'wrong_op' function"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "delete_line"
+anchor = { pattern = "# Fix the operator", occurrence = 1 }
+description = "Delete the comment (dd)"
+points = 75
+optimal_keys = 2
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "check_value", occurrence = 1 }
+description = "Move to 'check_value'"
+points = 50
+optimal_keys = 5
+
+[[tasks]]
+type = "delete_line"
+anchor = { pattern = "# Fix the comparison", occurrence = 1 }
+description = "Delete the comment (dd)"
+points = 75
+optimal_keys = 2

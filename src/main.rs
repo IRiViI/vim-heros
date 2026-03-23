@@ -69,6 +69,7 @@ mod integration_tests {
     use crate::vim::command::{self, Action, CommandParser, ParseResult};
     use crate::vim::cursor::Cursor;
     use crate::vim::mode::Mode;
+    use crate::vim::register::RegisterFile;
 
     /// Helper: feed a sequence of keystrokes through the engine.
     fn feed_keys(
@@ -79,6 +80,7 @@ mod integration_tests {
     ) -> usize {
         let mut keystroke_count = 0;
         let mut parser = CommandParser::new();
+        let mut regs = RegisterFile::new();
         for ch in keys.chars() {
             keystroke_count += 1;
             if mode.is_insert() {
@@ -86,11 +88,11 @@ mod integration_tests {
                     '\x1b' => Action::EnterNormalMode,
                     _ => Action::InsertChar(ch),
                 };
-                command::execute(action, buffer, cursor, mode);
+                command::execute(action, buffer, cursor, mode, &mut regs);
             } else {
                 if let ParseResult::Action(action, count) = parser.feed(ch) {
                     for _ in 0..count {
-                        command::execute(action, buffer, cursor, mode);
+                        command::execute(action, buffer, cursor, mode, &mut regs);
                     }
                 }
             }

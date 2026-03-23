@@ -255,10 +255,12 @@ fn render_status_bar(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     let mode_str = match app.mode {
         Mode::Normal => " NORMAL ",
         Mode::Insert => " INSERT ",
+        Mode::Replace => " REPLACE ",
     };
     let mode_color = match app.mode {
         Mode::Normal => Color::Blue,
         Mode::Insert => Color::Green,
+        Mode::Replace => Color::Red,
     };
 
     let position = format!(
@@ -384,7 +386,12 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         ]),
         Line::from(""),
         Line::from(Span::styled(
-            "R to retry \u{2502} Q to quit",
+            format!("Level {}", app.level.display_id()),
+            Style::default().fg(Color::DarkGray),
+        )),
+        Line::from(""),
+        Line::from(Span::styled(
+            "R retry \u{2502} N next level \u{2502} Q quit",
             Style::default().fg(Color::DarkGray),
         )),
     ];

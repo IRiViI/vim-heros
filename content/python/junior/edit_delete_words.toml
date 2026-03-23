@@ -1,0 +1,47 @@
+[meta]
+id = "py-junior-edit-delete-words"
+zone = "junior"
+language = "python"
+tags = ["editing", "delete", "dw"]
+difficulty = 3
+
+[code]
+content = """
+# Vim tip: dw deletes from cursor to start of next word
+def parse_config(filepath):
+    config = {}
+    with open(filepath) as f:
+        for line in f:
+            key, _, value = line.partition("=")
+            config[key.strip()] = value.strip()
+    return config
+
+
+def validate_OBSOLETE_email(address):
+    if "@" not in address:
+        return False
+    parts = address.split("@")
+    return len(parts) == 2
+
+
+class DataProcessor:
+    def __init__(self, UNUSED_source):
+        self.data = []
+
+    def add(self, item):
+        self.data.append(item)
+"""
+
+[[tasks]]
+type = "delete_word"
+anchor = { pattern = "OBSOLETE_", occurrence = 1 }
+description = "Delete 'OBSOLETE_' from function name (dw)"
+points = 100
+optimal_keys = 3
+
+[[tasks]]
+type = "delete_word"
+anchor = { pattern = "UNUSED_", occurrence = 1 }
+description = "Delete 'UNUSED_' from param name (dw)"
+points = 100
+optimal_keys = 3

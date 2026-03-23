@@ -1,0 +1,62 @@
+[meta]
+id = "py-junior-edit-mixed-ops"
+zone = "junior"
+language = "python"
+tags = ["editing", "mixed", "dd", "cw", "dw"]
+difficulty = 4
+
+[code]
+content = """
+# Vim tip: Combine dd, dw, cw, and r for efficient editing
+class ShoppingCart:
+    def __init__(self):
+        self.items = []
+        # TODO: add max capacity
+        self.total = 0
+
+    def add_item(self, itm, price):
+        self.items.append(itm)
+        print("TEMP:", itm, price)
+        self.total += price
+
+    def remove_item(self, itm):
+        if itm in self.items:
+            self.items.remove(itm)
+
+    def get_total(self):
+        return self.total
+
+    def clear(self):
+        # HACK: just reset everything
+        self.items = []
+        self.total = 0
+"""
+
+[[tasks]]
+type = "delete_line"
+anchor = { pattern = "TODO: add max", occurrence = 1 }
+description = "Delete the TODO comment (dd)"
+points = 75
+optimal_keys = 2
+
+[[tasks]]
+type = "change_word"
+anchor = { pattern = "itm", occurrence = 1 }
+description = "Fix param: 'itm' -> 'item' (cw)"
+points = 100
+optimal_keys = 6
+new_text = "item"
+
+[[tasks]]
+type = "delete_line"
+anchor = { pattern = "TEMP:", occurrence = 1 }
+description = "Remove debug print (dd)"
+points = 75
+optimal_keys = 2
+
+[[tasks]]
+type = "delete_line"
+anchor = { pattern = "HACK:", occurrence = 1 }
+description = "Remove HACK comment (dd)"
+points = 75
+optimal_keys = 2

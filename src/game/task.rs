@@ -12,10 +12,32 @@ pub enum TaskState {
     Missed,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskKind {
+    /// Move cursor to target position.
     MoveTo,
-    // Future: DeleteLine, ChangeWord, etc.
+    /// Delete the entire line at target_line. Completed when that line's content is gone.
+    DeleteLine {
+        /// The original content of the line (to detect it was deleted).
+        original_content: String,
+    },
+    /// Delete a word at the anchor. Completed when the word is gone from that line.
+    DeleteWord {
+        /// The word that should be deleted.
+        word: String,
+    },
+    /// Change text at the anchor to new_text. Completed when the line contains new_text.
+    ChangeWord {
+        /// The original text to be changed.
+        original: String,
+        /// What it should become.
+        new_text: String,
+    },
+    /// Replace a single character. Completed when char at position matches expected.
+    ReplaceChar {
+        /// The character it should become.
+        expected: char,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +61,90 @@ impl Task {
     ) -> Self {
         Self {
             kind: TaskKind::MoveTo,
+            state: TaskState::Pending,
+            target_line,
+            target_col,
+            description: description.into(),
+            points,
+            gutter_text: gutter_text.into(),
+        }
+    }
+
+    pub fn delete_line(
+        target_line: usize,
+        original_content: impl Into<String>,
+        description: impl Into<String>,
+        gutter_text: impl Into<String>,
+        points: i64,
+    ) -> Self {
+        Self {
+            kind: TaskKind::DeleteLine {
+                original_content: original_content.into(),
+            },
+            state: TaskState::Pending,
+            target_line,
+            target_col: 0,
+            description: description.into(),
+            points,
+            gutter_text: gutter_text.into(),
+        }
+    }
+
+    pub fn delete_word(
+        target_line: usize,
+        target_col: usize,
+        word: impl Into<String>,
+        description: impl Into<String>,
+        gutter_text: impl Into<String>,
+        points: i64,
+    ) -> Self {
+        Self {
+            kind: TaskKind::DeleteWord {
+                word: word.into(),
+            },
+            state: TaskState::Pending,
+            target_line,
+            target_col,
+            description: description.into(),
+            points,
+            gutter_text: gutter_text.into(),
+        }
+    }
+
+    pub fn change_word(
+        target_line: usize,
+        target_col: usize,
+        original: impl Into<String>,
+        new_text: impl Into<String>,
+        description: impl Into<String>,
+        gutter_text: impl Into<String>,
+        points: i64,
+    ) -> Self {
+        let new_text = new_text.into();
+        Self {
+            kind: TaskKind::ChangeWord {
+                original: original.into(),
+                new_text: new_text.clone(),
+            },
+            state: TaskState::Pending,
+            target_line,
+            target_col,
+            description: description.into(),
+            points,
+            gutter_text: gutter_text.into(),
+        }
+    }
+
+    pub fn replace_char(
+        target_line: usize,
+        target_col: usize,
+        expected: char,
+        description: impl Into<String>,
+        gutter_text: impl Into<String>,
+        points: i64,
+    ) -> Self {
+        Self {
+            kind: TaskKind::ReplaceChar { expected },
             state: TaskState::Pending,
             target_line,
             target_col,
