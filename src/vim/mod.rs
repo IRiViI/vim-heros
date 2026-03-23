@@ -5,4 +5,6 @@ pub mod mode;
 pub mod motions;
 pub mod range;
 pub mod register;
+pub mod search;
+pub mod text_objects;
 pub mod undo;

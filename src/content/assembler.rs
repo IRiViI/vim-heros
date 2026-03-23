@@ -259,6 +259,61 @@ fn resolve_segment_task(
                 seg_task.points,
             ))
         }
+        "change_inside" => {
+            let delimiter = seg_task
+                .delimiter
+                .as_ref()
+                .and_then(|s| s.chars().next())
+                .unwrap_or('"');
+            let new_text = seg_task.new_text.as_deref().unwrap_or("???");
+            let gutter = format!("ci{} \u{2192} {}", delimiter, new_text);
+            Some(Task::change_inside(
+                abs_line,
+                col,
+                delimiter,
+                new_text,
+                &seg_task.description,
+                gutter,
+                seg_task.points,
+            ))
+        }
+        "yank_paste" => {
+            let expected = seg_task.expected_text.as_deref().unwrap_or("???");
+            Some(Task::yank_paste(
+                abs_line,
+                col,
+                expected,
+                &seg_task.description,
+                "YANK+P",
+                seg_task.points,
+            ))
+        }
+        "delete_block" => {
+            let n = seg_task.line_count.unwrap_or(1);
+            let mut original_lines = Vec::new();
+            for i in 0..n {
+                if let Some(l) = code_buffer.line(line + i) {
+                    original_lines.push(l);
+                }
+            }
+            Some(Task::delete_block(
+                abs_line,
+                original_lines,
+                &seg_task.description,
+                "DEL BLK",
+                seg_task.points,
+            ))
+        }
+        "indent" => {
+            let expected = seg_task.expected_indent.as_deref().unwrap_or("    ");
+            Some(Task::indent(
+                abs_line,
+                expected,
+                &seg_task.description,
+                "INDENT",
+                seg_task.points,
+            ))
+        }
         _ => {
             // Default: move_to
             Some(Task::move_to(

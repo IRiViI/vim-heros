@@ -38,6 +38,31 @@ pub enum TaskKind {
         /// The character it should become.
         expected: char,
     },
+    /// Change text inside a delimiter (e.g., ci" task).
+    /// Completed when the content between delimiters matches new_text.
+    ChangeInside {
+        /// The delimiter character (e.g., '"', '(', '{').
+        delimiter: char,
+        /// What the inside should become.
+        new_text: String,
+    },
+    /// Yank text and paste it at a target location.
+    /// Completed when the target line contains the expected text.
+    YankPaste {
+        /// Text that should appear at the target location.
+        expected_text: String,
+    },
+    /// Delete a block of lines (e.g., delete from line N to line M).
+    /// Completed when all specified lines are gone.
+    DeleteBlock {
+        /// Original content of the lines that should be deleted.
+        original_lines: Vec<String>,
+    },
+    /// Indent or dedent lines. Completed when the line starts with expected indentation.
+    Indent {
+        /// Expected leading whitespace.
+        expected_indent: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -148,6 +173,88 @@ impl Task {
             state: TaskState::Pending,
             target_line,
             target_col,
+            description: description.into(),
+            points,
+            gutter_text: gutter_text.into(),
+        }
+    }
+
+    pub fn change_inside(
+        target_line: usize,
+        target_col: usize,
+        delimiter: char,
+        new_text: impl Into<String>,
+        description: impl Into<String>,
+        gutter_text: impl Into<String>,
+        points: i64,
+    ) -> Self {
+        Self {
+            kind: TaskKind::ChangeInside {
+                delimiter,
+                new_text: new_text.into(),
+            },
+            state: TaskState::Pending,
+            target_line,
+            target_col,
+            description: description.into(),
+            points,
+            gutter_text: gutter_text.into(),
+        }
+    }
+
+    pub fn yank_paste(
+        target_line: usize,
+        target_col: usize,
+        expected_text: impl Into<String>,
+        description: impl Into<String>,
+        gutter_text: impl Into<String>,
+        points: i64,
+    ) -> Self {
+        Self {
+            kind: TaskKind::YankPaste {
+                expected_text: expected_text.into(),
+            },
+            state: TaskState::Pending,
+            target_line,
+            target_col,
+            description: description.into(),
+            points,
+            gutter_text: gutter_text.into(),
+        }
+    }
+
+    pub fn delete_block(
+        target_line: usize,
+        original_lines: Vec<String>,
+        description: impl Into<String>,
+        gutter_text: impl Into<String>,
+        points: i64,
+    ) -> Self {
+        Self {
+            kind: TaskKind::DeleteBlock { original_lines },
+            state: TaskState::Pending,
+            target_line,
+            target_col: 0,
+            description: description.into(),
+            points,
+            gutter_text: gutter_text.into(),
+        }
+    }
+
+    pub fn indent(
+        target_line: usize,
+        expected_indent: impl Into<String>,
+        description: impl Into<String>,
+        gutter_text: impl Into<String>,
+        points: i64,
+    ) -> Self {
+        Self {
+            kind: TaskKind::Indent {
+                expected_indent: expected_indent.into(),
+            },
+            state: TaskState::Pending,
+            target_line,
+            target_col: 0,
             description: description.into(),
             points,
             gutter_text: gutter_text.into(),
@@ -370,6 +477,52 @@ mod tests {
         for task in &tasks {
             assert_eq!(task.state, TaskState::Pending);
             assert!(task.points > 0);
+        }
+    }
+
+    // -- new task types --
+
+    #[test]
+    fn test_change_inside_task() {
+        let task = Task::change_inside(0, 5, '"', "world", "Change inside quotes", "CHG", 75);
+        assert_eq!(task.state, TaskState::Pending);
+        assert!(task.is_completable());
+        if let TaskKind::ChangeInside { delimiter, new_text } = &task.kind {
+            assert_eq!(*delimiter, '"');
+            assert_eq!(new_text, "world");
+        } else {
+            panic!("wrong task kind");
+        }
+    }
+
+    #[test]
+    fn test_yank_paste_task() {
+        let task = Task::yank_paste(5, 0, "expected", "Yank and paste", "Y+P", 100);
+        if let TaskKind::YankPaste { expected_text } = &task.kind {
+            assert_eq!(expected_text, "expected");
+        } else {
+            panic!("wrong task kind");
+        }
+    }
+
+    #[test]
+    fn test_delete_block_task() {
+        let lines = vec!["line 1".to_string(), "line 2".to_string()];
+        let task = Task::delete_block(3, lines.clone(), "Delete block", "DEL BLK", 120);
+        if let TaskKind::DeleteBlock { original_lines } = &task.kind {
+            assert_eq!(original_lines, &lines);
+        } else {
+            panic!("wrong task kind");
+        }
+    }
+
+    #[test]
+    fn test_indent_task() {
+        let task = Task::indent(2, "    ", "Fix indentation", "INDENT", 60);
+        if let TaskKind::Indent { expected_indent } = &task.kind {
+            assert_eq!(expected_indent, "    ");
+        } else {
+            panic!("wrong task kind");
         }
     }
 }

@@ -1,4 +1,5 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use std::collections::HashMap;
 use std::time::Duration;
 
 use crate::content::assembler;
@@ -12,6 +13,7 @@ use crate::vim::command::{self, Action, CommandParser, ParseResult};
 use crate::vim::cursor::Cursor;
 use crate::vim::mode::Mode;
 use crate::vim::register::RegisterFile;
+use crate::vim::search::{self, SearchDirection, SearchState};
 use crate::vim::undo::UndoHistory;
 
 const SAMPLE_CODE: &str = r#"use std::collections::HashMap;
@@ -142,6 +144,17 @@ fn default_level() -> LevelInfo {
     level_list().into_iter().next().unwrap()
 }
 
+/// A repeatable edit for dot (.) repeat.
+#[derive(Debug, Clone)]
+struct RepeatableEdit {
+    /// The initial action that triggered the edit.
+    action: Action,
+    /// How many times to repeat the initial action.
+    count: usize,
+    /// Characters typed during insert mode (for change/insert actions).
+    insert_text: Vec<char>,
+}
+
 pub struct App {
     pub buffer: Buffer,
     pub cursor: Cursor,
@@ -156,6 +169,21 @@ pub struct App {
     recently_seen: Vec<String>,
     registers: RegisterFile,
     undo: UndoHistory,
+    pub search: SearchState,
+    /// Anchor cursor for visual mode selection (where v/V was pressed).
+    pub visual_anchor: Cursor,
+    /// Last repeatable edit for dot (.) repeat.
+    last_edit: Option<RepeatableEdit>,
+    /// Buffer for collecting insert-mode keystrokes (for dot repeat).
+    insert_chars: Vec<char>,
+    /// Macro register storage: maps register char -> recorded keystrokes.
+    macro_regs: HashMap<char, Vec<KeyEvent>>,
+    /// Current macro recording buffer (None = not recording).
+    macro_recording: Option<(char, Vec<KeyEvent>)>,
+    /// Last played macro register (for @@ repeat).
+    last_macro_reg: Option<char>,
+    /// Command-line input buffer (for : commands). None = not active.
+    pub cmdline: Option<String>,
     level_index: usize,
 }
 
@@ -178,6 +206,14 @@ impl App {
             recently_seen: seen,
             registers: RegisterFile::new(),
             undo: UndoHistory::new(),
+            search: SearchState::new(),
+            visual_anchor: Cursor::new(0, 0),
+            last_edit: None,
+            insert_chars: Vec::new(),
+            macro_regs: HashMap::new(),
+            macro_recording: None,
+            last_macro_reg: None,
+            cmdline: None,
             level_index: 0,
         }
     }
@@ -378,6 +414,14 @@ impl App {
         self.parser = CommandParser::new();
         self.registers = RegisterFile::new();
         self.undo = UndoHistory::new();
+        self.search = SearchState::new();
+        self.visual_anchor = Cursor::new(0, 0);
+        self.last_edit = None;
+        self.insert_chars.clear();
+        self.macro_regs.clear();
+        self.macro_recording = None;
+        self.last_macro_reg = None;
+        self.cmdline = None;
     }
 
     /// Move cursor (and viewport) by `lines` in a direction.
@@ -406,10 +450,192 @@ impl App {
             return true;
         }
 
+        // Command-line mode intercepts all keys
+        if self.cmdline.is_some() {
+            return self.handle_cmdline_input(key);
+        }
+
+        // Search input mode intercepts all keys
+        if self.search.active {
+            return self.handle_search_input(key);
+        }
+
+        // Record keystrokes for macro (except the q that stops recording)
+        let is_macro_stop = key.code == KeyCode::Char('q')
+            && self.mode.is_normal()
+            && self.macro_recording.is_some();
+        if self.macro_recording.is_some() && !is_macro_stop {
+            if let Some((_, ref mut keys)) = self.macro_recording {
+                keys.push(key);
+            }
+        }
+
         match self.mode {
             Mode::Normal => self.handle_normal_key(key),
             Mode::Insert => self.handle_insert_key(key),
             Mode::Replace => self.handle_replace_key(key),
+            Mode::Visual | Mode::VisualLine => self.handle_visual_key(key),
+        }
+    }
+
+    fn handle_search_input(&mut self, key: KeyEvent) -> bool {
+        match key.code {
+            KeyCode::Enter => {
+                if self.search.commit_input() {
+                    // Execute the search
+                    self.execute_search(self.search.direction);
+                }
+                true
+            }
+            KeyCode::Esc => {
+                self.search.cancel_input();
+                true
+            }
+            KeyCode::Backspace => {
+                if self.search.input_buf.is_empty() {
+                    self.search.cancel_input();
+                } else {
+                    self.search.pop_char();
+                }
+                true
+            }
+            KeyCode::Char(ch) => {
+                self.search.push_char(ch);
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn handle_cmdline_input(&mut self, key: KeyEvent) -> bool {
+        match key.code {
+            KeyCode::Enter => {
+                let cmd = self.cmdline.take().unwrap_or_default();
+                self.execute_cmdline(&cmd);
+                true
+            }
+            KeyCode::Esc => {
+                self.cmdline = None;
+                true
+            }
+            KeyCode::Backspace => {
+                if let Some(ref mut buf) = self.cmdline {
+                    if buf.is_empty() {
+                        self.cmdline = None;
+                    } else {
+                        buf.pop();
+                    }
+                }
+                true
+            }
+            KeyCode::Char(ch) => {
+                if let Some(ref mut buf) = self.cmdline {
+                    buf.push(ch);
+                }
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn execute_cmdline(&mut self, cmd: &str) {
+        let cmd = cmd.trim();
+        match cmd {
+            "q" => {
+                // Quit current level — for now, quit the game
+                self.running = false;
+            }
+            "q!" => {
+                // Force quit
+                self.running = false;
+            }
+            "r" | "restart" => {
+                self.restart();
+            }
+            "n" | "next" => {
+                self.next_level();
+            }
+            _ => {
+                // Unknown command — just dismiss
+            }
+        }
+    }
+
+    fn execute_dot_repeat(&mut self, repeat_count: usize) {
+        let edit = match &self.last_edit {
+            Some(e) => e.clone(),
+            None => return,
+        };
+
+        for _ in 0..repeat_count {
+            self.undo.push(self.buffer.rope(), self.cursor);
+
+            // Execute the initial action
+            for _ in 0..edit.count {
+                command::execute(
+                    edit.action,
+                    &mut self.buffer,
+                    &mut self.cursor,
+                    &mut self.mode,
+                    &mut self.registers,
+                );
+            }
+
+            // If the action entered insert mode, replay the insert text
+            if !edit.insert_text.is_empty() && self.mode.is_insert() {
+                for &ch in &edit.insert_text {
+                    command::execute(
+                        Action::InsertChar(ch),
+                        &mut self.buffer,
+                        &mut self.cursor,
+                        &mut self.mode,
+                        &mut self.registers,
+                    );
+                }
+                // Return to normal mode
+                command::execute(
+                    Action::EnterNormalMode,
+                    &mut self.buffer,
+                    &mut self.cursor,
+                    &mut self.mode,
+                    &mut self.registers,
+                );
+            }
+        }
+        self.check_task_completion();
+    }
+
+    fn execute_macro(&mut self, reg: char, count: usize) {
+        let keys = match self.macro_regs.get(&reg) {
+            Some(k) => k.clone(),
+            None => return,
+        };
+        // Temporarily stop recording to avoid nested recording
+        let was_recording = self.macro_recording.take();
+        for _ in 0..count {
+            for key in &keys {
+                self.handle_key(*key);
+                if !self.running {
+                    break;
+                }
+            }
+        }
+        self.macro_recording = was_recording;
+    }
+
+    fn execute_search(&mut self, direction: SearchDirection) {
+        if !self.search.has_pattern() {
+            return;
+        }
+        let result = search::search_next(
+            &self.cursor,
+            &self.buffer,
+            &self.search.pattern,
+            direction,
+        );
+        if let Some(new_cursor) = result {
+            self.cursor = new_cursor;
+            self.check_task_completion();
         }
     }
 
@@ -455,12 +681,6 @@ impl App {
                 true
             }
             KeyCode::Char(ch) => {
-                // 'q' quits the game, but only when not in a pending sequence
-                if ch == 'q' && !self.parser.is_pending() {
-                    self.running = false;
-                    return true;
-                }
-
                 self.scoring.penalize_keystroke();
 
                 match self.parser.feed(ch) {
@@ -474,10 +694,103 @@ impl App {
                             return true;
                         }
 
+                        // Handle visual mode entry — set anchor
+                        if matches!(action, Action::EnterVisualMode | Action::EnterVisualLineMode) {
+                            self.visual_anchor = self.cursor;
+                        }
+
+                        // Handle search/cmdline actions specially
+                        match action {
+                            Action::EnterCmdLine => {
+                                self.cmdline = Some(String::new());
+                                return true;
+                            }
+                            Action::SearchForward => {
+                                self.search.start_input(SearchDirection::Forward);
+                                return true;
+                            }
+                            Action::SearchBackward => {
+                                self.search.start_input(SearchDirection::Backward);
+                                return true;
+                            }
+                            Action::SearchNext => {
+                                for _ in 0..count {
+                                    self.execute_search(self.search.direction);
+                                }
+                                return true;
+                            }
+                            Action::SearchPrev => {
+                                let reverse = match self.search.direction {
+                                    SearchDirection::Forward => SearchDirection::Backward,
+                                    SearchDirection::Backward => SearchDirection::Forward,
+                                };
+                                for _ in 0..count {
+                                    self.execute_search(reverse);
+                                }
+                                return true;
+                            }
+                            Action::SearchWordForward => {
+                                if let Some(word) = search::word_under_cursor(&self.cursor, &self.buffer) {
+                                    self.search.pattern = word;
+                                    self.search.direction = SearchDirection::Forward;
+                                    self.execute_search(SearchDirection::Forward);
+                                }
+                                return true;
+                            }
+                            Action::SearchWordBackward => {
+                                if let Some(word) = search::word_under_cursor(&self.cursor, &self.buffer) {
+                                    self.search.pattern = word;
+                                    self.search.direction = SearchDirection::Backward;
+                                    self.execute_search(SearchDirection::Backward);
+                                }
+                                return true;
+                            }
+                            Action::DotRepeat => {
+                                self.execute_dot_repeat(count);
+                                return true;
+                            }
+                            Action::MacroRecord(reg) => {
+                                self.macro_recording = Some((reg, Vec::new()));
+                                return true;
+                            }
+                            Action::MacroStop => {
+                                if let Some((reg, keys)) = self.macro_recording.take() {
+                                    self.macro_regs.insert(reg, keys);
+                                }
+                                return true;
+                            }
+                            Action::MacroPlay(reg) => {
+                                let actual_reg = if reg == '\0' {
+                                    // @@ — replay last
+                                    match self.last_macro_reg {
+                                        Some(r) => r,
+                                        None => return true,
+                                    }
+                                } else {
+                                    reg
+                                };
+                                self.last_macro_reg = Some(actual_reg);
+                                self.execute_macro(actual_reg, count);
+                                return true;
+                            }
+                            _ => {}
+                        }
+
                         // Push undo snapshot before editing actions
                         if action.is_edit() {
                             self.undo.push(self.buffer.rope(), self.cursor);
                         }
+
+                        // Record repeatable edits for dot repeat
+                        if action.is_edit() && !matches!(action, Action::InsertChar(_) | Action::Backspace) {
+                            self.last_edit = Some(RepeatableEdit {
+                                action,
+                                count,
+                                insert_text: Vec::new(),
+                            });
+                            self.insert_chars.clear();
+                        }
+
                         for _ in 0..count {
                             command::execute(
                                 action,
@@ -500,14 +813,27 @@ impl App {
 
     fn handle_insert_key(&mut self, key: KeyEvent) -> bool {
         let action = match key.code {
-            KeyCode::Esc => Action::EnterNormalMode,
-            KeyCode::Char(ch) => Action::InsertChar(ch),
-            KeyCode::Enter => Action::InsertChar('\n'),
+            KeyCode::Esc => {
+                // Finalize the repeatable edit with collected insert chars
+                if let Some(ref mut edit) = self.last_edit {
+                    edit.insert_text = self.insert_chars.clone();
+                }
+                self.insert_chars.clear();
+                Action::EnterNormalMode
+            }
+            KeyCode::Char(ch) => {
+                self.insert_chars.push(ch);
+                Action::InsertChar(ch)
+            }
+            KeyCode::Enter => {
+                self.insert_chars.push('\n');
+                Action::InsertChar('\n')
+            }
             KeyCode::Backspace => Action::Backspace,
             _ => return false,
         };
 
-                self.scoring.penalize_keystroke();
+        self.scoring.penalize_keystroke();
         if action.is_edit() {
             self.undo.push(self.buffer.rope(), self.cursor);
         }
@@ -532,6 +858,196 @@ impl App {
         command::execute(action, &mut self.buffer, &mut self.cursor, &mut self.mode, &mut self.registers);
         self.check_task_completion();
         true
+    }
+
+    fn handle_visual_key(&mut self, key: KeyEvent) -> bool {
+        // Ctrl combos
+        if key.modifiers.contains(KeyModifiers::CONTROL) {
+            match key.code {
+                KeyCode::Char('d') => {
+                    self.scoring.penalize_keystroke();
+                    self.scroll_cursor(self.viewport.height / 2, true);
+                    return true;
+                }
+                KeyCode::Char('u') => {
+                    self.scoring.penalize_keystroke();
+                    self.scroll_cursor(self.viewport.height / 2, false);
+                    return true;
+                }
+                _ => {}
+            }
+        }
+
+        match key.code {
+            KeyCode::Esc => {
+                self.mode = Mode::Normal;
+                self.parser.cancel();
+                true
+            }
+            KeyCode::Char(ch) => {
+                self.scoring.penalize_keystroke();
+
+                // Operators act on the visual selection
+                match ch {
+                    'd' | 'x' => {
+                        self.visual_operator(command::Operator::Delete);
+                        return true;
+                    }
+                    'c' | 's' => {
+                        self.visual_operator(command::Operator::Change);
+                        return true;
+                    }
+                    'y' => {
+                        self.visual_operator(command::Operator::Yank);
+                        return true;
+                    }
+                    // Toggle between visual and visual-line
+                    'v' => {
+                        if self.mode == Mode::Visual {
+                            self.mode = Mode::Normal;
+                        } else {
+                            self.mode = Mode::Visual;
+                            self.visual_anchor = self.cursor;
+                        }
+                        return true;
+                    }
+                    'V' => {
+                        if self.mode == Mode::VisualLine {
+                            self.mode = Mode::Normal;
+                        } else {
+                            self.mode = Mode::VisualLine;
+                            self.visual_anchor = self.cursor;
+                        }
+                        return true;
+                    }
+                    _ => {}
+                }
+
+                // Motions: use the parser to interpret, then apply as cursor movement
+                match self.parser.feed(ch) {
+                    ParseResult::Action(action, count) => {
+                        // Apply motion to move the cursor (extending selection)
+                        for _ in 0..count {
+                            command::execute(
+                                action,
+                                &mut self.buffer,
+                                &mut self.cursor,
+                                &mut self.mode,
+                                &mut self.registers,
+                            );
+                        }
+                        // Stay in visual mode (execute may have changed it for insert actions)
+                        // Only if execution didn't change mode to something else
+                    }
+                    ParseResult::Pending => {}
+                    ParseResult::None => {}
+                }
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Execute an operator on the visual selection.
+    fn visual_operator(&mut self, op: command::Operator) {
+        let anchor = self.visual_anchor;
+        let cursor = self.cursor;
+        let is_linewise = self.mode == Mode::VisualLine;
+
+        self.undo.push(self.buffer.rope(), self.cursor);
+
+        if is_linewise {
+            let start_line = anchor.line.min(cursor.line);
+            let end_line = anchor.line.max(cursor.line);
+
+            match op {
+                command::Operator::Delete => {
+                    let text = self.buffer.delete_lines(start_line, end_line);
+                    let reg_text = if text.ends_with('\n') { text } else { format!("{}\n", text) };
+                    self.registers.delete(None, super::vim::register::RegisterContent::Linewise(reg_text));
+                    self.cursor.line = start_line.min(self.buffer.line_count().saturating_sub(1));
+                    self.cursor.clamp(&self.buffer, false);
+                }
+                command::Operator::Change => {
+                    let text = self.buffer.delete_lines(start_line, end_line);
+                    let reg_text = if text.ends_with('\n') { text } else { format!("{}\n", text) };
+                    self.registers.delete(None, super::vim::register::RegisterContent::Linewise(reg_text));
+                    if start_line < self.buffer.line_count() {
+                        self.buffer.insert_char(start_line, 0, '\n');
+                        self.cursor.line = start_line;
+                    }
+                    self.cursor.col = 0;
+                    self.mode = Mode::Insert;
+                    self.check_task_completion();
+                    return;
+                }
+                command::Operator::Yank => {
+                    let mut text = String::new();
+                    for line_idx in start_line..=end_line {
+                        if let Some(line) = self.buffer.line(line_idx) {
+                            text.push_str(&line);
+                            text.push('\n');
+                        }
+                    }
+                    self.registers.yank(None, super::vim::register::RegisterContent::Linewise(text));
+                    self.cursor.line = start_line;
+                    self.cursor.clamp(&self.buffer, false);
+                }
+            }
+        } else {
+            // Charwise visual
+            let (start, end) = if (anchor.line, anchor.col) <= (cursor.line, cursor.col) {
+                (anchor, cursor)
+            } else {
+                (cursor, anchor)
+            };
+
+            // End is inclusive in charwise visual — make it exclusive for the range
+            let end_exclusive = if end.col + 1 <= self.buffer.line_len(end.line) {
+                Cursor::new(end.line, end.col + 1)
+            } else if end.line + 1 < self.buffer.line_count() {
+                Cursor::new(end.line + 1, 0)
+            } else {
+                Cursor::new(end.line, self.buffer.line_len(end.line))
+            };
+
+            let text = self.buffer.text_range(
+                start.line,
+                start.col,
+                end_exclusive.line,
+                end_exclusive.col,
+            );
+
+            match op {
+                command::Operator::Delete => {
+                    self.buffer.delete_range(
+                        start.line, start.col,
+                        end_exclusive.line, end_exclusive.col,
+                    );
+                    self.registers.delete(None, super::vim::register::RegisterContent::Charwise(text));
+                    self.cursor = start;
+                    self.cursor.clamp(&self.buffer, false);
+                }
+                command::Operator::Change => {
+                    self.buffer.delete_range(
+                        start.line, start.col,
+                        end_exclusive.line, end_exclusive.col,
+                    );
+                    self.registers.delete(None, super::vim::register::RegisterContent::Charwise(text));
+                    self.cursor = start;
+                    self.mode = Mode::Insert;
+                    self.check_task_completion();
+                    return;
+                }
+                command::Operator::Yank => {
+                    self.registers.yank(None, super::vim::register::RegisterContent::Charwise(text));
+                    self.cursor = start;
+                }
+            }
+        }
+
+        self.mode = Mode::Normal;
+        self.check_task_completion();
     }
 
     fn check_task_completion(&mut self) {
@@ -571,6 +1087,37 @@ impl App {
                         .char_at(task.target_line, task.target_col)
                         .map(|ch| ch == *expected)
                         .unwrap_or(false)
+                }
+                TaskKind::ChangeInside { new_text, .. } => {
+                    // Completed when the line contains the new_text
+                    match self.buffer.line(task.target_line) {
+                        Some(line) => line.contains(new_text.as_str()),
+                        None => false,
+                    }
+                }
+                TaskKind::YankPaste { expected_text } => {
+                    // Completed when the target line contains the expected text
+                    match self.buffer.line(task.target_line) {
+                        Some(line) => line.contains(expected_text.as_str()),
+                        None => false,
+                    }
+                }
+                TaskKind::DeleteBlock { original_lines } => {
+                    // Completed when none of the original lines exist at their positions
+                    original_lines.iter().enumerate().all(|(i, orig)| {
+                        let line_idx = task.target_line + i;
+                        match self.buffer.line(line_idx) {
+                            Some(line) => line.trim() != orig.trim(),
+                            None => true,
+                        }
+                    })
+                }
+                TaskKind::Indent { expected_indent } => {
+                    // Completed when the line starts with the expected indentation
+                    match self.buffer.line(task.target_line) {
+                        Some(line) => line.starts_with(expected_indent.as_str()),
+                        None => false,
+                    }
                 }
             };
             if completed {

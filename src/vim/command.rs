@@ -3,6 +3,7 @@ use super::cursor::Cursor;
 use super::mode::Mode;
 use super::motions::{self, Motion};
 use super::register::{RegisterContent, RegisterFile};
+use super::text_objects::TextObject;
 
 /// Operators that combine with motions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -81,14 +82,40 @@ pub enum Action {
     // The usize is the motion repeat count (e.g., d3w = Delete, WordForward, 3)
     OperatorMotion(Operator, Motion, usize),
 
+    // Operator + text object (diw, ca", yi(, etc.)
+    OperatorTextObject(Operator, TextObject),
+
+    // Visual mode
+    EnterVisualMode,       // v
+    EnterVisualLineMode,   // V
+
     // Replace
     ReplaceChar(char),   // r{char}
     EnterReplaceMode,    // R
     ReplaceOverwrite(char), // char typed in Replace mode
 
+    // Command line
+    EnterCmdLine,        // : — open command line (handled by app)
+
+    // Search
+    SearchForward,       // / — start search input (handled by app)
+    SearchBackward,      // ? — start search input (handled by app)
+    SearchNext,          // n — repeat last search
+    SearchPrev,          // N — repeat last search in opposite direction
+    SearchWordForward,   // * — search word under cursor forward
+    SearchWordBackward,  // # — search word under cursor backward
+
     // Undo/Redo
     Undo,
     Redo,
+
+    // Dot repeat
+    DotRepeat,           // . — repeat last edit (handled by app)
+
+    // Macros (handled by app)
+    MacroRecord(char),   // q{reg} — start recording into register
+    MacroStop,           // q — stop recording
+    MacroPlay(char),     // @{reg} — play macro from register
 
     // Insert mode actions
     InsertChar(char),
@@ -111,6 +138,7 @@ impl Action {
                 | Action::PasteBefore
                 | Action::ChangeToEnd
                 | Action::OperatorMotion(_, _, _)
+                | Action::OperatorTextObject(_, _)
                 | Action::ReplaceChar(_)
                 | Action::ReplaceOverwrite(_)
                 | Action::Undo
@@ -167,7 +195,10 @@ enum ParseState {
     WaitingOperator(Operator),          // after d/c/y, waiting for motion or self-repeat (dd/cc/yy)
     WaitingOperatorFind(Operator, FindKind), // after d/c/y then f/t/F/T, waiting for char
     WaitingOperatorG(Operator),         // after d/c/y then g, waiting for g (dgg)
+    WaitingOperatorTextObj(Operator, bool), // after d/c/y then i/a, waiting for object char (inner=true)
     WaitingReplace,                     // after 'r', waiting for replacement char
+    WaitingMacroReg,                    // after 'q', waiting for register char
+    WaitingMacroPlay,                   // after '@', waiting for register char
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -186,6 +217,8 @@ pub struct CommandParser {
     state: ParseState,
     count: Option<usize>,
     last_find: Option<FindState>,
+    /// Whether a macro is currently being recorded (for q toggle behavior).
+    pub recording_macro: bool,
 }
 
 impl CommandParser {
@@ -194,6 +227,7 @@ impl CommandParser {
             state: ParseState::Ready,
             count: None,
             last_find: None,
+            recording_macro: false,
         }
     }
 
@@ -230,7 +264,10 @@ impl CommandParser {
             ParseState::WaitingOperator(op) => self.feed_waiting_operator(ch, op),
             ParseState::WaitingOperatorFind(op, kind) => self.feed_waiting_operator_find(ch, op, kind),
             ParseState::WaitingOperatorG(op) => self.feed_waiting_operator_g(ch, op),
+            ParseState::WaitingOperatorTextObj(op, inner) => self.feed_waiting_operator_textobj(ch, op, inner),
             ParseState::WaitingReplace => self.feed_waiting_replace(ch),
+            ParseState::WaitingMacroReg => self.feed_waiting_macro_reg(ch),
+            ParseState::WaitingMacroPlay => self.feed_waiting_macro_play(ch),
             ParseState::Ready => self.feed_ready(ch),
         }
     }
@@ -316,9 +353,27 @@ impl CommandParser {
                 self.state = ParseState::WaitingOperatorG(op);
                 return ParseResult::Pending;
             }
+            'i' => {
+                self.state = ParseState::WaitingOperatorTextObj(op, true);
+                return ParseResult::Pending;
+            }
+            'a' => {
+                self.state = ParseState::WaitingOperatorTextObj(op, false);
+                return ParseResult::Pending;
+            }
             _ => {}
         }
 
+        self.count = None;
+        ParseResult::None
+    }
+
+    fn feed_waiting_operator_textobj(&mut self, ch: char, op: Operator, inner: bool) -> ParseResult {
+        self.state = ParseState::Ready;
+        if let Some(obj) = TextObject::from_char(ch, inner) {
+            self.count = None;
+            return ParseResult::Action(Action::OperatorTextObject(op, obj), 1);
+        }
         self.count = None;
         ParseResult::None
     }
@@ -351,6 +406,28 @@ impl CommandParser {
                 ParseResult::None
             }
         }
+    }
+
+    fn feed_waiting_macro_reg(&mut self, ch: char) -> ParseResult {
+        self.state = ParseState::Ready;
+        if ch.is_ascii_lowercase() {
+            self.recording_macro = true;
+            self.count = None;
+            return ParseResult::Action(Action::MacroRecord(ch), 1);
+        }
+        self.count = None;
+        ParseResult::None
+    }
+
+    fn feed_waiting_macro_play(&mut self, ch: char) -> ParseResult {
+        self.state = ParseState::Ready;
+        if ch.is_ascii_lowercase() || ch == '@' {
+            // @@ replays last played macro — handled by app
+            let reg = if ch == '@' { '\0' } else { ch };
+            return self.action_with_count(Action::MacroPlay(reg));
+        }
+        self.count = None;
+        ParseResult::None
     }
 
     fn feed_waiting_replace(&mut self, ch: char) -> ParseResult {
@@ -485,12 +562,46 @@ impl CommandParser {
             'p' => self.action_with_count(Action::PasteAfter),
             'P' => self.action_with_count(Action::PasteBefore),
 
+            // Visual mode
+            'v' => self.action_no_count(Action::EnterVisualMode),
+            'V' => self.action_no_count(Action::EnterVisualLineMode),
+
             // Replace
             'r' => {
                 self.state = ParseState::WaitingReplace;
                 ParseResult::Pending
             }
             'R' => self.action_no_count(Action::EnterReplaceMode),
+
+            // Command line
+            ':' => self.action_no_count(Action::EnterCmdLine),
+
+            // Dot repeat
+            '.' => self.action_with_count(Action::DotRepeat),
+
+            // Search
+            '/' => self.action_no_count(Action::SearchForward),
+            '?' => self.action_no_count(Action::SearchBackward),
+            'n' => self.action_with_count(Action::SearchNext),
+            'N' => self.action_with_count(Action::SearchPrev),
+            '*' => self.action_no_count(Action::SearchWordForward),
+            '#' => self.action_no_count(Action::SearchWordBackward),
+
+            // Macros
+            'q' => {
+                if self.recording_macro {
+                    self.recording_macro = false;
+                    self.count = None;
+                    ParseResult::Action(Action::MacroStop, 1)
+                } else {
+                    self.state = ParseState::WaitingMacroReg;
+                    ParseResult::Pending
+                }
+            }
+            '@' => {
+                self.state = ParseState::WaitingMacroPlay;
+                ParseResult::Pending
+            }
 
             // Undo
             'u' => self.action_no_count(Action::Undo),
@@ -570,6 +681,14 @@ pub fn execute(
 
         // Bracket matching
         Action::MatchBracket => *cursor = motions::match_bracket(cursor, buffer),
+
+        // Visual mode entry (anchor set by app.rs)
+        Action::EnterVisualMode => {
+            *mode = Mode::Visual;
+        }
+        Action::EnterVisualLineMode => {
+            *mode = Mode::VisualLine;
+        }
 
         // Mode changes — basic insert
         Action::EnterInsertMode => {
@@ -754,10 +873,16 @@ pub fn execute(
             }
         }
 
-        // Handled by app.rs (need viewport/undo access)
+        // Handled by app.rs (need viewport/undo/search access)
         Action::Undo | Action::Redo => {}
         Action::ScrollHalfDown | Action::ScrollHalfUp
         | Action::ScrollFullDown | Action::ScrollFullUp => {}
+        Action::SearchForward | Action::SearchBackward
+        | Action::SearchNext | Action::SearchPrev
+        | Action::SearchWordForward | Action::SearchWordBackward => {}
+        Action::EnterCmdLine => {} // handled by app.rs
+        Action::DotRepeat => {} // handled by app.rs
+        Action::MacroRecord(_) | Action::MacroStop | Action::MacroPlay(_) => {} // handled by app.rs
 
         // Operator + motion
         Action::OperatorMotion(op, motion, count) => {
@@ -876,6 +1001,50 @@ pub fn execute(
                         registers.yank(None, RegisterContent::Charwise(text));
                         // Cursor stays at start of yanked region
                         *cursor = start;
+                    }
+                }
+            }
+        }
+
+        // Operator + text object
+        Action::OperatorTextObject(op, obj) => {
+            if let Some(range) = obj.resolve(cursor, buffer) {
+                let text = buffer.text_range(
+                    range.start_line,
+                    range.start_col,
+                    range.end_line,
+                    range.end_col,
+                );
+
+                match op {
+                    Operator::Delete => {
+                        buffer.delete_range(
+                            range.start_line,
+                            range.start_col,
+                            range.end_line,
+                            range.end_col,
+                        );
+                        registers.delete(None, RegisterContent::Charwise(text));
+                        cursor.line = range.start_line;
+                        cursor.col = range.start_col;
+                        cursor.clamp(buffer, false);
+                    }
+                    Operator::Change => {
+                        buffer.delete_range(
+                            range.start_line,
+                            range.start_col,
+                            range.end_line,
+                            range.end_col,
+                        );
+                        registers.delete(None, RegisterContent::Charwise(text));
+                        cursor.line = range.start_line;
+                        cursor.col = range.start_col;
+                        *mode = Mode::Insert;
+                    }
+                    Operator::Yank => {
+                        registers.yank(None, RegisterContent::Charwise(text));
+                        cursor.line = range.start_line;
+                        cursor.col = range.start_col;
                     }
                 }
             }
@@ -1777,4 +1946,108 @@ mod tests {
         assert_eq!(buf.line(0), Some("HEllo".to_string()));
         assert_eq!(cur.col, 2);
     }
+
+    // -- Text object parser tests --
+
+    #[test]
+    fn test_parser_diw() {
+
+        assert_eq!(parse_sequence("d"), ParseResult::Pending);
+        let mut parser = CommandParser::new();
+        assert_eq!(parser.feed('d'), ParseResult::Pending);
+        assert_eq!(parser.feed('i'), ParseResult::Pending);
+        assert_eq!(
+            parser.feed('w'),
+            ParseResult::Action(Action::OperatorTextObject(Operator::Delete, TextObject::InnerWord), 1)
+        );
+    }
+
+    #[test]
+    fn test_parser_ci_double_quote() {
+
+        let mut parser = CommandParser::new();
+        assert_eq!(parser.feed('c'), ParseResult::Pending);
+        assert_eq!(parser.feed('i'), ParseResult::Pending);
+        assert_eq!(
+            parser.feed('"'),
+            ParseResult::Action(Action::OperatorTextObject(Operator::Change, TextObject::InnerQuote('"')), 1)
+        );
+    }
+
+    #[test]
+    fn test_parser_ya_paren() {
+
+        let mut parser = CommandParser::new();
+        assert_eq!(parser.feed('y'), ParseResult::Pending);
+        assert_eq!(parser.feed('a'), ParseResult::Pending);
+        assert_eq!(
+            parser.feed('('),
+            ParseResult::Action(Action::OperatorTextObject(Operator::Yank, TextObject::AParen), 1)
+        );
+    }
+
+    // -- Text object execution tests --
+
+    #[test]
+    fn test_execute_diw() {
+        let mut buf = Buffer::from_str("hello world");
+        let mut cur = Cursor::new(0, 0);
+        let mut mode = Mode::Normal;
+        let mut regs = RegisterFile::new();
+
+        exec_with_regs(
+            Action::OperatorTextObject(Operator::Delete, TextObject::InnerWord),
+            &mut buf, &mut cur, &mut mode, &mut regs,
+        );
+        assert_eq!(buf.line(0), Some(" world".to_string()));
+        assert_eq!(regs.get(None).text(), "hello");
+    }
+
+    #[test]
+    fn test_execute_daw() {
+        let mut buf = Buffer::from_str("hello world");
+        let mut cur = Cursor::new(0, 0);
+        let mut mode = Mode::Normal;
+        let mut regs = RegisterFile::new();
+
+        exec_with_regs(
+            Action::OperatorTextObject(Operator::Delete, TextObject::AWord),
+            &mut buf, &mut cur, &mut mode, &mut regs,
+        );
+        assert_eq!(buf.line(0), Some("world".to_string()));
+        assert_eq!(regs.get(None).text(), "hello ");
+    }
+
+    #[test]
+    fn test_execute_ci_quote() {
+        let mut buf = Buffer::from_str(r#"let x = "hello";"#);
+        let mut cur = Cursor::new(0, 10);
+        let mut mode = Mode::Normal;
+        let mut regs = RegisterFile::new();
+
+        exec_with_regs(
+            Action::OperatorTextObject(Operator::Change, TextObject::InnerQuote('"')),
+            &mut buf, &mut cur, &mut mode, &mut regs,
+        );
+        assert_eq!(buf.line(0), Some(r#"let x = "";"#.to_string()));
+        assert_eq!(mode, Mode::Insert);
+        assert_eq!(regs.get(None).text(), "hello");
+    }
+
+    #[test]
+    fn test_execute_yi_paren() {
+        let mut buf = Buffer::from_str("fn foo(x, y)");
+        let mut cur = Cursor::new(0, 8);
+        let mut mode = Mode::Normal;
+        let mut regs = RegisterFile::new();
+
+        exec_with_regs(
+            Action::OperatorTextObject(Operator::Yank, TextObject::InnerParen),
+            &mut buf, &mut cur, &mut mode, &mut regs,
+        );
+        // Buffer unchanged
+        assert_eq!(buf.line(0), Some("fn foo(x, y)".to_string()));
+        assert_eq!(regs.get(None).text(), "x, y");
+    }
+
 }

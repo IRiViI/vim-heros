@@ -47,6 +47,18 @@ pub struct SegmentTask {
     /// For replace_char tasks: the expected character after replacement.
     #[serde(default)]
     pub replace_with: Option<String>,
+    /// For change_inside tasks: the delimiter character.
+    #[serde(default)]
+    pub delimiter: Option<String>,
+    /// For yank_paste tasks: the expected text at the target.
+    #[serde(default)]
+    pub expected_text: Option<String>,
+    /// For indent tasks: the expected leading whitespace.
+    #[serde(default)]
+    pub expected_indent: Option<String>,
+    /// For delete_block tasks: the number of lines to delete.
+    #[serde(default)]
+    pub line_count: Option<usize>,
 }
 
 fn default_points() -> i64 {

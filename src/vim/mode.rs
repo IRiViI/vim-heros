@@ -4,6 +4,8 @@ pub enum Mode {
     Normal,
     Insert,
     Replace,
+    Visual,
+    VisualLine,
 }
 
 impl Mode {
@@ -17,6 +19,10 @@ impl Mode {
 
     pub fn is_replace(self) -> bool {
         self == Mode::Replace
+    }
+
+    pub fn is_visual(self) -> bool {
+        matches!(self, Mode::Visual | Mode::VisualLine)
     }
 }
 

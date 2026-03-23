@@ -171,9 +171,16 @@ fn render_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             let task_col = task.map(|t| t.target_col);
             let task_style = task.map(|t| task_char_style(t));
 
+            // Compute visual selection range for this line
+            let visual_range = if app.mode.is_visual() {
+                visual_line_range(app, line_idx, line_content.len())
+            } else {
+                None
+            };
+
             // Build spans character by character only when needed,
             // otherwise use sliced spans for performance.
-            if task_col.is_some() || cursor_col.is_some() {
+            if task_col.is_some() || cursor_col.is_some() || visual_range.is_some() {
                 // We need character-level control
                 let chars: Vec<char> = line_content.chars().collect();
                 let mut col = 0;
@@ -200,8 +207,11 @@ fn render_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
 
                     let is_cursor = cursor_col == Some(i);
                     let is_task_target = task_col == Some(i) && task_style.is_some();
+                    let is_visual = visual_range
+                        .map(|(vs, ve)| i >= vs && i < ve)
+                        .unwrap_or(false);
 
-                    if is_cursor || is_task_target {
+                    if is_cursor || is_task_target || is_visual {
                         // Flush any accumulated normal text
                         flush_run(&mut spans, &line_content, run_start, byte_pos);
 
@@ -212,9 +222,15 @@ fn render_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
                                 ch_str,
                                 Style::default().bg(Color::White).fg(Color::Black),
                             ));
-                        } else {
+                        } else if is_task_target {
                             // Task target character
                             spans.push(Span::styled(ch_str, task_style.unwrap()));
+                        } else {
+                            // Visual selection highlight
+                            spans.push(Span::styled(
+                                ch_str,
+                                Style::default().bg(Color::Rgb(80, 80, 140)).fg(Color::White),
+                            ));
                         }
                         run_start = next_byte;
                     }
@@ -250,17 +266,108 @@ fn render_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     frame.render_widget(paragraph, area);
 }
 
+/// Compute the column range (start_col, end_col_exclusive) of the visual selection on a line.
+/// Returns None if this line is not part of the selection.
+fn visual_line_range(app: &App, line_idx: usize, line_len: usize) -> Option<(usize, usize)> {
+    let anchor = app.visual_anchor;
+    let cursor = app.cursor;
+
+    match app.mode {
+        Mode::Visual => {
+            let (start, end) = if (anchor.line, anchor.col) <= (cursor.line, cursor.col) {
+                (anchor, cursor)
+            } else {
+                (cursor, anchor)
+            };
+
+            if line_idx < start.line || line_idx > end.line {
+                return None;
+            }
+
+            let col_start = if line_idx == start.line { start.col } else { 0 };
+            let col_end = if line_idx == end.line {
+                (end.col + 1).min(line_len)
+            } else {
+                line_len
+            };
+
+            if col_start >= col_end && col_start >= line_len {
+                return None;
+            }
+            Some((col_start, col_end.max(col_start + 1)))
+        }
+        Mode::VisualLine => {
+            let start_line = anchor.line.min(cursor.line);
+            let end_line = anchor.line.max(cursor.line);
+
+            if line_idx >= start_line && line_idx <= end_line {
+                Some((0, line_len.max(1)))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
 /// Render the status bar showing mode, cursor position, score, and scroll progress.
 fn render_status_bar(frame: &mut ratatui::Frame, app: &App, area: Rect) {
+    // If command line is active, show it
+    if let Some(ref cmd) = app.cmdline {
+        let cmd_line = Paragraph::new(Line::from(vec![
+            Span::styled(
+                ":",
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                cmd.clone(),
+                Style::default().fg(Color::White),
+            ),
+            Span::styled(
+                "\u{2588}",
+                Style::default().fg(Color::Yellow),
+            ),
+        ]))
+        .style(Style::default().bg(Color::Rgb(30, 30, 30)));
+        frame.render_widget(cmd_line, area);
+        return;
+    }
+
+    // If search input is active, show the search line instead
+    if app.search.active {
+        let prompt = app.search.prompt_char();
+        let input = &app.search.input_buf;
+        let search_line = Paragraph::new(Line::from(vec![
+            Span::styled(
+                format!("{}", prompt),
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                input.clone(),
+                Style::default().fg(Color::White),
+            ),
+            Span::styled(
+                "\u{2588}",
+                Style::default().fg(Color::Yellow),
+            ),
+        ]))
+        .style(Style::default().bg(Color::Rgb(30, 30, 30)));
+        frame.render_widget(search_line, area);
+        return;
+    }
+
     let mode_str = match app.mode {
         Mode::Normal => " NORMAL ",
         Mode::Insert => " INSERT ",
         Mode::Replace => " REPLACE ",
+        Mode::Visual => " VISUAL ",
+        Mode::VisualLine => " V-LINE ",
     };
     let mode_color = match app.mode {
         Mode::Normal => Color::Blue,
         Mode::Insert => Color::Green,
         Mode::Replace => Color::Red,
+        Mode::Visual | Mode::VisualLine => Color::Magenta,
     };
 
     let position = format!(
