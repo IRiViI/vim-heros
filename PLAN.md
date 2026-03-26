@@ -4,18 +4,25 @@ A Guitar Hero–inspired terminal game that teaches Vim through escalating, real
 challenges. Text scrolls down like a note highway; your cursor must keep up or it's
 game over. Fewer keystrokes = more points. Powered by real Vim commands.
 
+**Design philosophy**: Slay the Spire meets Guitar Hero for Vim. A full skilled run
+takes ~30 minutes. Failing and restarting is the learning loop — both for the game
+mechanics and for real Vim skills.
+
 ---
 
 ## Table of Contents
 
 1. [Game Design](#1-game-design)
-2. [Zone & Level System](#2-zone--level-system)
-3. [Content System](#3-content-system)
-4. [Keybinding / Config System](#4-keybinding--config-system)
-5. [Technical Architecture](#5-technical-architecture)
-6. [Credit Shop & Progression](#6-credit-shop--progression)
-7. [Multi-Buffer System](#7-multi-buffer-system)
-8. [Phased Implementation Plan](#8-phased-implementation-plan)
+2. [World & Level System](#2-world--level-system)
+3. [Game Modes](#3-game-modes)
+4. [Content System](#4-content-system)
+5. [Achievements System](#5-achievements-system)
+6. [Easter Eggs & Vim Wisdom](#6-easter-eggs--vim-wisdom)
+7. [Keybinding / Config System](#7-keybinding--config-system)
+8. [Technical Architecture](#8-technical-architecture)
+9. [Multi-Buffer System](#9-multi-buffer-system)
+10. [Ideas Parking Lot](#10-ideas-parking-lot)
+11. [Phased Implementation Plan](#11-phased-implementation-plan)
 
 ---
 
@@ -33,6 +40,7 @@ game over. Fewer keystrokes = more points. Powered by real Vim commands.
        ▼                                          ▼
   Cursor out of                             Task done?
   viewport? ──▶ GAME OVER                  ──▶ Points + combo
+  Energy = 0? ──▶ GAME OVER
 ```
 
 - The **text buffer is static** — it's a real code file assembled from segments.
@@ -46,6 +54,8 @@ game over. Fewer keystrokes = more points. Powered by real Vim commands.
   players speed things up — e.g. `6j` at the bottom edge scrolls the viewport
   6 lines forward instantly. The auto-scroll timer resets after a boost so the
   player isn't immediately punished.
+- **Energy bar**: every keystroke drains energy, completing tasks restores it.
+  Hit 0 energy = game over. This makes efficiency the core survival mechanic.
 
 ### 1.1b Level Start: Countdown & Import Runway
 
@@ -82,8 +92,7 @@ and the player has 3 seconds of orientation time before anything moves.
 
 | Source              | Points      | Notes                                    |
 |---------------------|-------------|------------------------------------------|
-| Each second alive   | +10         | Baseline survival reward                 |
-| Each keystroke      | −2          | Penalizes inefficiency                   |
+| Each scroll tick    | +10         | Baseline survival reward                 |
 | Task completed      | +50 to +500 | Scales with task complexity              |
 | Optimal solution    | +100 bonus  | Used ≤ optimal number of keystrokes      |
 | Combo multiplier    | ×1.5 / ×2 / ×3 | Consecutive optimal task completions |
@@ -92,43 +101,181 @@ and the player has 3 seconds of orientation time before anything moves.
 Tasks must be worth significantly more than survival points so the optimal strategy
 is "complete tasks efficiently," not "hold j and ignore everything."
 
-### 1.3 Star Rating (per level)
+Note: The old keystroke penalty (−2 per key) is replaced by the **energy bar system**
+(Section 1.3). Keystrokes drain energy instead of directly reducing score.
+
+### 1.3 Energy Bar System
+
+The energy bar is the core survival mechanic. It replaces the simple keystroke
+penalty with a visible, visceral pressure system.
+
+#### How it works
+- Start each level with a full energy bar (e.g., 100 energy)
+- **Every keystroke drains energy** (configurable cost per action type)
+- **Completing tasks restores energy** (more for optimal completion)
+- **Energy also drains over time** (tied to scroll speed — harder levels drain faster)
+- **Hit 0 energy = Game Over** (restart from checkpoint)
+
+#### Configurable costs (stored in a tuning config file)
+
+All values live in a single config/TOML file for tuning without recompile:
+
+```toml
+[energy]
+max = 100
+start = 100
+
+[energy.drain]
+keystroke_base = 1        # basic cost per key press
+time_drain_per_tick = 0.5 # passive drain per scroll tick
+
+[energy.restore]
+task_complete = 15        # energy restored on task completion
+task_optimal = 25         # energy restored on optimal completion
+combo_bonus = 5           # extra per combo level (combo 3 = +15 extra)
+
+[energy.difficulty_multipliers]
+# Multipliers applied to drain values per difficulty
+nano_user = { drain: 0.5, restore: 1.5 }
+wq_survivor = { drain: 0.75, restore: 1.25 }
+keyboard_warrior = { drain: 1.0, restore: 1.0 }
+ten_x_engineer = { drain: 1.5, restore: 0.75 }
+uses_arch_btw = { drain: 2.0, restore: 0.5 }
+```
+
+#### Visual design
+- Energy bar in the HUD (top bar), next to score
+- Color gradient: green (>60%) → yellow (30-60%) → red (<30%)
+- Pulsing/flashing when critically low (<15%)
+- Brief "+15" popup when energy restored by task completion
+
+#### Energy between levels
+- Energy **resets to full** at the start of each level
+- No attrition across levels — each level is a fresh challenge
+- The roguelike tension comes from "fail = restart from checkpoint", not gradual drain
+- Energy does NOT drain during countdown or import runway (grace period)
+- Energy does NOT drain for unlearned keys (skill-gated keys are free)
+
+#### Relationship to scoring
+- Score system (points, combos, stars) still exists for ranking/leaderboard
+- Energy = survival mechanic (hit 0 = die)
+- Score = mastery mechanic (how well you survived)
+
+### 1.4 Star Rating & Checkpoints (per level)
 
 - ★☆☆ — Completed the level (survived to the end)
 - ★★☆ — Completed all tasks
 - ★★★ — Completed all tasks within the optimal keystroke budget
 
-### 1.4 Visual Design (Terminal)
+**Difficulty does NOT affect stars.** Stars measure completion quality, not speed:
+- ★ = survived (possible on any difficulty)
+- ★★ = all tasks completed (possible on any difficulty)
+- ★★★ = all tasks completed optimally (possible on any difficulty)
+
+Difficulty affects scroll speed, energy drain/restore, and **score**. A 3-star
+run on "Uses Arch btw" earns the same checkpoint as "Nano User" but a much higher
+score. Beginners can progress on easier difficulty; experts chase high scores.
+
+**Checkpoint mechanic:** Every 3-starred level becomes a permanent checkpoint.
+The checkpoint is determined by your highest **consecutive** 3-star chain starting
+from level 1-1. Example: 3-starred 1-1 through 4-3 → next run starts at 4-4.
+If you 3-star 1-1, 1-2, skip 1-3, and 3-star 1-4 — your checkpoint is still 1-3
+(the chain broke). This incentivizes going back to perfect skipped levels.
+
+### 1.5 Visual Design (Terminal)
 
 ```
-┌──────────────────────────────────────────────────┐
-│ ★★☆  Level 2-3  "Word Hopping"   Score: 1,250  ×2│  ← HUD
-├──────────────────────────────────────────────────┤
-│  14 │   for (const item of items) {              │
-│  15 │     sum += item.price;                     │
-│  16 │ ██  sum += item.tax  ██       CHG → "cost" │  ← red = pending task
-│  17 │   }                                        │
-│  18 │   return sum;               █              │  ← cursor
-│  19 │ }                                          │
-│  20 │ ▓▓  console.log(total)  ▓▓       ✓ DONE   │  ← green = completed
-│  21 │                                            │
-├──────────────────────────────────────────────────┤
-│ NORMAL │ Keys: 12 │ ▸ Change "tax" → "cost"     │  ← status bar
-└──────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│ ★★☆  Level 2-3  "Word Surfer"   Score: 1,250  ×2    │  ← HUD
+│ Energy: ████████████░░░░░  68%                       │  ← Energy bar
+├──────────────────────────────────────────────────────┤
+│  14 │   for (const item of items) {                  │
+│  15 │     sum += item.price;                         │
+│  16 │ ██  sum += item.tax  ██       CHG → "cost"     │  ← red = pending task
+│  17 │   }                                            │
+│  18 │   return sum;               █                  │  ← cursor
+│  19 │ }                                              │
+│  20 │ ▓▓  console.log(total)  ▓▓       ✓ DONE       │  ← green = completed
+│  21 │                                                │
+├──────────────────────────────────────────────────────┤
+│ NORMAL │ Keys: 12 │ ▸ Change "tax" → "cost"         │  ← status bar
+└──────────────────────────────────────────────────────┘
 ```
 
 - **Red background**: task pending, with a short annotation in the right gutter.
 - **Green background**: task completed.
 - **Yellow background**: partially done / cursor is on it.
+- **Energy bar**: color gradient from green to red, pulsing when critically low.
 - **Status bar**: current mode, keystroke count, current task description.
-- **HUD**: level name, star progress, score, combo multiplier.
+- **HUD**: level name, star progress, score, combo multiplier, energy.
 
-### 1.5 Game Over Screen
+### 1.6 Game Over Screen
 
 Show: final score, stars earned, tasks completed/total, keystrokes used vs optimal,
-and a breakdown of commands used. Offer: retry, next level, back to menu.
+energy remaining, and a breakdown of commands used.
 
-### 1.6 Tutorial-as-Gameplay: Intro Segments
+```
+┌──────────────────────────────────────────┐
+│            GAME OVER                     │
+│                                          │
+│  World 5-3  "The Destroyer"              │
+│  Score: 2,450        Stars: ★★☆          │
+│  Tasks: 7/9          Energy: 0%          │
+│  Keystrokes: 84      Optimal: 61         │
+│                                          │
+│  Your checkpoint: World 4-4              │
+│                                          │
+│  [R] Restart from checkpoint             │
+│  [B] Back to beginning (1-1)             │
+│  [Q] Quit to menu                        │
+└──────────────────────────────────────────┘
+```
+
+"Restart from checkpoint" goes to the level after your highest consecutive 3-star.
+Stars earned during the failed run are still saved (progress isn't lost, just position).
+
+### 1.6b Between-Level Flow
+
+What happens between levels during a run:
+
+**1. Level Complete → Results screen** (mandatory 2 seconds, then press any key):
+```
+┌──────────────────────────────────────────┐
+│         LEVEL COMPLETE!                  │
+│                                          │
+│  World 3-2  "Line Rider"                 │
+│  Score: 1,850        Stars: ★★★          │
+│  Tasks: 6/6          Energy: 72%         │
+│  Keystrokes: 42      Optimal: 38         │
+│                                          │
+│  ✓ NEW CHECKPOINT UNLOCKED!              │
+│                                          │
+│     Press any key to continue...         │
+└──────────────────────────────────────────┘
+```
+
+If a new achievement unlocks: "ACHIEVEMENT UNLOCKED: Wordsmith" shown below stats.
+
+**2. Next Level loading screen** (press any key to start):
+```
+┌──────────────────────────────────────────┐
+│       World 3, Level 3                   │
+│       "Line Rider"                       │
+│                                          │
+│  Available: h j k l 5j w b e 0 ^ $ f t  │
+│                                          │
+│     Press any key to start...            │
+└──────────────────────────────────────────┘
+```
+
+**3. Countdown** (3... 2... 1...) → level starts with full energy.
+
+**Pause menu** (press `Esc` during gameplay):
+- [Resume] — continue playing
+- [Quit Run] — return to main menu (stars saved, run ends)
+- No "Restart Level" option — in roguelike mode, you either complete or die
+
+### 1.7 Tutorial-as-Gameplay: Intro Segments
 
 There is no separate tutorial. Every level begins with an **intro segment** — a
 specially crafted code snippet that teaches the player exactly what they need for
@@ -148,11 +295,11 @@ all while the viewport is already scrolling. This creates a natural flow from
 3. After the intro segment, regular code segments follow with real tasks.
 4. The intro tasks are worth fewer points (25–50) — they're training wheels.
 
-#### Example: Level 1-2 intro (introduces `w` and `b`)
+#### Example: Level 2-1 intro (introduces `w` and `b`)
 
 ```
   1 │ # ═══════════════════════════════════
-  2 │ # LEVEL 1-2: Word Motions
+  2 │ # WORLD 2: Word Surfer
   3 │ # ═══════════════════════════════════
   4 │ #
   5 │ # You already know h/j/k/l.
@@ -185,37 +332,66 @@ that just list the available commands in a brief header comment.
 
 | Level | Intro type | What it teaches |
 |-------|------------|-----------------|
-| 1-1   | Full intro | `h` `j` `k` `l` — how the game works, what the viewport is, what tasks look like |
-| 1-2   | Full intro | `w` `b` `e` — word motions |
-| 1-3   | Short reminder | `0` `^` `$` |
-| 1-4   | Short reminder | `gg` `G` `{num}G` |
-| 1-5   | Short reminder | Mixed review |
-| 2-1   | Full intro | `x` `X` — first editing commands |
-| 2-2   | Full intro | `dd` `yy` `p` — delete/yank/paste |
-| 2-3   | Short reminder | `i` `a` `I` `A` |
-| ...   | ... | ... |
-| 7-1   | Full intro | `q{reg}` `@{reg}` — macros |
+| 1-1   | Full intro | `h` `j` `k` `l` + counts — how the game works, viewport, tasks, scoring, energy |
+| 2-1   | Full intro | `w` `b` `e` `W` `B` `E` — word motions |
+| 3-1   | Full intro | `0` `^` `$` `f` `t` `;` `,` — line precision |
+| 4-1   | Full intro | `i` `a` `I` `A` `o` `O` `R` — insert mode entry points |
+| 5-1   | Full intro | `x` `X` `dd` `D` — deletion commands |
+| 6-1   | Full intro | `d{motion}` `c{motion}` `.` `>>` `<<` — **the verb+noun paradigm** (most important tutorial) |
+| 7-1   | Full intro | `y` `yy` `p` `P` — yank and paste |
+| 8-1   | Full intro | `v` `V` + operators — visual mode |
+| 9-1   | Full intro | `iw` `aw` `i"` `ci(` `da{` — text objects |
+| 10-1  | Full intro | `{` `}` `%` + marks — code navigation |
+| 11-1  | Full intro | `/` `?` `n` `N` `*` `#` — search |
+| 12-1  | Full intro | `u` `Ctrl-R` + named registers `"a`-`"z` — time travel |
+| 13-1  | Full intro | `q{reg}` `@{reg}` `@@` — macros |
+| 14-1  | Short intro | Everything — no new commands, just the final challenge |
 
 The very first intro (1-1) is special — it also explains the game mechanics:
 the scrolling viewport, what happens when you fall behind, what the colored
-highlights mean, and the scoring system. This is the only "meta-tutorial."
+highlights mean, the energy bar, and the scoring system. This is the only "meta-tutorial."
+
+#### World 6 intro: The most important tutorial
+
+World 6 "Verb + Noun" is where Vim "clicks" for most people. The intro should
+be exceptional:
+
+```
+# ═══════════════════════════════════════
+# THE MOST IMPORTANT LESSON IN VIM:
+# ═══════════════════════════════════════
+#
+# Everything you've learned is a NOUN:
+#   w (word), $ (end of line), 3j (3 lines down)
+#
+# Now meet the VERBS:
+#   d (delete), c (change), y (yank)
+#
+# Verb + Noun = Action:
+#   d + w  = delete a word
+#   c + $  = change to end of line
+#   d + 3j = delete 3 lines down
+#
+# And the magic: '.' repeats your last verb+noun.
+# ═══════════════════════════════════════
+```
 
 #### Segment format addition
 
 ```toml
 [meta]
-id = "intro-1-2-word-motions"
+id = "intro-2-1-word-motions"
 zone = "starter"
 language = "python"        # one intro per language per level
 tags = ["words"]
 difficulty = 1
 intro = true               # marks this as a level intro segment
-intro_level = "1-2"        # which level this intro belongs to
+intro_level = "2-1"        # which level this intro belongs to
 
 [code]
 content = """
 # ═══════════════════════════════════
-# LEVEL 1-2: Word Motions
+# WORLD 2: Word Surfer
 # ═══════════════════════════════════
 #
 # Pressing 'l' many times is slow.
@@ -240,7 +416,7 @@ points = 25
 optimal_keys = 2
 ```
 
-### 1.7 Vim Hints System
+### 1.8 Vim Hints System
 
 Vim hints appear throughout the game to teach concepts alongside the hands-on
 practice. Hints are delivered through three channels:
@@ -262,7 +438,7 @@ level starts, introducing the new command(s) that level focuses on.
 
 ```
 ┌─────────────────────────────────────────┐
-│         Level 1-2: Word Motions         │
+│         World 2-1: Word Surfer          │
 │                                         │
 │   NEW COMMAND: w                        │
 │   Jump forward to the start of the      │
@@ -299,42 +475,42 @@ should include 0–2 comment hints per segment, drawn from that zone's pool.
 | S07 | `$` goes to the end of the line. Think of it like regex. |
 | S08 | `gg` goes to the top of the file. `G` goes to the bottom. |
 | S09 | `5G` jumps to line 5. Works with any number. |
-| S10 | `x` deletes the character under the cursor. Like a tiny eraser. |
-| S11 | `dd` deletes the entire current line. Quick and clean. |
-| S12 | `u` undoes your last change. `Ctrl-r` redoes it. |
+| S10 | `f{char}` finds the next occurrence of {char} on the line. `fa` jumps to the next 'a'. |
+| S11 | `t{char}` jumps to just before {char}. `tf` stops one character before 'f'. |
+| S12 | `;` repeats your last `f` or `t` search forward. `,` repeats it backward. |
 | S13 | `i` enters insert mode before the cursor. `a` enters after. |
 | S14 | `I` inserts at the start of the line. `A` appends at the end. |
 | S15 | `o` opens a new line below and enters insert mode. `O` opens above. |
-| S16 | `p` pastes after the cursor. `P` pastes before. |
-| S17 | `yy` yanks (copies) the entire current line. |
-| S18 | After `dd`, press `p` to paste the deleted line somewhere else — it's a cut! |
-| S19 | Press `Esc` to return to Normal mode from anywhere. Always your safe home. |
-| S20 | In Vim, you spend most of your time in Normal mode, not Insert mode. |
+| S16 | Press `Esc` to return to Normal mode from anywhere. Always your safe home. |
+| S17 | In Vim, you spend most of your time in Normal mode, not Insert mode. |
+| S18 | Counts work with motions: `3w` jumps 3 words forward. `5j` moves 5 lines down. |
+| S19 | `5G` or `5gg` jumps to line 5. Any number works. |
+| S20 | `f` is a sniper rifle — it finds any character on the line instantly. |
 
 ##### Zone: Junior
 
 | ID | Hint |
 |----|------|
-| J01 | `f{char}` finds the next occurrence of {char} on the line. `fa` jumps to the next 'a'. |
-| J02 | `t{char}` jumps to just before {char}. `tf` stops one character before 'f'. |
-| J03 | `;` repeats your last `f` or `t` search forward. `,` repeats it backward. |
+| J01 | `x` deletes the character under the cursor. Like a tiny eraser. |
+| J02 | `dd` deletes the entire current line. Quick and clean. |
+| J03 | `D` deletes from cursor to end of line. Shorthand for `d$`. |
 | J04 | `dw` = delete a word. Operators (`d`) + motions (`w`) combine into power moves. |
 | J05 | `d$` deletes from cursor to end of line. `d0` deletes to the start. |
 | J06 | `cw` changes a word — deletes it and drops you into insert mode. |
 | J07 | `c$` changes from cursor to end of line. You can also use `C` as a shortcut. |
 | J08 | `.` repeats your last change. Did `cw`+typed "foo"+`Esc`? Now `.` does it again. |
 | J09 | The dot command `.` is one of Vim's most powerful features. Master it. |
-| J10 | `r{char}` replaces the character under the cursor without entering insert mode. |
-| J11 | `R` enters Replace mode — every character you type overwrites the existing text. |
-| J12 | Counts work with motions: `3w` jumps 3 words forward. `5j` moves 5 lines down. |
-| J13 | Counts work with operators too: `3dd` deletes 3 lines. `2dw` deletes 2 words. |
-| J14 | `/pattern` searches forward. `?pattern` searches backward. |
-| J15 | After searching, `n` goes to the next match, `N` goes to the previous. |
-| J16 | `*` searches for the word under your cursor. `#` searches backward for it. |
-| J17 | Think in terms of "verb + noun": `d` (delete) + `w` (word) = delete word. |
-| J18 | `D` is shorthand for `d$`. `C` is shorthand for `c$`. Saves one keystroke. |
-| J19 | `Y` yanks the entire line (same as `yy`). `yw` yanks one word. |
-| J20 | Combine counts: `d3w` deletes 3 words. Every operator accepts a count. |
+| J10 | Think in terms of "verb + noun": `d` (delete) + `w` (word) = delete word. |
+| J11 | `>>` indents the current line. `<<` dedents. These are operators too! |
+| J12 | Counts work with operators too: `3dd` deletes 3 lines. `2dw` deletes 2 words. |
+| J13 | `yy` yanks (copies) the entire current line. |
+| J14 | `p` pastes after the cursor. `P` pastes before. |
+| J15 | After `dd`, press `p` to paste the deleted line somewhere else — it's a cut! |
+| J16 | `Y` yanks the entire line (same as `yy`). `yw` yanks one word. |
+| J17 | `v` starts visual mode (character-wise). `V` selects whole lines. |
+| J18 | In visual mode, select text then press `d` to delete, `c` to change, or `y` to yank. |
+| J19 | `r{char}` replaces the character under the cursor without entering insert mode. |
+| J20 | `R` enters Replace mode — every character you type overwrites the existing text. |
 
 ##### Zone: Medior
 
@@ -346,160 +522,707 @@ should include 0–2 comment hints per segment, drawn from that zone's pool.
 | M04 | `di"` deletes inside quotes. `da"` deletes the quotes too (around). |
 | M05 | `i` = inner (inside the delimiters). `a` = around (includes the delimiters). |
 | M06 | `vi{` visually selects everything inside curly braces. Great for function bodies. |
-| M07 | `v` starts visual mode (character-wise). `V` selects whole lines. |
-| M08 | In visual mode, press `o` to jump to the other end of your selection. |
-| M09 | `Ctrl-v` enters visual block mode — select a rectangle of text. |
-| M10 | In visual block mode, `I` inserts text on every selected line. |
-| M11 | `%` jumps to the matching bracket: `(↔)`, `{↔}`, `[↔]`. |
-| M12 | `>` indents, `<` dedents. `>>` indents the current line. `>i{` indents inside braces. |
-| M13 | `gU` makes text uppercase. `gu` makes it lowercase. `gUiw` = uppercase the word. |
-| M14 | Text objects understand nesting: `ci(` inside `f(g(x))` changes the innermost `()`. |
-| M15 | `.` after `ciw`+type+`Esc` lets you change the next occurrence instantly. |
-| M16 | `diw` then `w` then `.` — delete words one at a time, wherever you want. |
-| M17 | `dt{char}` deletes from cursor up to (but not including) {char}. |
-| M18 | `yiw` yanks a word without moving the cursor. Great for copy-paste workflows. |
-| M19 | After `y`, the cursor stays where it was. Use `p` to paste at the destination. |
-| M20 | Think of text objects as "what", motions as "where": `d` + `iw` = delete [what: inner word]. |
+| M07 | Text objects understand nesting: `ci(` inside `f(g(x))` changes the innermost `()`. |
+| M08 | `%` jumps to the matching bracket: `(↔)`, `{↔}`, `[↔]`. |
+| M09 | `{` jumps to the previous empty line. `}` jumps to the next. Great for navigating between functions. |
+| M10 | Marks let you save positions: `ma` saves, `'a` jumps back. Like bookmarks in code. |
+| M11 | `/pattern` searches forward. `?pattern` searches backward. |
+| M12 | After searching, `n` goes to the next match, `N` goes to the previous. |
+| M13 | `*` searches for the word under your cursor. `#` searches backward for it. |
+| M14 | `.` after `ciw`+type+`Esc` lets you change the next occurrence instantly. |
+| M15 | `diw` then `w` then `.` — delete words one at a time, wherever you want. |
+| M16 | `dt{char}` deletes from cursor up to (but not including) {char}. |
+| M17 | `yiw` yanks a word without moving the cursor. Great for copy-paste workflows. |
+| M18 | After `y`, the cursor stays where it was. Use `p` to paste at the destination. |
+| M19 | Think of text objects as "what", motions as "where": `d` + `iw` = delete [what: inner word]. |
+| M20 | `>i{` indents everything inside braces. Operators + text objects = precision. |
 
 ##### Zone: Senior
 
 | ID | Hint |
 |----|------|
-| X01 | `qa` starts recording a macro into register 'a'. `q` stops recording. `@a` replays it. |
-| X02 | `@@` replays the last macro. `5@a` replays macro 'a' five times. |
-| X03 | Plan your macro: get to a consistent starting position first, end in a position ready for the next `@a`. |
-| X04 | `"ayy` yanks a line into register 'a'. `"ap` pastes from register 'a'. |
-| X05 | Registers `a-z` store text. Uppercase `"Ayy` appends to register 'a' instead of replacing. |
-| X06 | `"0` always holds your last yank. `""` holds the last delete or yank. |
-| X07 | `"+y` yanks to the system clipboard. `"+p` pastes from it. |
-| X08 | `:reg` shows all register contents. Useful when juggling multiple registers. |
-| X09 | Macros ARE register contents. `"ap` pastes macro 'a' as text. Edit it, then `"ayy` to save back. |
-| X10 | `g;` goes to the last change position. `g,` goes to the next. Great for navigating edits. |
-| X11 | `Ctrl-a` increments a number under the cursor. `Ctrl-x` decrements it. |
-| X12 | `gf` opens the file path under the cursor. Useful in imports. |
-| X13 | `=` auto-indents. `=i{` fixes indentation inside a block. `gg=G` re-indents the whole file. |
-| X14 | A well-crafted macro + `100@a` can refactor an entire file in one move. |
-| X15 | `c3w` vs `3cw` — both change 3 words, but muscle memory prefers one. Experiment. |
-| X16 | `xp` swaps two characters. `ddp` swaps two lines. Quick micro-refactors. |
-| X17 | `:s/old/new/g` substitutes on the current line. `:%s/old/new/g` does the whole file. |
-| X18 | `:g/pattern/d` deletes all lines matching a pattern. `:v/pattern/d` keeps only matching lines. |
-| X19 | If you're doing the same edit more than twice, you should be recording a macro. |
+| X01 | `u` undoes your last change. `Ctrl-r` redoes it. Your safety net. |
+| X02 | Vim's undo is a **tree**, not a line. Undo then edit = new branch. The old branch is still there. |
+| X03 | `g-` goes to an older text state. `g+` goes to a newer one. They walk the undo tree chronologically. |
+| X04 | `:earlier 5m` reverts to how the file looked 5 minutes ago. `:later 5m` goes forward. Time travel. |
+| X05 | `"ayy` yanks a line into register 'a'. `"ap` pastes from register 'a'. |
+| X06 | Registers `a-z` store text. Uppercase `"Ayy` appends to register 'a' instead of replacing. |
+| X07 | `"0` always holds your last yank. `""` holds the last delete or yank. |
+| X08 | Undo + registers = time travel. Undo to a past state, yank something, redo back, paste it. |
+| X09 | `qa` starts recording a macro into register 'a'. `q` stops recording. `@a` replays it. |
+| X10 | `@@` replays the last macro. `5@a` replays macro 'a' five times. |
+| X11 | Plan your macro: get to a consistent starting position first, end ready for the next `@a`. |
+| X12 | Macros ARE register contents. `"ap` pastes macro 'a' as text. Edit it, then `"ayy` to save back. |
+| X13 | A well-crafted macro + `100@a` can refactor an entire file in one move. |
+| X14 | If you're doing the same edit more than twice, you should be recording a macro. |
+| X15 | `Ctrl-a` increments a number under the cursor. `Ctrl-x` decrements it. |
+| X16 | `=` auto-indents. `=i{` fixes indentation inside a block. `gg=G` re-indents the whole file. |
+| X17 | `xp` swaps two characters. `ddp` swaps two lines. Quick micro-refactors. |
+| X18 | `:s/old/new/g` substitutes on the current line. `:%s/old/new/g` does the whole file. |
+| X19 | `"+y` yanks to the system clipboard. `"+p` pastes from it. |
 | X20 | The best Vim command is the one that gets the job done in the fewest keystrokes. |
 
 ---
 
-## 2. Zone & Level System
+## 2. World & Level System
 
-### 2.1 Four Zones
+### 2.1 Four Zones, 14 Worlds
 
-Each zone maps to a skill tier and a code complexity tier. Zones contain multiple
-worlds, each world contains 5 levels.
+The game has 14 worlds organized into 4 skill zones. Each world focuses on a
+specific category of Vim motions. Within a world, **only that world's skills +
+all previous worlds' skills are available.** Keys for unlearned motions are ignored
+(no penalty, no energy drain).
 
-| Zone       | Worlds | Scroll Speed    | Vim Skills                        | Code Style            |
-|------------|--------|-----------------|-----------------------------------|-----------------------|
-| **Starter**  | 1–2    | 1 line / 2–3s   | Movement, basic editing           | Hello world, simple scripts |
-| **Junior**   | 3–4    | 1 line / 1.5–2s | Word motions, operators+motions   | Functions, classes, basic patterns |
-| **Medior**   | 5–6    | 1 line / 1–1.5s | Text objects, search, visual mode | Design patterns, async, generics |
-| **Senior**   | 7–8    | 1 line / 0.5–1s | Macros, registers, advanced combos | Production-grade, complex architectures |
+#### STARTER ZONE (Worlds 1-4) — "Learning to Walk"
 
-### 2.2 Worlds & Levels
+| World | Name | Core Skills | Teaching Goal |
+|-------|------|-------------|---------------|
+| 1 | **"First Steps"** | `h j k l` + counts (`5j`, `8l`) + `gg G {num}G` | Move around code. Counts multiply everything. |
+| 2 | **"Word Surfer"** | `w b e W B E` | Navigate by words — never spam `l` again. |
+| 3 | **"Line Rider"** | `0 ^ $ f t F T ; ,` | Precision within lines. `f` is a sniper rifle. |
+| 4 | **"The Writer"** | `i a I A o O R` + `Esc` | Enter/exit insert mode efficiently. Know which entry point to use. |
 
-Each world introduces specific commands, then tests them in 5 levels of increasing
-density and speed.
+#### JUNIOR ZONE (Worlds 5-8) — "Learning to Fight"
 
-#### Zone: Starter
+| World | Name | Core Skills | Teaching Goal |
+|-------|------|-------------|---------------|
+| 5 | **"The Destroyer"** | `x X dd D` | Simple deletions. Remove what doesn't belong. |
+| 6 | **"Verb + Noun"** | `d{motion} c{motion} . >> <<` | The operator paradigm — Vim's biggest "aha" moment. `d3w`, `c$`, `.` to repeat. Indentation as operators. |
+| 7 | **"Copy Ninja"** | `y yy p P` | Yank and paste workflows. Rearrange code. |
+| 8 | **"The Selector"** | `v V` + operators on selections | Visual mode — select then act. Bulk operations. |
 
-**World 1 — First Steps**
-| Level | New Commands         | Task Types                     |
-|-------|----------------------|--------------------------------|
-| 1-1   | `h` `j` `k` `l`     | Move cursor to marked positions |
-| 1-2   | `w` `b` `e`         | Jump to highlighted words       |
-| 1-3   | `0` `^` `$`         | Reach start/end of lines        |
-| 1-4   | `gg` `G` `{num}G`   | Jump to specific line numbers   |
-| 1-5   | All of the above     | Mixed movement challenges       |
+#### MEDIOR ZONE (Worlds 9-11) — "Learning to Master"
 
-**World 2 — First Edits**
-| Level | New Commands         | Task Types                     |
-|-------|----------------------|--------------------------------|
-| 2-1   | `x` `X`             | Delete specific characters      |
-| 2-2   | `dd` `yy` `p` `P`   | Delete/yank/paste lines         |
-| 2-3   | `i` `a` `I` `A`     | Insert text at positions        |
-| 2-4   | `o` `O`             | Open lines and insert           |
-| 2-5   | All of the above     | Mixed basic editing             |
+| World | Name | Core Skills | Teaching Goal |
+|-------|------|-------------|---------------|
+| 9 | **"Text Object Surgeon"** | `iw aw i" a" i( a( i{ a{` | Inner/around objects. Edit INSIDE things. Combine with operators from World 6. |
+| 10 | **"Code Navigator"** | `{ } %` + marks `m` `'` `` ` `` | Structural code navigation. Jump between functions, matching brackets, saved positions. |
+| 11 | **"Search & Destroy"** | `/ ? n N * #` | Find patterns across the file. Hunt bugs. |
 
-#### Zone: Junior
+#### SENIOR ZONE (Worlds 12-14) — "Becoming the Master"
 
-**World 3 — Precision**
-| Level | New Commands         | Task Types                     |
-|-------|----------------------|--------------------------------|
-| 3-1   | `f` `t` `F` `T`     | Find characters on a line       |
-| 3-2   | `;` `,`             | Repeat find motions             |
-| 3-3   | `dw` `db` `d$` `d0` | Delete with motions             |
-| 3-4   | `cw` `cb` `c$`      | Change with motions             |
-| 3-5   | `.` (dot repeat)     | Repeat last change efficiently  |
+| World | Name | Core Skills | Teaching Goal |
+|-------|------|-------------|---------------|
+| 12 | **"Time Traveler"** | `u Ctrl-R` + undo tree (`g-` `g+` `:earlier` `:later`) + named registers `"ayy "bp` | Undo tree branching — navigate between undo branches. Named registers as multiple clipboards. Fish things from the past. |
+| 13 | **"Macro Wizard"** | `q{reg} @{reg} @@` | Record, replay, automate. The ultimate efficiency tool. |
+| 14 | **"The Grandmaster"** | Everything | The finale — all skills combined under maximum pressure. |
 
-**World 4 — Speed**
-| Level | New Commands         | Task Types                     |
-|-------|----------------------|--------------------------------|
-| 4-1   | `r` `R`             | Replace characters              |
-| 4-2   | `u` `Ctrl-r`        | Undo/redo (fix intentional mistakes) |
-| 4-3   | `/` `?` `n` `N`     | Search navigation               |
-| 4-4   | `*` `#`             | Word-under-cursor search        |
-| 4-5   | All of the above     | Mixed precision + speed         |
+#### Zone progression summary
 
-#### Zone: Medior
+```
+STARTER (1-4)  →  JUNIOR (5-8)  →  MEDIOR (9-11)  →  SENIOR (12-14)
+  movement          editing          precision          mastery
+  ~8 min            ~8 min           ~6 min             ~8 min
+```
 
-**World 5 — Text Objects**
-| Level | New Commands              | Task Types                   |
-|-------|---------------------------|------------------------------|
-| 5-1   | `iw` `aw`                | Inner/around word            |
-| 5-2   | `i"` `i'` `a"` `a'`     | Inside/around quotes         |
-| 5-3   | `i(` `i{` `i[` `a(` etc | Inside/around brackets       |
-| 5-4   | `ci"` `di(` `yi{`       | Operators + text objects     |
-| 5-5   | All of the above          | Mixed text object challenges |
+Every 3-starred level = permanent checkpoint. Your "high water mark" advances
+as you master levels.
 
-**World 6 — Visual & Combine**
-| Level | New Commands              | Task Types                   |
-|-------|---------------------------|------------------------------|
-| 6-1   | `v` + motions             | Visual character selection   |
-| 6-2   | `V` + motions             | Visual line selection        |
-| 6-3   | `Ctrl-v`                  | Visual block mode            |
-| 6-4   | `%` (bracket matching)    | Navigate matching pairs      |
-| 6-5   | All of the above          | Complex multi-step edits     |
+Total: ~30 min for a skilled run, ~45 min including retries on harder worlds.
 
-#### Zone: Senior
+### 2.2 Worlds & Levels in Detail
 
-**World 7 — Power User**
-| Level | New Commands              | Task Types                   |
-|-------|---------------------------|------------------------------|
-| 7-1   | `q{reg}` ... `q` `@{reg}` | Record and replay macros    |
-| 7-2   | `"{reg}y` `"{reg}p`      | Named registers              |
-| 7-3   | `>` `<` indent operators  | Code indentation tasks       |
-| 7-4   | `gU` `gu` case operators  | Case manipulation            |
-| 7-5   | All of the above          | Mixed power user             |
+Each world has 5 levels. Level X-1 has a full tutorial intro. Level X-5 is a
+world boss with a unique mechanic.
 
-**World 8 — Mastery**
-| Level | New Commands              | Task Types                       |
-|-------|---------------------------|----------------------------------|
-| 8-1   | Complex macro chains      | Multi-step refactoring w/ macros |
-| 8-2   | Register juggling         | Yank/paste across distant code   |
-| 8-3   | Everything                | Real refactoring: rename vars    |
-| 8-4   | Everything                | Real refactoring: restructure    |
-| 8-5   | Everything                | Boss battle: full code overhaul  |
+#### World 1 — First Steps
 
-### 2.3 Special Modes
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 1-1   | `h` `j` `k` `l` + game mechanics | Move cursor to marked positions |
+| 1-2   | Counts: `5j` `8l` `3k` | Navigate using counts |
+| 1-3   | `gg` `G` `{num}G` | Jump to specific lines |
+| 1-4   | All basic movement combined | Mixed movement challenges |
+| 1-5   | **BOSS: "The Maze"** | Navigate deeply nested ASCII code art |
 
-- **Practice Mode**: No scrolling, no timer. Just tasks on a static buffer. For
-  learning new commands before tackling the real levels.
-- **Endless Mode**: Infinite scrolling code with random tasks. Score-attack with a
-  global leaderboard. Speed increases every 60 seconds.
+#### World 2 — Word Surfer
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 2-1   | `w` `b` `e` | Jump to highlighted words |
+| 2-2   | `W` `B` `E` (big words) | Navigate through symbols and punctuation |
+| 2-3   | Word motions + counts (`3w`, `2b`) | Longer jumps |
+| 2-4   | All word motions combined | Mixed word navigation |
+| 2-5   | **BOSS: "The Marathon"** | Sprint through camelCaseVariableNamesThatGoOnForever |
+
+#### World 3 — Line Rider
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 3-1   | `0` `^` `$` | Line start/end positioning |
+| 3-2   | `f` `t` `F` `T` | Find characters on a line |
+| 3-3   | `;` `,` | Repeat find motions |
+| 3-4   | All line motions combined | Mixed precision |
+| 3-5   | **BOSS: "The Sniper Range"** | 120+ character lines, targets scattered across configs |
+
+#### World 4 — The Writer
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 4-1   | `i` `a` (basic insert) | Insert text at positions |
+| 4-2   | `I` `A` (line start/end insert) | Insert at line boundaries |
+| 4-3   | `o` `O` (open lines) | Open lines and insert |
+| 4-4   | `R` (replace mode) | Overwrite text efficiently |
+| 4-5   | **BOSS: "The Blank Page"** | Code with many missing pieces, heavy insert mode |
+
+#### World 5 — The Destroyer
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 5-1   | `x` `X` | Delete specific characters |
+| 5-2   | `dd` | Delete entire lines |
+| 5-3   | `D` (delete to EOL) | Partial line deletion |
+| 5-4   | Mixed deletions | Combined deletion challenges |
+| 5-5   | **BOSS: "The Cleanup"** | File full of dead code, comments, debug prints — strip it all |
+
+#### World 6 — Verb + Noun *(Most important world)*
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 6-1   | `dw` `db` `d$` `d0` | Delete with motions |
+| 6-2   | `cw` `cb` `c$` `C` | Change with motions |
+| 6-3   | `.` (dot repeat) | Repeat last change efficiently |
+| 6-4   | `>>` `<<` (indentation) | Indent/dedent as operators |
+| 6-5   | **BOSS: "The Refactor"** | Systematic changes with verb+noun combos, heavy `.` repeat |
+
+#### World 7 — Copy Ninja
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 7-1   | `yy` `p` | Yank and paste lines |
+| 7-2   | `yw` `p` | Yank and paste words |
+| 7-3   | `P` (paste before) | Paste positioning |
+| 7-4   | `dd` + `p` workflows (cut) | Move code around |
+| 7-5   | **BOSS: "The Rearrangement"** | Code blocks in wrong order, rearrange correctly |
+
+#### World 8 — The Selector
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 8-1   | `v` + motions + `d`/`c`/`y` | Visual character selection |
+| 8-2   | `V` + operators | Visual line selection |
+| 8-3   | Visual + counts (`v3w` then `d`) | Combining visual with motions |
+| 8-4   | Mixed visual operations | Combined visual challenges |
+| 8-5   | **BOSS: "The Bulk Edit"** | Multiple sections needing identical operations |
+
+#### World 9 — Text Object Surgeon
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 9-1   | `iw` `aw` | Inner/around word |
+| 9-2   | `i"` `i'` `a"` `a'` | Inside/around quotes |
+| 9-3   | `i(` `i{` `i[` `a(` etc | Inside/around brackets |
+| 9-4   | `ci"` `di(` `yi{` | Operators + text objects |
+| 9-5   | **BOSS: "The Nested Beast"** | 5+ levels of nesting (JSON, callbacks), deep `ci{` `da(` |
+
+#### World 10 — Code Navigator
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 10-1  | `{` `}` (paragraph motions) | Jump between functions |
+| 10-2  | `%` (bracket matching) | Navigate matching pairs |
+| 10-3  | `m{a-z}` marks + `'` jumps | Save and restore positions |
+| 10-4  | All navigation combined | Mixed structural navigation |
+| 10-5  | **BOSS: "The Labyrinth"** | 100+ line file, jump between functions/brackets/marks |
+
+#### World 11 — Search & Destroy
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 11-1  | `/` `?` (basic search) | Search forward/backward |
+| 11-2  | `n` `N` (next/prev match) | Navigate search results |
+| 11-3  | `*` `#` (word search) | Search word under cursor |
+| 11-4  | Search + operators (`d/pattern`) | Delete/change to search match |
+| 11-5  | **BOSS: "The Bug Hunt"** | Multiple instances of same bug pattern, use `*` `n` to find and fix |
+
+#### World 12 — Time Traveler
+
+Vim's undo system is a **tree**, not a line. When you undo and then make a new
+edit, you create a branch. Most editors lose the undone work — Vim keeps it all.
+This world teaches the player to navigate that tree and use registers as
+multi-clipboard time travel.
+
+**How the game creates undo branches:** The game performs **setup edits** on the
+buffer during the countdown phase (before the player takes control). These edits
+are shown as a brief "previously on..." montage — the code visibly changes a few
+times, creating an undo history with branches. When the countdown ends, the player
+inherits a buffer with a pre-built undo tree to navigate. For later levels (12-4,
+12-5), the game also auto-executes "mistake" edits mid-level (shown as
+`⚡ AUTO-EDIT: function deleted!` flash) that the player must undo/recover from.
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 12-1  | `u` `Ctrl-R` (basic undo/redo) | Simple undo/redo tasks. Game makes a "mistake" mid-scroll, player undoes it. |
+| 12-2  | Named registers (`"ayy` `"bp`) | Juggle multiple code pieces using registers a-z. Yank into `"a`, `"b`, paste elsewhere. |
+| 12-3  | Undo tree branching (`g-` `g+` `:earlier` `:later`) | Pre-built undo tree from setup edits. Navigate between branches to recover "lost" edits. |
+| 12-4  | Combine undo tree + registers | "The Accident" — game auto-deletes code mid-level. Undo to past state, yank into register, redo back, paste. Fish code from the past. |
+| 12-5  | **BOSS: "The Time Paradox"** | Complex pre-built undo tree with 3+ branches. Reconstruct the correct code version by navigating branches and assembling pieces from registers. No hints. |
+
+#### World 13 — Macro Wizard
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 13-1  | `qa` ... `q` `@a` (record + play) | Basic macro recording |
+| 13-2  | `@@` (replay last) | Replay efficiency |
+| 13-3  | `5@a` (counted replay) | Batch macro execution |
+| 13-4  | Complex macro chains (multi-step) | Multi-command macros |
+| 13-5  | **BOSS: "The Assembly Line"** | 20+ identical changes, record one macro, replay 20 times |
+
+#### World 14 — The Grandmaster (Grand Finale)
+
+See Section 2.4 for full finale design.
+
+| Level | Focus | Task Types |
+|-------|-------|------------|
+| 14-1  | Fix Bubble Sort | Simple edits |
+| 14-2  | Fix Binary Search | Precision edits with `ciw`, `r` |
+| 14-3  | Fix Quicksort | Multiple related bugs, needs search |
+| 14-4  | Fix Merge Sort | Operators + text objects |
+| 14-5  | **FINAL BOSS**: All algorithms combined | 15+ bugs, 100+ lines, fast scroll |
+
+### 2.3 World Bosses — Unique Mechanics
+
+Each world boss (level X-5) has a thematic twist that tests mastery of that
+world's core skills. Bosses differ from regular levels in **both content and rules**:
+
+**All bosses share:**
+- **1.5x scroll speed** compared to regular levels in that world
+- **More tasks per segment** (denser challenges)
+- **No tutorial hints** in the code — you're on your own
+- **No import runway** — first task appears immediately
+
+**Each boss also has one unique content/rule twist** (see table):
+
+| World | Boss Name | Unique Mechanic |
+|-------|-----------|----------------|
+| 1 | **"The Maze"** | Code structured as a navigation puzzle — deeply nested blocks, ASCII art. Pure `hjkl` + counts. |
+| 2 | **"The Marathon"** | Extremely long camelCaseVariableNamesThatGoOnForever. `w`/`b`/`e` sprint through them. |
+| 3 | **"The Sniper Range"** | 120+ character lines. Targets scattered across long strings/configs. `f`/`t` precision. |
+| 4 | **"The Blank Page"** | Code with many missing pieces. Heavy insert mode — pick the right entry point every time. |
+| 5 | **"The Cleanup"** | File full of dead code, commented-out blocks, debug prints. Strip it all down. |
+| 6 | **"The Refactor"** | Systematic changes across a function. Each uses a different verb+noun combo. Heavy `.` repeat. |
+| 7 | **"The Rearrangement"** | Code blocks in wrong order. Yank/delete/paste to rearrange everything correctly. |
+| 8 | **"The Bulk Edit"** | Multiple sections need identical operations. Visual select + operate. |
+| 9 | **"The Nested Beast"** | 5+ levels of nesting (JSON, nested callbacks). `ci{`, `da(`, `yi"` deep inside structures. |
+| 10 | **"The Labyrinth"** | 100+ line file. Jump between functions, matching brackets, saved marks. Structural navigation. |
+| 11 | **"The Bug Hunt"** | Multiple instances of the same bug pattern. Use `/`, `*`, `n` to find all, then fix. |
+| 12 | **"The Time Paradox"** | Complex undo/register puzzle. Undo to recover deleted code, store in registers, redo, reassemble. |
+| 13 | **"The Assembly Line"** | 20+ identical repetitive changes. Record one macro, replay 20 times. The efficiency ultimate. |
+| 14 | **"The Final Boss"** | See Grand Finale — 15+ bugs across all sorting algorithms. |
+
+### 2.4 Grand Finale — World 14: "The Grandmaster"
+
+The finale uses **fix broken algorithms** — which exercises the full Vim toolkit
+(navigate, edit, search, undo, repeat). Writing code from scratch is just typing;
+*fixing* buggy code is where Vim mastery shines.
+
+| Level | Algorithm | Bugs to Fix | Why it's a good test |
+|-------|-----------|-------------|---------------------|
+| 14-1 | Bubble Sort | Wrong comparison, missing swap, off-by-one loop bound | Warm-up. Simple edits. |
+| 14-2 | Binary Search | Off-by-one, wrong midpoint calc (`/` vs `//`), incorrect return | Precision edits with `ciw`, `r` |
+| 14-3 | Quicksort | Partition logic wrong, bad pivot, missing recursion base case | Multiple related bugs — needs `/` and `n` to find them |
+| 14-4 | Merge Sort | Incorrect merge step, missing base case, wrong slice indices | Deep understanding of operators + text objects |
+| 14-5 | **FINAL BOSS**: Full program using all 4 algorithms | 15+ bugs across 100+ lines. Fast scroll. | Everything. All skills. Maximum pressure. |
+
+**Cherry on the cake — the code "runs":**
+
+When the player completes level 14-5, the game triggers a victory sequence:
+
+1. Buffer stops scrolling. Cursor disappears.
+2. Screen clears to a clean code view of the fixed algorithms.
+3. A simulated terminal output appears below, line by line (typewriter effect):
+
+```
+$ python sorting.py
+Running bubble sort...    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] ✓
+Running binary search...  found 7 at index 6 ✓
+Running quicksort...      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] ✓
+Running merge sort...     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] ✓
+
+ALL TESTS PASSED ✓
+```
+
+4. Final congratulations screen:
+
+```
+┌──────────────────────────────────────────────┐
+│                                              │
+│        Congratulations, Grandmaster.         │
+│                                              │
+│   You didn't just play a game — you fixed    │
+│   real code with pure Vim mastery.           │
+│                                              │
+│   Total time:    28:43                       │
+│   Total keys:    1,247                       │
+│   Stars earned:  ★★★ × 62 / 70              │
+│   Achievements:  8 / 11                      │
+│                                              │
+│        Press any key...                      │
+└──────────────────────────────────────────────┘
+```
+
+5. Optional: fun credits scroll with Vim facts and contributor names.
+
+### 2.5 Roguelike Progression
+
+**Fail = restart from checkpoint.**
+
+- No "retry just this level" in the default mode
+- Game is short enough (~30 min skilled) that restarting IS the learning loop
+- If you can't pass World 3, you need more practice with Worlds 1-2 anyway
+- Creates real tension — every keystroke matters
+- Each run you get better at Vim, both in-game and in real life
+
+**Checkpoint system:** Highest consecutive 3-star chain from 1-1 = your checkpoint.
+- When you 3-star a level, it's permanently recorded
+- Your checkpoint = the level AFTER your highest consecutive 3-star chain from 1-1
+- Example: 3-starred 1-1 through 4-3 → checkpoint is 4-4
+- If you 3-star 1-1, 1-2, miss 1-3, 3-star 1-4 → checkpoint is still 1-3 (chain broke)
+- This incentivizes going back to perfect skipped levels to extend the chain
+- Stars earned during a failed run are still saved (progress isn't lost, only position)
+
+**Death UX flow:**
+1. Game Over screen shows score, stats, and current checkpoint
+2. Options: [R] Restart from checkpoint / [B] Start from 1-1 / [Q] Quit to menu
+3. Starting from checkpoint = full energy, fresh run from that level forward
+4. All levels between checkpoint and death lose their in-progress state (but saved stars persist)
+
+**World map** (main menu):
+- Visual grid showing all 14 worlds × 5 levels
+- Gold star = 3-starred (part of checkpoint chain)
+- Silver star = 1-2 stars (reached but not mastered)
+- Lock icon = not yet reached
+- Checkpoint marker shows where next run starts
+- Current run progress shown as a path through the map
+
+### 2.6 Skill Gating
+
+- Unlocked motions are cumulative (World 5 player has all Worlds 1-5 skills)
+- Pressing an unlearned key does nothing (no penalty, no energy drain)
+- Forces players to solve problems with the right tools
+- Tutorial intro for each world teaches: "You now have access to X, Y, Z"
+- Skills are unlocked by reaching worlds, not purchased
+
+**UX when pressing an unlearned key:**
+- Brief subtle flash on the status bar: `🔒 w — unlock in World 2`
+- Disappears after 0.5 seconds
+- Only shown **once per key per level** (don't nag the player)
+- No energy drain, no score penalty, no sound — just a gentle hint
+- Teaches players what's coming next and builds anticipation
+- In the results screen, if the player pressed locked keys frequently:
+  *"You tried 'w' 12 times — it unlocks in World 2!"*
+
+---
+
+## 3. Game Modes
+
+### 3.1 Story Mode
+
+The default experience. Player picks a **difficulty level** (which controls scroll
+speed and energy drain/restore multipliers) and plays through the 14 worlds with
+progressive vim motion unlocking per world. Motions are gated by the world system —
+reach a world to unlock its skills.
+
+### 3.2 Endless Mode
+
+All vim motions unlocked. Player picks a **language**, then plays infinite scrolling
+code with random tasks. No difficulty selection — speed ramps automatically based on
+lines of code scrolled.
+
+**Zone system (line-based):**
+- Every **1000 lines** = new zone with a speed increase
+- Each zone boundary triggers a **30-row break banner** — no tasks, just the zone
+  name and flavor text. Gives the player a breather and a sense of achievement.
+- After "Uses Arch btw", zones scale exponentially: 100X, 1000X, 10^NX Engineer...
+- Banner is styled as code comments in the player's selected language:
+
+```
+│  998 │     return result                              │
+│  999 │ }                                              │
+│ 1000 │                                                │
+│ 1001 │ // =========================================== │
+│ 1002 │ //                                             │
+│ 1003 │ //         :wq Survivor                        │
+│ 1004 │ //                                             │
+│ 1005 │ //   "You can exit Vim. That's more than       │
+│ 1006 │ //    most."                                   │
+│ 1007 │ //                                             │
+│ 1008 │ //         Score: 4,230                        │
+│ 1009 │ //                                             │
+│ 1010 │ // =========================================== │
+│ 1011 │                                                │
+│ 1012 │ fn process_batch(items: &[Item]) -> Vec<Out> { │
+```
+
+| Lines     | Zone              | Flavor Text                                              |
+|-----------|-------------------|----------------------------------------------------------|
+| 0–999     | Nano User         | *"Welcome. You can do this."*                            |
+| 1000–1999 | :wq Survivor      | *"You can exit Vim. That's more than most."*             |
+| 2000–2999 | Keyboard Warrior  | *"Your fingers are starting to blur."*                   |
+| 3000–3999 | 10x Engineer      | *"Your terminal fears you."*                             |
+| 4000–4999 | Uses Arch btw     | *"You don't use Vim. Vim uses you."*                     |
+| 5000–5999 | 100X Engineer     | *"At this point you're compiling by hand."*              |
+| 6000–6999 | 1000X Engineer    | *"The machine code writes itself when you're near."*     |
+| 7000+     | 10^NX Engineer    | Keeps scaling: 10^4X, 10^5X, 10^6X...                   |
+
+**Death conditions:**
+1. Cursor scrolls off the top of the viewport
+2. Energy reaches 0
+
+**Scoring:** Linear — no multipliers. Score is score. Clean leaderboard comparison.
+
+**Personal ghost:** Faint marker showing where the player's previous best run died.
+*"You passed your ghost at line 4,230."*
+
+**Nerd crowd meter:** Fun persistent element — Stack Overflow rep, GitHub stars,
+NPM downloads, PR approvals. Shown on break banners or as HUD element.
+
+### 3.3 Rhythm Mode — "Vim Drop"
+
+A separate game mode where vim commands fall down a single lane, queue up, and
+the player types them in order — watching each command execute live on a code
+buffer. Combines rhythm-game feel with real vim editing practice.
+
+#### Core Concept
+
+```
+  Code buffer (left)              │  Command lane (right)
+                                  │
+    def calculate(items):         │      ciw
+      old_price = 0        ←highlight   j
+      for item in items:          │      dw
+        old_price += item.cost    │      w
+      tmp = old_price * 1.1       │
+      return tmp                  │  ═══════════════
+                                  │  → ciw  ← type this
+                                  │    j       (queued)
+                                  │    dw      (queued)
+                                  │
+  Input: c          STREAK: 14    │  Nano User  Score: 91
+```
+
+- **Single lane**: all commands fall down one column
+- **Queue**: commands stack at the bottom strike zone, processed in order
+- **Live execution**: each correct command visibly modifies the code buffer
+- **Wrong keys ignored**: don't execute, but reset multiplier to 0
+- **Commands stay queued** until correctly typed
+
+#### Two Sub-Modes
+
+**Mode A — Guided Drop**: You see the vim commands falling and queued. Type them
+as they arrive. Teaches command recognition and muscle memory.
+
+**Mode B — Blind Drop**: Commands are **hidden**. Instead, the code buffer shows
+highlights + gutter descriptions of what needs to happen (e.g., highlight
+`old_price` with hint "change to `new_price`"). You must figure out the correct
+vim command. Tests true vim fluency.
+
+#### Scoring System
+
+**0-indexed, base-1 — a coder's scoring system.**
+
+```
+multiplier starts at 0
+
+Per correct command:  score += 1 × multiplier, then multiplier += 1
+On wrong key:        multiplier = 0  (brutal reset)
+On timeout:          multiplier -= 1 (min 0)
+End of level:        score -= total_time_seconds × coefficient
+```
+
+**Progression example (perfect streak):**
+```
+Hit 1:  1 × 0 = 0 pts   (multiplier becomes 1)
+Hit 2:  1 × 1 = 1 pts   (multiplier becomes 2)
+Hit 3:  1 × 2 = 2 pts   (multiplier becomes 3)
+...
+Hit 50: 1 × 49 = 49 pts (multiplier becomes 50)
+
+Total after 50 perfect hits: 0+1+2+...+49 = 1225 (triangular number)
+```
+
+One mistake at hit 50? Back to multiplier 0. Accuracy is king.
+
+**Three scoring layers:**
+
+| Layer | Mechanic | Effect |
+|-------|----------|--------|
+| Accuracy | Multiplier resets to 0 on wrong key | Dominates scoring. Streaks are everything. |
+| Time decay | Multiplier -1 every `timeout` seconds of inactivity | Keeps pressure on per difficulty level |
+| Time tax | Final score -= total_seconds × coefficient | Rewards overall speed |
+
+#### Difficulty Levels
+
+| Level | Name | Timeout | Vibe |
+|-------|------|---------|------|
+| 1 | **Nano User** | 10s | Learning, hunting for keys |
+| 2 | **:wq Survivor** | 5s | Can exit vim, still thinking |
+| 3 | **Keyboard Warrior** | 2s | Knows the commands, building speed |
+| 4 | **10x Engineer** | 0.5s | Muscle memory, rapid fire |
+| 5 | **Uses Arch btw** | 0.2s | Meme-tier. Barely human reaction time. |
+
+#### Architecture
+
+**Top-Level Mode Dispatch:**
+
+```rust
+enum AppMode {
+    StoryMode(App),        // existing game, untouched
+    RhythmMode(RhythmApp), // new
+}
+```
+
+`main.rs` holds `AppMode` and dispatches `tick()` + `render()`. Existing `App`
+stays as-is — pure additive change.
+
+**New Module Structure:**
+
+```
+src/rhythm/
+  mod.rs          — pub mod declarations
+  app.rs          — RhythmApp state machine (Guided + Blind sub-modes)
+  engine.rs       — timing, note spawning, queue management
+  note.rs         — Note, QueuedNote structs
+  scoring.rs      — 0-indexed multiplier, time decay, time tax
+  input.rs        — keystroke matching, multi-key sequence handling
+  song.rs         — Song/level definition + TOML deser
+src/content/
+  rhythm_loader.rs — load songs from content/rhythm/ via include_dir!
+src/ui/
+  rhythm_view.rs   — split layout: code buffer (left) + command lane (right)
+```
+
+**Key Data Structures:**
+
+```rust
+struct Note {
+    keys: String,           // "ciw", "dw", "j", "3w", etc.
+    description: String,    // "change inner word to 'new_price'"
+    target_line: usize,     // line in code buffer this affects
+    target_col: usize,      // column
+    difficulty: Difficulty,
+}
+
+struct QueuedNote {
+    note: Note,
+    state: NoteState,       // Falling | Queued | Active | Completed
+    y_position: f64,        // for falling animation
+}
+
+enum RhythmSubMode {
+    Guided,  // commands visible
+    Blind,   // commands hidden, hints shown in code
+}
+
+struct RhythmApp {
+    sub_mode: RhythmSubMode,
+    code_buffer: Buffer,       // reuse existing vim Buffer
+    cursor: Cursor,            // reuse existing vim Cursor
+    falling_notes: Vec<QueuedNote>,
+    queue: VecDeque<QueuedNote>,
+    active_note: Option<QueuedNote>,
+    input_buffer: String,      // for multi-key sequences
+    scoring: RhythmScoring,
+    difficulty: Difficulty,
+    song: Song,
+    engine: RhythmEngine,
+}
+```
+
+**Rendering — Split Layout:**
+
+```
+┌─────────────────────────────────┬──────────────────┐
+│                                 │   Command Lane   │
+│        Code Buffer              │                  │
+│   (with cursor, highlights,     │    dw  (falling) │
+│    live execution visible)      │    j             │
+│                                 │    ciw           │
+│                                 │  ════════════    │
+│                                 │  → dw  (active)  │
+│                                 │    j   (queued)  │
+│                                 │    ciw (queued)  │
+├─────────────────────────────────┴──────────────────┤
+│ Input: d     STREAK: 14    Nano User    Score: 91  │
+└────────────────────────────────────────────────────┘
+```
+
+In **Blind mode**, the command lane shows `???` instead of command text, and the
+code buffer shows highlighted regions with gutter hints like
+`◀ change to 'new_price'`.
+
+**Reuse from Existing Code:**
+
+- **`vim::Buffer`** + **`vim::Cursor`** — code buffer and cursor for live execution
+- **`vim::command::CommandParser`** — parse player input into Actions
+- **`vim::motions`** — execute parsed motions/commands on the buffer
+- **`content::loader`** pattern — `include_dir!` for loading rhythm song TOML files
+- **`game::scoring`** pattern — structural reference for RhythmScoring
+- **`ui::game_view`** patterns — ratatui layout, HUD rendering, highlight styling
+
+**Song Content Format:**
+
+```toml
+# content/rhythm/basic-motions/first-steps.toml
+[meta]
+id = "basic-motions-1"
+name = "First Steps"
+description = "Basic movement on a simple function"
+difficulty = "easy"
+language = "python"
+
+[code]
+content = """
+def calculate(items):
+    old_price = 0
+    for item in items:
+        old_price += item.cost
+    return old_price
+"""
+
+[[commands]]
+keys = "w"
+description = "Jump to next word"
+target = { line = 1, col = 0 }
+
+[[commands]]
+keys = "dw"
+description = "Delete 'old_'"
+target = { line = 2, col = 4 }
+
+[[commands]]
+keys = "j"
+description = "Move down"
+target = { line = 2, col = 4 }
+```
+
+### 3.4 Difficulty Levels
+
+Shared difficulty names used across Story Mode and Rhythm Mode:
+
+| Level | Name                 | Story (scroll speed) | Story (energy) | Rhythm (timeout) |
+|-------|----------------------|----------------------|----------------|------------------|
+| 1     | **Nano User**        | Very slow            | Low drain, high restore | 10s |
+| 2     | **:wq Survivor**     | Slow                 | Medium drain/restore | 5s |
+| 3     | **Keyboard Warrior** | Medium               | Balanced | 2s |
+| 4     | **10x Engineer**     | Fast                 | High drain, low restore | 0.5s |
+| 5     | **Uses Arch btw**    | Brutal               | Extreme drain, minimal restore | 0.2s |
+
+Endless Mode does not use this difficulty system — its speed is determined entirely
+by line-based zone progression.
+
+### 3.5 Future Mode Ideas
+
+- **Practice Mode**: No scrolling, no energy drain. Just tasks on a static buffer.
+  Useful for drilling specific skills without restart pressure. Could be unlocked
+  after reaching a world in story mode.
 - **Daily Challenge**: One shared level per day, same for everyone. Leaderboard.
 
 ---
 
-## 3. Content System
+## 4. Content System
 
-### 3.1 Languages
+### 4.1 Languages
 
 Players choose their language before starting. Available languages:
 
@@ -519,7 +1242,7 @@ Each language exercises different Vim strengths:
 | Rust           | Lifetimes `'a` as f-targets, `::` paths, match arms       |
 | C++            | `<>` templates, `::` scope, `*&` pointers, `#` preprocessor |
 
-### 3.2 Segment Pool Architecture
+### 4.2 Segment Pool Architecture
 
 Code content is organized as a **pool of segments** — self-contained 15–40 line code
 blocks. Each playthrough randomly selects and stitches segments together.
@@ -546,7 +1269,11 @@ content/
 Each playthrough uses 3–6 segments. Combined with the "no repeat from last 3
 playthroughs" rule, players get thousands of unique combinations before repetition.
 
-### 3.3 Segment Format
+Segments should also be tagged by **world** so that the segment pool for World 5
+("The Destroyer") contains segments with delete-heavy tasks, World 9 segments have
+deeply nested structures for text object practice, etc.
+
+### 4.3 Segment Format
 
 ```toml
 [meta]
@@ -554,8 +1281,9 @@ id = "py-junior-api-fetch"
 zone = "junior"
 language = "python"
 tags = ["functions", "error-handling", "http"]
+world_tags = ["destroyer", "verb-noun"]    # which worlds this segment suits
 difficulty = 3                    # 1-5 within the zone
-hints = ["J04", "J06"]           # Hint IDs from Section 1.6 to embed as comments
+hints = ["J04", "J06"]           # Hint IDs from Section 1.8 to embed as comments
 
 [code]
 content = """
@@ -586,7 +1314,7 @@ points = 75
 optimal_keys = 2
 ```
 
-### 3.4 Task Types
+### 4.4 Task Types
 
 | Type           | Description                        | Example                          |
 |----------------|------------------------------------|----------------------------------|
@@ -601,12 +1329,12 @@ optimal_keys = 2
 | `indent`       | Fix indentation                    | "Indent this block"              |
 | `replace_char` | Replace a single character         | "Fix this typo: a → e"          |
 
-### 3.5 Assembly Algorithm
+### 4.5 Assembly Algorithm
 
 When a level starts:
 
-1. Determine zone from level number.
-2. Load segment pool for the player's chosen language + zone.
+1. Determine zone and world from level number.
+2. Load segment pool for the player's chosen language + zone, filtered by world tags.
 3. Randomly select 3–6 segments, weighted by:
    - Tags matching the level's target commands.
    - Not recently seen (tracked in save file, last 3 playthroughs).
@@ -615,7 +1343,7 @@ When a level starts:
 5. Resolve task anchors → absolute line/column positions in assembled buffer.
 6. Order tasks top-to-bottom to match scroll direction.
 
-### 3.6 Code Complexity by Zone
+### 4.6 Code Complexity by Zone
 
 **Starter** — Tutorial-level code:
 ```python
@@ -673,7 +1401,7 @@ trait Middleware: Send + Sync + 'static {
 }
 ```
 
-### 3.7 Adding New Content
+### 4.7 Adding New Content
 
 New segments, languages, and task types can be added using the
 `add-content` skill file (see `.claude/skills/add-content.md`). The skill
@@ -682,14 +1410,75 @@ naming conventions.
 
 ---
 
-## 4. Keybinding / Config System
+## 5. Achievements System
 
-### 4.1 Config File Location
+Achievements are optional goals that completionists chase. They replace the
+"constraint level" concept — instead of blocking progression, they're bragging
+rights with cosmetic rewards.
+
+### Achievement Ideas
+
+| Achievement | Condition | Difficulty |
+|-------------|-----------|-----------|
+| **"Wordsmith"** | Complete World 2 without using `h` or `l` | Medium |
+| **"One Shot"** | Complete any level with 0 wasted keystrokes | Hard |
+| **"Speed Demon"** | Complete World 1 in under 60 seconds | Medium |
+| **"Pacifist"** | Complete a level without deleting anything | Easy |
+| **"No Arrow Keys"** | Never press arrow keys during an entire run | Easy |
+| **"The Floor is Lava"** | Complete a level without ever stopping (no idle ticks) | Hard |
+| **"Untouchable"** | Complete a world without energy ever dropping below 50% | Hard |
+| **"Minimalist"** | Complete a level using fewer keystrokes than par | Hard |
+| **"Marathon Runner"** | Reach line 5000 in Endless Mode | Medium |
+| **"Perfect World"** | 3-star every level in a single world | Medium |
+| **"Grandmaster"** | Complete World 14 | Hard |
+
+### Achievement Rewards
+
+- Terminal color themes
+- Cursor style unlocks
+- Fun HUD skins
+- Title next to player name on leaderboard
+
+---
+
+## 6. Easter Eggs & Vim Wisdom
+
+**Not formal unlocks** — fun comments and references scattered throughout level
+content as part of the code segments. These serve double duty: they make the game
+feel alive AND teach deeper Vim understanding.
+
+### Vim Wisdom (educational easter eggs)
+
+Sprinkled as code comments that teach deeper understanding:
+- `// Fun fact: 'dd' is actually 'd' + 'd' — the delete operator applied to a line motion`
+- `# Pro tip: 'ciw' is just 'c' + 'iw' — change + inner-word. All operators work with text objects!`
+- `// 'diw' deletes the word, 'daw' deletes the word AND the space. The 'a' = "around"`
+
+### Nerdy References
+
+- `// TODO: exit vim` (World 1)
+- `i_use_arch_btw = True` (variable name)
+- `# This code was written by someone who definitely uses Emacs` (task: delete this line)
+- `// The cake is a lie` (Portal reference)
+- `sudo_rm_rf = "please don't"`
+- `# There are only 10 types of people...` (binary joke)
+- `// It works on my machine ¯\_(ツ)_/¯`
+- A function called `turnOffAndOnAgain()` (IT Crowd)
+- `# First, solve the problem. Then, write the code. — John Johnson`
+- Hidden Konami code reference in a comment
+- `// I'm not saying it's aliens, but it's aliens` (in auto-generated code)
+- `# rm -rf / was here` in a comment the player must delete
+
+---
+
+## 7. Keybinding / Config System
+
+### 7.1 Config File Location
 
 `~/.vim-heroes/config.toml` — created on first launch with sensible defaults
 and comments explaining every option.
 
-### 4.2 Config Structure
+### 7.2 Config Structure
 
 ```toml
 [general]
@@ -765,7 +1554,7 @@ record_macro = "q"
 play_macro = "@"
 ```
 
-### 4.3 Key Syntax
+### 7.3 Key Syntax
 
 | Syntax     | Meaning                              |
 |------------|--------------------------------------|
@@ -778,7 +1567,7 @@ play_macro = "@"
 | `"gg"`     | Multi-key sequence (sequential)      |
 | `["Escape", "jk"]` | Multiple bindings for one action |
 
-### 4.4 Built-in Presets
+### 7.4 Built-in Presets
 
 | Preset       | Movement keys | Notes                            |
 |--------------|---------------|----------------------------------|
@@ -791,7 +1580,7 @@ play_macro = "@"
 Presets remap the full set of keys for that layout. Individual overrides in
 `[keymap]` take precedence over the preset.
 
-### 4.5 Architecture Integration
+### 7.5 Architecture Integration
 
 ```
 Raw keystroke (crossterm)
@@ -819,9 +1608,9 @@ change your score.
 
 ---
 
-## 5. Technical Architecture
+## 8. Technical Architecture
 
-### 5.1 Stack
+### 8.1 Stack
 
 | Component        | Choice             | Rationale                              |
 |------------------|--------------------|----------------------------------------|
@@ -832,12 +1621,12 @@ change your score.
 | Content embed    | include_dir        | Bake segments into the binary          |
 | Save data        | serde + bincode    | Fast local save to ~/.vim-heroes/      |
 
-### 5.2 Project Structure
+### 8.2 Project Structure
 
 ```
 vim-heroes/
 ├── src/
-│   ├── main.rs                  # Entry point, terminal init/cleanup
+│   ├── main.rs                  # Entry point, terminal init/cleanup, AppMode dispatch
 │   ├── app.rs                   # Top-level state machine: Menu → Playing → Results
 │   │
 │   ├── vim/                     # Vim emulation engine
@@ -858,14 +1647,26 @@ vim-heroes/
 │   │   ├── engine.rs            # Core game loop: tick, scroll, input, render
 │   │   ├── viewport.rs          # Viewport position, scroll speed, bounds check
 │   │   ├── scoring.rs           # Points, combo, star calculation
+│   │   ├── energy.rs            # Energy bar system, drain/restore logic
 │   │   ├── task.rs              # Task state machine: pending → active → done/missed
+│   │   ├── worlds.rs            # World definitions, skill gating, progression
 │   │   └── level.rs             # Level metadata, progression logic
+│   │
+│   ├── rhythm/                  # Rhythm Mode (Vim Drop)
+│   │   ├── mod.rs
+│   │   ├── app.rs               # RhythmApp state machine (Guided + Blind)
+│   │   ├── engine.rs            # Timing, note spawning, queue management
+│   │   ├── note.rs              # Note, QueuedNote structs
+│   │   ├── scoring.rs           # 0-indexed multiplier, time decay, time tax
+│   │   ├── input.rs             # Keystroke matching, multi-key sequences
+│   │   └── song.rs              # Song/level definition + TOML deser
 │   │
 │   ├── content/                 # Content management
 │   │   ├── mod.rs
 │   │   ├── segment.rs           # Segment struct, TOML parsing
 │   │   ├── assembler.rs         # Stitch segments into a level buffer
 │   │   ├── anchor.rs            # Resolve pattern anchors → buffer positions
+│   │   ├── rhythm_loader.rs     # Load rhythm songs from content/rhythm/
 │   │   └── history.rs           # Track recently-seen segments for variety
 │   │
 │   ├── config/                  # Configuration
@@ -877,18 +1678,21 @@ vim-heroes/
 │   ├── ui/                      # Terminal rendering
 │   │   ├── mod.rs
 │   │   ├── game_view.rs         # Main gameplay screen
+│   │   ├── rhythm_view.rs       # Rhythm mode split layout
 │   │   ├── menu.rs              # Main menu, level select, language picker
-│   │   ├── hud.rs               # Score, combo, stars, level info
+│   │   ├── hud.rs               # Score, combo, stars, energy bar, level info
 │   │   ├── task_overlay.rs      # Red/green/yellow highlights + gutter annotations
 │   │   ├── results.rs           # End-of-level results screen
-│   │   ├── shop.rs              # Credit shop: motions, buffer cmds, cosmetics
 │   │   └── theme.rs             # Color themes
 │   │
 │   └── progress/                # Player progress
 │       ├── mod.rs
-│       ├── save.rs              # Stars, high scores, unlocks → ~/.vim-heroes/save.dat
-│       ├── credits.rs           # Credit balance, earn/spend logic
-│       └── unlocks.rs           # Unlocked motions, cosmetics, buffer commands
+│       ├── save.rs              # Stars, high scores, checkpoints → ~/.vim-heroes/save.dat
+│       ├── achievements.rs      # Achievement tracking and unlock logic
+│       └── unlocks.rs           # Cosmetics, achievement rewards
+│
+├── config/
+│   └── energy.toml              # Tunable energy bar values
 │
 ├── content/                     # Code segments (embedded at compile time)
 │   ├── python/
@@ -903,7 +1707,10 @@ vim-heroes/
 │   │   └── ...
 │   ├── rust/
 │   │   └── ...
-│   └── cpp/
+│   ├── cpp/
+│   │   └── ...
+│   └── rhythm/                  # Rhythm Mode songs
+│       ├── basic-motions/
 │       └── ...
 │
 ├── Cargo.toml
@@ -911,7 +1718,7 @@ vim-heroes/
 └── README.md
 ```
 
-### 5.3 Key Dependencies
+### 8.3 Key Dependencies
 
 ```toml
 [dependencies]
@@ -928,7 +1735,7 @@ rand = "0.8"
 
 Binary size target: ~5-8 MB (all content embedded).
 
-### 5.4 Game Loop
+### 8.4 Game Loop
 
 ```rust
 // Pseudocode
@@ -936,7 +1743,11 @@ loop {
     // 1. Non-blocking input
     if poll_input(timeout: 33ms) {        // ~30 fps
         let key = read_key();
+        if !world_allows_key(key, current_world) {
+            continue;                     // skill gating: ignore unlearned keys
+        }
         keystroke_count += 1;
+        energy -= keystroke_drain;
         let action = keymap.resolve(key); // physical → logical
         vim_engine.execute(action);
         check_task_completion(&mut tasks, &buffer, &cursor);
@@ -945,7 +1756,11 @@ loop {
     // 2. Scroll tick
     if elapsed >= scroll_interval {
         viewport.scroll_down(1);
+        energy -= time_drain;
         if cursor.line < viewport.top_line {
+            return GameOver;
+        }
+        if energy <= 0 {
             return GameOver;
         }
         score += SURVIVAL_POINTS;
@@ -962,7 +1777,7 @@ loop {
 
     // 4. Render
     terminal.draw(|frame| {
-        render_hud(frame, &game_state);
+        render_hud(frame, &game_state, &energy);
         render_buffer(frame, &buffer, &viewport, &cursor, &tasks);
         render_statusbar(frame, &vim_engine, &keystroke_count, &current_task);
     });
@@ -974,7 +1789,7 @@ loop {
 }
 ```
 
-### 5.5 Distribution
+### 8.5 Distribution
 
 | Channel              | Tool / Method          | Audience              |
 |----------------------|------------------------|-----------------------|
@@ -987,201 +1802,30 @@ loop {
 
 ---
 
-## 6. Credit Shop & Progression
+## 9. Multi-Buffer System
 
-The game uses a Tony Hawk Pro Skater–style unlock system. Players earn credits
-after every level and spend them on new Vim motions, buffer commands, and
-cosmetics. This aligns the game mechanic with how people actually learn Vim —
-layering on commands over time — but gives the player agency over *what* to
-learn next.
+Starting from later worlds, levels can use multiple code files (buffers). This
+teaches real-world multi-file Vim workflow and adds a context-switching challenge.
 
-### 6.1 Earning Credits
+### 9.1 Buffer Count Progression
 
-| Source                    | Credits | Notes                                      |
-|---------------------------|---------|---------------------------------------------|
-| Level completed           | 50      | Baseline reward for surviving               |
-| Per task completed        | 10–30   | Scales with task complexity                 |
-| Star bonus (per star)     | 25      | Up to 75 bonus for a 3-star run             |
-| Optimal solution bonus    | 15      | Per task solved within optimal keystrokes   |
-| First-time level clear    | 100     | One-time bonus per level                    |
-
-Credits are tracked in the save file alongside stars and scores.
-
-### 6.2 Motion Unlock Tree
-
-Players start with a minimal kit and buy new commands. Levels are designed so
-the starter kit can always *complete* them (even if the score is low), but
-unlocked motions enable higher scores and stars — the Tony Hawk loop of "same
-park, new tricks, better score."
-
-#### Tier 0 — Free Starter Kit
-
-These are always available from the start:
-
-| Command       | Description                      |
-|---------------|----------------------------------|
-| `h` `j` `k` `l` | Basic movement                |
-| `i`           | Enter insert mode                |
-| `Esc`         | Return to normal mode            |
-| `x`           | Delete character under cursor    |
-
-#### Tier 1 — Essentials (25–50 credits each)
-
-| Command       | Cost | Description                      |
-|---------------|------|----------------------------------|
-| `w` `b`       | 25   | Word forward / back              |
-| `e`           | 25   | End of word                      |
-| `0` `$`       | 30   | Line start / end                 |
-| `dd`          | 40   | Delete line                      |
-| `yy` `p`      | 50   | Yank line / paste                |
-
-#### Tier 2 — Bread & Butter (75–125 credits each)
-
-| Command       | Cost | Description                      |
-|---------------|------|----------------------------------|
-| `^`           | 75   | First non-blank character        |
-| `gg` `G`      | 75   | Top / bottom of file             |
-| `o` `O`       | 80   | Open line below / above          |
-| `a` `A`       | 80   | Append after cursor / end of line|
-| `I`           | 80   | Insert at line start             |
-| `dw` `db`     | 100  | Delete word forward / back       |
-| `cw`          | 100  | Change word                      |
-| `d$` `d0`     | 100  | Delete to end / start of line    |
-| `P`           | 75   | Paste before cursor              |
-| `u`           | 125  | Undo                             |
-
-#### Tier 3 — Precision (150–250 credits each)
-
-| Command         | Cost | Description                      |
-|-----------------|------|----------------------------------|
-| `f` `t` `F` `T` | 150  | Find / till character           |
-| `;` `,`         | 100  | Repeat find forward / back      |
-| `.`             | 200  | Dot repeat                       |
-| `r`             | 150  | Replace character                |
-| `/` `?`         | 200  | Search forward / back            |
-| `n` `N`         | 150  | Next / previous search match     |
-| `*` `#`         | 175  | Search word under cursor         |
-| `c$` `C`        | 175  | Change to end of line            |
-| `{num}G`        | 150  | Jump to line number              |
-
-#### Tier 4 — Power Moves (300–500 credits each)
-
-| Command              | Cost | Description                      |
-|----------------------|------|----------------------------------|
-| `ciw` `diw` `yiw`   | 300  | Inner word text objects          |
-| `ci"` `di"` `ci(`   | 350  | Inside quotes / brackets         |
-| `v` `V`             | 300  | Visual mode (char / line)        |
-| `Ctrl-v`            | 400  | Visual block mode                |
-| `%`                 | 300  | Match bracket                    |
-| `>` `<`             | 350  | Indent / dedent                  |
-| `gU` `gu`           | 300  | Uppercase / lowercase            |
-
-#### Tier 5 — Endgame (500–750 credits each)
-
-| Command              | Cost | Description                      |
-|----------------------|------|----------------------------------|
-| `q{reg}` `@{reg}`   | 500  | Record / replay macros           |
-| `"{reg}y` `"{reg}p`  | 500  | Named registers                  |
-| `@@`                 | 300  | Replay last macro                |
-| `:s/old/new/g`       | 750  | Substitution                     |
-
-#### Unlock Rules
-
-- Unlocked motions are persisted in the save file and available across all levels.
-- The shop is accessible from the main menu and from the end-of-level results screen.
-- Levels display a "tip" when the player uses many keystrokes on something an
-  unlockable motion would solve: *"This would be 2 keystrokes with `cw` — available
-  in the shop for 100 credits."*
-- The unlock tree is **not gated by tiers** — a player can save up and buy a Tier 4
-  command early if they want to. Tiers just indicate pricing.
-- Replaying earlier levels with newly unlocked motions is the primary way to improve
-  scores and earn more credits (the Tony Hawk loop).
-
-### 6.3 Cosmetics Shop
-
-Cosmetics are purely visual. Keep the catalog small and focused.
-
-#### Cursor Styles (50–150 credits each)
-
-| Item              | Cost | Description                                 |
-|-------------------|------|---------------------------------------------|
-| Green cursor      | 50   | Green block cursor                          |
-| Blue cursor       | 50   | Blue block cursor                           |
-| Amber cursor      | 75   | Retro amber terminal look                   |
-| Underscore cursor | 100  | `_` style instead of block                  |
-| Pipe cursor       | 100  | `|` style (thin line)                       |
-| Blinking cursor   | 150  | Block with blink animation                  |
-
-#### Color Themes (100–200 credits each)
-
-| Theme         | Cost | Description                                    |
-|---------------|------|------------------------------------------------|
-| Default       | Free | Ships with the game                            |
-| Gruvbox       | 100  | Warm retro theme                               |
-| Catppuccin    | 100  | Pastel modern theme                            |
-| Solarized     | 150  | Classic solarized palette                      |
-| Dracula       | 150  | Dark purple theme                              |
-
-#### HUD Skins (200–400 credits each)
-
-| Skin           | Cost | Description                                   |
-|----------------|------|-----------------------------------------------|
-| Stock Vim      | Free | Default — minimal, classic Vim aesthetic       |
-| NeoVim         | 200  | Inspired by NeoVim's modern look              |
-| SpaceVim       | 300  | SpaceVim's status line style with icons        |
-| LazyVim        | 400  | LazyVim-inspired UI with rounded borders       |
-
-#### Other Unlockables (100–250 credits each)
-
-| Item                  | Cost | Description                               |
-|-----------------------|------|-------------------------------------------|
-| Relative line numbers | 100  | Show relative line numbers (useful for `5j`, `12G` etc.) |
-| Nerd Font icons       | 150  | Use nerd font icons in HUD (requires nerd font installed) |
-| Task complete sparkle | 250  | Animated flash effect when completing a task |
-
----
-
-## 7. Multi-Buffer System
-
-Starting from World 2, levels use multiple code files (buffers). This teaches
-real-world multi-file Vim workflow and adds a context-switching challenge.
-
-### 7.1 Buffer Count Progression
-
-| World   | Buffers | Switch Trigger        | Notes                           |
+| Zone    | Buffers | Switch Trigger        | Notes                           |
 |---------|---------|----------------------|---------------------------------|
-| 1 (1-1 to 1-5)  | 1 | —                  | Single file, learn the basics   |
-| 2 (2-1 to 2-5)  | 2 | Event-driven       | Game forces swaps at set points |
-| 3–4              | 2–3 | Event-driven      | More frequent swaps             |
-| 5–6              | 3–4 | Event + player-initiated | Cross-file tasks (yank from A, paste in B) |
-| 7–8              | 4+  | Player-initiated   | Register juggling across files  |
+| Starter | 1 | —                  | Single file, learn the basics   |
+| Junior  | 1-2 | Event-driven       | Game forces swaps at set points |
+| Medior  | 2-3 | Event + player-initiated | Cross-file tasks (yank from A, paste in B) |
+| Senior  | 3-4 | Player-initiated   | Register juggling across files  |
 
-### 7.2 Buffer Command Unlock Tree
+### 9.2 HUD: Buffer Line
 
-Buffer commands are part of the credit shop (Section 6.2) but listed separately
-because they form their own progression.
-
-Players start with the most primitive method and unlock faster commands:
-
-| Command              | Cost | Tier | Description                              |
-|----------------------|------|------|------------------------------------------|
-| `:e {filename}`      | Free | 0    | Open file by typing full name — slow but always available |
-| `:bn` `:bp`          | 150  | 2    | Next / previous buffer                   |
-| `:ls`                | 100  | 2    | List open buffers                        |
-| `:b {partial}`       | 200  | 3    | Switch buffer by partial name match      |
-| `Ctrl-^`             | 300  | 3    | Toggle to last buffer — instant swap     |
-| `:b{num}`            | 250  | 3    | Switch to buffer by number               |
-
-### 7.3 HUD: Buffer Line
-
-When multiple buffers are active, the HUD shows a buffer line (standard Vim
-concept — `:ls` output visualized):
+When multiple buffers are active, the HUD shows a buffer line:
 
 ```
 ┌──────────────────────────────────────────────────┐
 │ [1] main.py  │  2  utils.py  │  3  config.py    │  ← buffer line
 ├──────────────────────────────────────────────────┤
-│ ★★☆  Level 3-2  "Multi-File"    Score: 2,100  ×2│  ← HUD
+│ ★★☆  Level 10-2                  Score: 2,100  ×2│  ← HUD
+│ Energy: ████████████████░░░  82%                 │
 ├──────────────────────────────────────────────────┤
 │  14 │   for item in items:                       │
 │  ...                                             │
@@ -1191,10 +1835,10 @@ concept — `:ls` output visualized):
 - Buffer line is always visible when there are 2+ buffers.
 - Modified buffers show a `+` indicator: `[1+] main.py`.
 
-### 7.4 Event-Driven Swaps (Early Levels)
+### 9.3 Event-Driven Swaps (Earlier Levels)
 
-In Worlds 2–4, the game controls when swaps happen. A swap event scrolls into
-view as a visual marker in the code:
+In earlier multi-buffer levels, the game controls when swaps happen. A swap
+event scrolls into view as a visual marker:
 
 ```
   24 │ }
@@ -1206,32 +1850,24 @@ view as a visual marker in the code:
 ```
 
 When the viewport reaches the swap marker, the buffer switches automatically.
-The player needs to orient themselves in the new file and continue completing
-tasks. This teaches context-switching without requiring buffer commands.
 
-### 7.5 Player-Initiated Swaps (Later Levels)
+### 9.4 Player-Initiated Swaps (Later Levels)
 
-In Worlds 5+, tasks require the player to actively switch buffers:
+In later levels, tasks require the player to actively switch buffers:
 
 - *"Yank the function signature from `utils.py` and paste it in `main.py`"*
-- *"The variable name in `config.py` is wrong — switch there and fix it, then come back"*
+- *"The variable name in `config.py` is wrong — switch there and fix it"*
 
-These tasks have no swap marker — the player decides when and how to switch
-using their unlocked buffer commands. This is where `:bn`, `Ctrl-^`, and
-`:b {name}` become essential.
-
-### 7.6 Segment Format Addition
-
-Multi-buffer levels use an extended segment format:
+### 9.5 Segment Format Addition
 
 ```toml
 [meta]
-id = "py-junior-multi-api"
-zone = "junior"
+id = "py-medior-multi-api"
+zone = "medior"
 language = "python"
-buffers = ["main.py", "utils.py"]       # declares multiple files
+buffers = ["main.py", "utils.py"]
 
-[code.main_py]                           # one [code.*] section per buffer
+[code.main_py]
 content = """
 from utils import fetch_data
 ..."""
@@ -1242,82 +1878,89 @@ import requests
 ..."""
 
 [[tasks]]
-buffer = "main.py"                       # which buffer the task is in
+buffer = "main.py"
 type = "change_word"
 anchor = { pattern = "fetch_data", occurrence = 1 }
 ...
 
-[[tasks]]
-buffer = "utils.py"
-type = "delete_line"
-anchor = { pattern = "# TODO", occurrence = 1 }
-...
-
-[[swap_events]]                          # event-driven swap points
-after_line = 24                          # swap triggers when viewport passes this line
+[[swap_events]]
+after_line = 24
 from = "main.py"
 to = "utils.py"
 ```
 
 ---
 
-## 8. Phased Implementation Plan
+## 10. Ideas Parking Lot
+
+Good ideas that don't belong in Story Mode but could be great minigames,
+features, or separate modes in the future.
+
+### Ghost Racer (Minigame)
+- Race against your previous best run (ghost cursor)
+- Race against "optimal" theoretical ghost
+- Could be a standalone mode with its own menu entry
+- Replayability: "I know I can beat my ghost on 3-2"
+
+### Combo Zones (Endless Mode / Minigame)
+- Highlighted sections where perfect play = massive bonus
+- Screen flashes, particles on perfect combo zone completion
+- Too arcade-y for story mode, perfect for endless/rhythm modes
+
+### Daily Gauntlet (Minigame)
+- One randomly generated level per day
+- Global leaderboard by keystroke efficiency
+- Keeps people coming back after finishing campaign
+- Could use any world's skill set randomly
+- Would need some form of online leaderboard (simple API?)
+
+### Cosmetics Shop
+- Credits earned from achievements or completing worlds
+- Cursor styles (green, blue, amber, underscore, pipe, blinking)
+- Color themes (Gruvbox, Catppuccin, Solarized, Dracula)
+- HUD skins (Stock Vim, NeoVim, SpaceVim, LazyVim)
+- Relative line numbers, nerd font icons, task complete sparkle
+
+### Personal Code: GitHub Integration
+- Fetch player's public repos and code files via GitHub REST API
+- Auto-slicer: split fetched files into game-sized segments with auto-generated tasks
+- "Your Code" mode in level select
+- Cache locally, graceful degradation if API unreachable
+- No auth tokens needed, only public repos
+
+### Multiplayer
+- Split-screen race mode (who finishes the level with more points)
+- Asynchronous leaderboards per level
+
+---
+
+## 11. Phased Implementation Plan
 
 Each phase is a self-contained deliverable. Complete one before starting the next.
-Phases are designed so the game becomes playable as early as possible, then gains
-features incrementally.
 
 ### Phase 1 — Project Skeleton & Vim Buffer ✅
 
-**Goal**: A Rust project that can hold text in a buffer and move a cursor with
-basic Vim motions.
+**Goal**: Rust project with text buffer and basic Vim motions.
 
-**Deliverables**:
-- `cargo init` with all dependencies in Cargo.toml
-- `vim/buffer.rs`: rope-backed text buffer (load string, get line, insert, delete)
-- `vim/cursor.rs`: cursor position with line/column, clamping to buffer bounds
-- `vim/mode.rs`: Normal and Insert mode enum
-- `vim/motions.rs`: `h`, `j`, `k`, `l` movement
-- `vim/command.rs`: keystroke → action parser (Normal mode only)
-- Unit tests for buffer operations and cursor movement
-
-**No rendering yet** — this is pure logic. All testable via `cargo test`.
-
-**Exit criteria**: Tests pass for loading a buffer, moving a cursor with hjkl,
-and cursor stays clamped within buffer bounds.
+**Deliverables**: `vim/buffer.rs`, `vim/cursor.rs`, `vim/mode.rs`,
+`vim/motions.rs` (hjkl), `vim/command.rs`, unit tests.
 
 ---
 
 ### Phase 2 — Terminal Rendering & Input ✅
 
-**Goal**: See the buffer on screen, move the cursor with real keystrokes.
+**Goal**: See the buffer on screen, move cursor with real keystrokes.
 
-**Deliverables**:
-- `main.rs`: terminal setup (raw mode, alternate screen) and cleanup
-- `ui/game_view.rs`: render buffer with line numbers, render cursor position
-- `config/keymap.rs`: basic keymap (hardcoded qwerty for now)
-- Input loop: read keystrokes → resolve to actions → update buffer → re-render
-- `app.rs`: minimal state machine (just "Playing" state for now)
-
-**Exit criteria**: Launch the game, see a hardcoded buffer, move cursor with hjkl
-in real-time, quit with `q` or `Ctrl-c`.
+**Deliverables**: `main.rs`, `ui/game_view.rs`, basic keymap, input loop, `app.rs`.
 
 ---
 
 ### Phase 3 — Scrolling Viewport & Game Over ✅
 
-**Goal**: The core Guitar Hero mechanic — viewport scrolls, cursor must keep up.
+**Goal**: Core Guitar Hero mechanic — viewport scrolls, cursor must keep up.
 
-**Deliverables**:
-- `game/viewport.rs`: viewport with configurable scroll speed, tracks top/bottom line
-- `game/engine.rs`: game loop with tick-based scrolling (decoupled from frame rate)
-- Game over detection: cursor above viewport top → game over screen
-- `ui/game_view.rs`: only render lines within viewport, show scroll indicator
-- Basic game over screen (score placeholder, "press R to retry")
-
-**Exit criteria**: Buffer scrolls down automatically, player must press `j` to keep
-up, game over triggers correctly when cursor leaves viewport. Moving past the
-bottom of the viewport (e.g. `j`, `6j`) scrolls the viewport forward to match.
+**Deliverables**: `game/viewport.rs`, `game/engine.rs`, game over detection,
+scroll indicator, basic game over screen.
 
 ---
 
@@ -1325,17 +1968,7 @@ bottom of the viewport (e.g. `j`, `6j`) scrolls the viewport forward to match.
 
 **Goal**: Enough Vim commands to make movement interesting.
 
-**Deliverables**:
-- `vim/motions.rs` expanded: `w`, `b`, `e`, `W`, `B`, `E` (word motions)
-- `0`, `^`, `$` (line position)
-- `gg`, `G`, `{num}G` (line jumping)
-- `f`, `t`, `F`, `T`, `;`, `,` (find character)
-- `{`, `}` (paragraph)
-- `%` (bracket matching)
-- Unit tests for all motions
-
-**Exit criteria**: All motions work correctly on various buffer contents.
-Edge cases handled (empty lines, end of buffer, etc.).
+**Deliverables**: w/b/e/W/B/E, 0/^/$, gg/G/{num}G, f/t/F/T/;/,, {/}, %.
 
 ---
 
@@ -1343,290 +1976,224 @@ Edge cases handled (empty lines, end of buffer, etc.).
 
 **Goal**: Tasks appear in the buffer and can be completed.
 
-**Deliverables**:
-- `game/task.rs`: task struct, states (pending/active/completed/missed)
-- `content/anchor.rs`: resolve text-pattern anchors to buffer positions
-- `ui/task_overlay.rs`: red/green/yellow highlighting on task lines
-- Gutter annotations ("DEL", "CHG → 'foo'", "✓ DONE")
-- Task completion detection: compare buffer state against expected outcome
-- `move_to` task type (simplest — just move cursor to a position)
-
-**Exit criteria**: Hardcoded tasks appear highlighted in the buffer, completing
-a `move_to` task turns it green, missed tasks (scrolled past) are detected.
+**Deliverables**: `game/task.rs`, `content/anchor.rs`, `ui/task_overlay.rs`,
+gutter annotations, `move_to` task type.
 
 ---
 
 ### Phase 6 — Scoring & HUD ✅
 
-**Goal**: The game feels like a game — points, combos, feedback.
+**Goal**: Points, combos, feedback.
 
-**Deliverables**:
-- `game/scoring.rs`: point accumulation, combo tracking, star calculation
-- `ui/hud.rs`: top bar with score, combo multiplier, level name, star progress
-- `ui/statusbar.rs`: mode indicator, keystroke count, current task description
-- `ui/results.rs`: end-of-level screen with score breakdown
-- Score formula: survival points + task points − keystroke penalty + combo bonus
-
-**Exit criteria**: Playing through a level shows a running score, combos work,
-end-of-level screen shows meaningful results with star rating.
+**Deliverables**: `game/scoring.rs`, `ui/hud.rs`, `ui/statusbar.rs`,
+`ui/results.rs`, score formula.
 
 ---
 
 ### Phase 7 — Content System & Segment Loader ✅
 
-**Goal**: Levels are assembled from content segments, not hardcoded.
+**Goal**: Levels assembled from content segments, not hardcoded.
 
-**Deliverables**:
-- `content/segment.rs`: parse TOML segment files
-- `content/assembler.rs`: randomly select and stitch segments into a buffer
-- `content/history.rs`: track recently-seen segments in save file
-- `levels/` directory structure with TOML format
-- `include_dir!` macro to embed content in binary
-- Level metadata: zone, world, level number, scroll speed, allowed commands
-
-**Exit criteria**: Starting a level loads random segments from the correct
-zone/language pool. Replaying gives different content.
+**Deliverables**: `content/segment.rs`, `content/assembler.rs`,
+`content/history.rs`, `include_dir!`, level metadata.
 
 ---
 
 ### Phase 8 — First Content: Python & TypeScript (Starter + Junior) ✅
 
-**Goal**: Enough content for a real playable demo across 2 languages, 2 zones.
+**Goal**: Enough content for a real playable demo.
 
-**Deliverables**:
-- ~40 Python starter segments
-- ~40 Python junior segments
-- ~40 TypeScript starter segments
-- ~40 TypeScript junior segments
-- Each segment has 1–3 well-designed tasks
-- Each segment includes 0–2 Vim hint comments from Section 1.6 (zone-appropriate)
-- Level intro screen showing the new command(s) for that level
-- Post-level insight: compare player's keystrokes to optimal and suggest commands
-- Language selection in menu
-- Tasks cover: `move_to`, `delete_line`, `delete_word`, `change_word`, `insert_text`
-- **Import runway**: assembler prepends 5–10 lines of language-appropriate imports
-  before the first segment (see Section 1.1b). These lines never contain tasks.
-- **3-second countdown**: overlay displayed before scrolling starts. Viewport is
-  frozen and keystrokes are not penalized during countdown (see Section 1.1b).
-
-**Exit criteria**: Worlds 1–4 are fully playable in Python and TypeScript with
-varied content on each replay. Hints are visible in code and on level screens.
-Countdown plays before each level. Import runway gives breathing room.
+**Deliverables**: ~80 Python segments, ~80 TypeScript segments, import runway,
+3-second countdown, language selection, hint comments.
 
 ---
 
 ### Phase 9 — Editing Commands & Advanced Tasks ✅
 
-**Goal**: Full operator + motion system, enabling medior/senior content.
+**Goal**: Full operator + motion system.
 
-**Deliverables**:
-- `vim/operators.rs`: `d`, `c`, `y` combined with any motion
-- `vim/text_objects.rs`: `iw`, `aw`, `i"`, `a"`, `i(`, `a(`, `i{`, `a{`, `i[`, `a[`
-- Insert mode: `i`, `a`, `I`, `A`, `o`, `O`, typing text, `Escape` to return
-- `r`, `R` (replace)
-- `.` (dot repeat)
-- `u`, `Ctrl-r` (undo/redo)
-- Visual mode: `v`, `V`, `Ctrl-v` + operators
-- Registers: unnamed, named `"a`-`"z`
-- Macros: `q{reg}`, `@{reg}`
-- New task types: `change_inside`, `yank_paste`, `delete_block`, `indent`
-- Search: `/`, `?`, `n`, `N`, `*`, `#`
-
-**Exit criteria**: All commands from the level tables (Section 2.2) are
-implemented and tested.
+**Deliverables**: d/c/y operators, text objects, insert mode, r/R, dot repeat,
+u/Ctrl-r, visual mode, registers, macros, search, new task types.
 
 ---
 
-### Phase 10 — Full Content: All Languages, All Zones
+### Phase 10 — Energy Bar System
 
-**Goal**: Complete content library.
+**Goal**: Replace keystroke penalty with energy bar as core survival mechanic.
 
 **Deliverables**:
-- Medior + senior segments for Python and TypeScript (~80 more per language)
+- `game/energy.rs`: energy state, drain/restore logic
+- `config/energy.toml`: tunable values (see Section 1.3)
+- Energy bar rendering in HUD (color gradient, pulse on low)
+- Energy drain on keystroke + scroll tick
+- Energy restore on task completion (more for optimal)
+- Difficulty multipliers for drain/restore rates
+- Game over when energy reaches 0
+- "+N" popup animation on energy restore
+
+**Exit criteria**: Playing a level shows energy bar draining per keystroke,
+refilling on task completion, and game over when hitting 0.
+
+---
+
+### Phase 11 — World System & Skill Gating
+
+**Goal**: 14 themed worlds with progressive skill unlocking.
+
+**Deliverables**:
+- `game/worlds.rs`: world definitions (14 worlds, skills per world)
+- Skill gating: unlearned keys are ignored (no penalty, no drain)
+- World-aware level metadata (replaces old zone-only system)
+- Content segments tagged with `world_tags` for appropriate selection
+- World-based level assembly (World 5 gets delete-heavy segments)
+- Tutorial intro segments for each world's first level
+
+**Exit criteria**: Starting World 1 only allows hjkl+counts. Starting World 6
+allows all prior skills + operators. Pressing `w` in World 1 does nothing.
+
+---
+
+### Phase 12 — Roguelike Progression & Checkpoints
+
+**Goal**: Fail = restart, with 3-star checkpoints.
+
+**Deliverables**:
+- `progress/save.rs`: persist per-level stars, checkpoint tracking
+- Game over → restart from highest consecutive 3-star checkpoint
+- Level select showing world map with star progress
+- 3-star a level → permanent checkpoint (next run can skip to it)
+- Results screen: show checkpoint advancement
+
+**Exit criteria**: Dying sends player back to their checkpoint. 3-starring a
+level advances the checkpoint. Progress persists across sessions.
+
+---
+
+### Phase 13 — Full Content: All Languages, All Zones
+
+**Goal**: Complete content library for 14 worlds.
+
+**Deliverables**:
+- Medior + senior segments for Python and TypeScript
 - All 4 zones for Rust (~160 segments)
 - All 4 zones for C++ (~160 segments)
+- World boss content (unique segments for each X-5 level)
+- Grand Finale content (buggy sorting algorithms for World 14)
+- Easter egg comments and Vim wisdom scattered throughout
 - Total: ~640 segments across all languages
-- All 8 worlds fully playable
 
-**Exit criteria**: Every world/level combination works in every language with
-no repetition for at least 3 playthroughs.
+**Exit criteria**: Every world/level combination works in every language.
+World bosses have unique mechanics. Grand Finale is playable.
 
 ---
 
-### Phase 11 — Config System & Presets
+### Phase 14 — Achievements & Menus
 
-**Goal**: Full keybinding customization.
+**Goal**: Achievement system and polished menu UI.
 
 **Deliverables**:
-- `config/mod.rs`: load/create `~/.vim-heroes/config.toml`
-- `config/key_syntax.rs`: parse all key formats ("C-r", "gg", arrays, etc.)
-- `config/presets.rs`: qwerty, colemak, colemak-dh, dvorak, workman
-- Multi-key sequence resolution with configurable timeout (default 300ms)
-- First-run prompt: choose layout or accept default
-- Hints and ghost replay show keys in the player's active mapping
+- `progress/achievements.rs`: achievement tracking, condition checking
+- Achievement notification popup on unlock
+- `ui/menu.rs`: main menu (Story Mode, Endless, Rhythm Mode, Achievements)
+- World select screen with star progress and checkpoints
+- Settings screen: difficulty, language, keybinds, theme, hints
 
-**Exit criteria**: A Colemak user can play the full game with correct bindings.
-Config file changes are picked up on next launch.
+**Exit criteria**: Achievements trigger correctly, persist across sessions.
+Menu navigation is smooth and shows all relevant progress.
 
 ---
 
-### Phase 12 — Progress, Saves & Menus
+### Phase 15 — Rhythm Mode (Vim Drop)
 
-**Goal**: Persistent player progression.
+**Goal**: Full Rhythm Mode as described in Section 3.3.
 
 **Deliverables**:
-- `progress/save.rs`: save/load to `~/.vim-heroes/save.dat`
-- Track per-level: best score, stars earned, keystroke counts
-- Track globally: total play time, commands used histogram
-- `ui/menu.rs`: main menu (New Game, Continue, Level Select, Settings, Quit)
-- New Game screen: choose game mode — **Story Mode** or **Free Play** (see Phase 13)
-- Level select screen showing stars, locked/unlocked worlds
-- World unlock: earn N stars in previous world to unlock next
-- Settings screen: language picker, keybind preset, theme, hint toggle
+- `src/rhythm/` module (app, engine, note, scoring, input, song)
+- `src/ui/rhythm_view.rs`: split layout rendering
+- `src/content/rhythm_loader.rs`: TOML song loading
+- Guided and Blind sub-modes
+- 0-indexed scoring with multiplier
+- 5+ handcrafted songs
+- Song selection menu
+- Difficulty selection (Nano User → Uses Arch btw)
+- Results screen: score, accuracy, streak
 
-**Exit criteria**: Player can quit and resume, see their star progress,
-unlock new worlds by earning stars.
+**Exit criteria**: Both Guided and Blind modes playable from song selection.
+Scoring works correctly. 5+ songs available.
 
 ---
 
-### Phase 13 — Credit Shop & Motion Unlocks
+### Phase 16 — Multi-Buffer Levels
 
-**Goal**: The Tony Hawk Pro Skater progression loop — earn credits, buy motions
-and cosmetics, replay levels for better scores.
+**Goal**: Levels with multiple code files and buffer-switching.
 
 **Deliverables**:
-- `progress/credits.rs`: credit balance tracking, earn/spend logic
-- `progress/unlocks.rs`: unlocked motions and cosmetics, persisted in save file
-- `ui/shop.rs`: shop screen accessible from main menu and results screen
-  - Motion unlock tree (Tier 0–5 from Section 6.2)
-  - Buffer command unlocks (Section 7.2)
-  - Cosmetics catalog (Section 6.3)
-- Credit rewards integrated into scoring (Section 6.1)
-- `vim/command.rs`: gate command execution behind unlock checks — if the player
-  presses an un-purchased motion, show a brief "locked" indicator
-- Shop tip system: when a player uses many keystrokes on something an unlockable
-  motion would solve, show a tip on the results screen
-- Starter kit (Tier 0) available from first launch, no purchase needed
-- `ui/results.rs`: add "credits earned" breakdown and "Visit Shop" option
-- **Game mode toggle: Story Mode vs Free Play**
-  - Selectable from main menu (added in Phase 12) and new game screen
-  - **Story Mode**: default experience — start with Tier 0 starter kit, earn
-    credits, buy motions progressively. The intended path for learners.
-  - **Free Play**: all Vim motions unlocked from the start, no credit/shop
-    gating. Designed for experienced vimmers who want to jump straight into
-    the challenge. Credits and shop still function (for cosmetics), but all
-    motions and buffer commands are pre-unlocked.
-  - `progress/game_mode.rs`: mode enum, persisted per save slot
-  - `vim/command.rs`: skip unlock check when mode is Free Play
-  - Mode is set at save creation and displayed in the level select / HUD
+- `vim/buffers.rs`: multi-buffer manager
+- Buffer commands: `:e`, `:bn`, `:bp`, `:ls`, `Ctrl-^`
+- Extended TOML format with multi-buffer support
+- Event-driven swap markers (auto-switch)
+- Buffer line in HUD
+- Cross-file tasks
 
-**Exit criteria**: Player earns credits after every level, can browse and buy
-motions/cosmetics in the shop, newly purchased motions work immediately in all
-levels. Replaying earlier levels with better motions yields higher scores.
-Free Play mode skips all motion gating — every command works from level one.
+**Exit criteria**: Multi-buffer levels work with event-driven and player-initiated
+swaps. Buffer line shows active file.
 
 ---
 
-### Phase 14 — Multi-Buffer Levels
-
-**Goal**: Levels with multiple code files and buffer-switching mechanics.
-
-**Deliverables**:
-- `vim/buffers.rs`: multi-buffer manager (list of buffers, active buffer index)
-- `:e {filename}` command (free, always available) for manual file switching
-- Unlockable buffer commands: `:bn`, `:bp`, `:ls`, `:b {partial}`, `Ctrl-^`, `:b{num}`
-- `content/segment.rs`: extended TOML format with multi-buffer support (Section 7.6)
-- `content/assembler.rs`: assemble multi-buffer levels from segments
-- Event-driven swap markers (Section 7.4): visual markers that auto-switch buffers
-- `ui/hud.rs`: buffer line showing open buffers with active indicator (Section 7.3)
-- `game/engine.rs`: handle buffer switches mid-level, maintain per-buffer cursor/viewport
-- Cross-file tasks: tasks that reference specific buffers (Section 7.5)
-- World 2+ content segments updated to use multi-buffer format
-
-**Exit criteria**: World 2 levels swap between 2 files via event markers. Later
-worlds support player-initiated swaps. Buffer line in HUD shows active file.
-Cross-file tasks (yank from A, paste in B) work in World 5+.
-
----
-
-### Phase 15 — Polish & Extra Modes
+### Phase 17 — Polish & Endless Mode
 
 **Goal**: Ship-quality experience.
 
 **Deliverables**:
-- Ghost replay: after level, show optimal keystrokes as a ghost cursor
-- Practice mode: no scrolling, just tasks
-- Endless mode: infinite random content, escalating speed
-- Sound effects (optional, terminal bell or off)
-- Stats dashboard: command usage, accuracy trends, time played
-- Tutorial: interactive first-launch walkthrough of game mechanics
-- Cosmetics rendering: cursor styles, color themes, HUD skins from shop
+- Endless Mode (line-based zones, break banners, speed ramp, ghost)
+- Cosmetics rendering (cursor styles, themes, HUD skins)
+- Stats dashboard (command usage, accuracy trends, time played)
+- Sound effects (optional)
+- Config system (full keybinding customization, presets)
+- First-run experience
 
-**Exit criteria**: The game feels complete and polished. A new player can
-pick it up, understand the mechanics, and progress through all worlds.
+**Exit criteria**: The game feels complete and polished.
 
 ---
 
-### Phase 16 — Distribution & Release
+### Phase 18 — Distribution & Release
 
-**Goal**: Players can install the game easily on any platform.
+**Goal**: Players can install easily on any platform.
 
 **Deliverables**:
-- CI/CD pipeline (GitHub Actions): build + test on Linux/macOS/Windows
-- `cargo install vim-heroes` — publish to crates.io
-- Homebrew formula in a tap repo
-- `.deb` package via cargo-deb
-- AUR PKGBUILD
-- GitHub Releases with prebuilt binaries (linux-x64, macos-arm64, windows-x64)
+- CI/CD pipeline (GitHub Actions)
+- `cargo install vim-heroes` → crates.io
+- Homebrew formula
+- `.deb` package, AUR PKGBUILD
+- GitHub Releases with prebuilt binaries
 - README with install instructions, screenshots, GIF demo
 
-**Exit criteria**: `brew install vim-heroes`, `cargo install vim-heroes`, or
-downloading a binary from GitHub Releases all work.
-
 ---
 
-### Phase 17 — Personal Code: GitHub Integration
+### Phase 19 — Personal Code: GitHub Integration
 
-**Goal**: Let players practice Vim on their own code from their public GitHub repos.
+**Goal**: Let players practice Vim on their own code.
 
 **Deliverables**:
-- `content/github.rs`: fetch player's public repos and code files via GitHub REST API
-- GitHub username detection: parse `~/.gitconfig` for `user.name` → fallback to in-game
-  prompt ("Enter your GitHub username")
-- Fetch top repos by stars: `GET https://api.github.com/users/{name}/repos?sort=stars`
-- Fetch code files: `GET https://api.github.com/repos/{owner}/{repo}/contents/{path}`
-  filtered by supported extensions (.py, .ts, .rs, .cpp)
-- Auto-slicer: split fetched files into game-sized segments (~20–60 lines) with
-  auto-generated tasks (move_to, delete_line, change_word based on code patterns)
-- "Your Code" mode in level select: separate section showing repo names as worlds
-- Cache fetched content locally in `~/.vim-heroes/github-cache/` to avoid redundant
-  API calls and respect rate limits
-- HTTP via `ureq` crate (small, sync, no OpenSSL dependency — pure Rust TLS)
+- `content/github.rs`: fetch public repos via GitHub REST API
+- Auto-slicer: split files into game-sized segments with auto-generated tasks
+- "Your Code" mode in level select
+- Local cache in `~/.vim-heroes/github-cache/`
+- HTTP via `ureq` crate (no OpenSSL dependency)
 
-**Constraints**:
-- No `gh` CLI dependency — uses raw HTTPS requests from the Rust binary
-- No sudo / admin rights / elevated privileges required
-- No auth tokens needed — only accesses public repos via unauthenticated API
-- Unauthenticated GitHub API rate limit: 60 requests/hour (sufficient for ~10 repos
-  worth of files per session)
-- Graceful degradation: if API is unreachable or user has no public repos, skip
-  silently and use built-in content
-
-**Exit criteria**: Player enters their GitHub username, sees their top repos listed,
-and can play levels built from their own code. Works on a fresh machine with no
-GitHub tooling installed.
+**Exit criteria**: Player enters GitHub username, sees repos, plays levels
+built from their own code.
 
 ---
 
 ### Future Ideas (Post-Release)
 
-- **Multiplayer**: split-screen race mode (who finishes the level with more points)
-- **Daily challenge**: shared daily level with global leaderboard
-- **Custom levels**: player-created segment packs (load from `~/.vim-heroes/custom/`)
-- **More languages**: Go, Java, Ruby, Zig, Haskell
-- **Neovim integration**: play inside Neovim as a plugin
-- **Community content**: submit segments via PR, curated into releases
-- **Boss battles**: multi-phase refactoring challenges
-- **Achievements**: "Used 0 arrow keys", "100 combo", "All stars World 1", etc.
-- **Replay analysis**: unlock ability to view the optimal solution for completed levels (shop item)
-- **Seasonal cosmetics**: limited-time cursor/theme unlocks
+- Ghost Racer mode
+- Daily Gauntlet with global leaderboard
+- Multiplayer split-screen race
+- Custom level packs
+- More languages (Go, Java, Ruby, Zig, Haskell)
+- Neovim plugin integration
+- Community content submissions
+- Seasonal cosmetics
+- Replay analysis (view optimal solution for completed levels)
