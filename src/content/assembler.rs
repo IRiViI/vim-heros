@@ -181,7 +181,9 @@ pub fn assemble(segments: &[&Segment]) -> AssembledLevel {
         // Resolve tasks: find anchors in the segment's code and offset
         let code_buffer = Buffer::from_str(code);
         for seg_task in &segment.tasks {
-            if let Some(task) = resolve_segment_task(seg_task, &code_buffer, line_offset) {
+            if let Some(mut task) = resolve_segment_task(seg_task, &code_buffer, line_offset) {
+                task.good_keys = seg_task.optimal_keys;
+                task.perfect_keys = seg_task.perfect_keys;
                 all_tasks.push(task);
             }
         }

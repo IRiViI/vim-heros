@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use crate::content::assembler;
 use crate::content::loader;
+use crate::game::energy::Energy;
 use crate::game::engine::{Engine, GameState};
 use crate::game::scoring::Scoring;
 use crate::game::task::{self, Task, TaskKind, TaskState};
@@ -163,6 +164,7 @@ pub struct App {
     pub viewport: Viewport,
     pub engine: Engine,
     pub scoring: Scoring,
+    pub energy: Energy,
     pub tasks: Vec<Task>,
     pub level: LevelInfo,
     parser: CommandParser,
@@ -185,6 +187,8 @@ pub struct App {
     /// Command-line input buffer (for : commands). None = not active.
     pub cmdline: Option<String>,
     level_index: usize,
+    /// Keystrokes since last task completion (for per-task optimal tracking).
+    task_keystrokes: usize,
 }
 
 impl App {
@@ -200,6 +204,7 @@ impl App {
             viewport: Viewport::new(viewport_height),
             engine: Engine::new(level.scroll_speed_ms),
             scoring: Scoring::new(tasks_total),
+            energy: Energy::default_new(),
             tasks,
             level,
             parser: CommandParser::new(),
@@ -215,6 +220,7 @@ impl App {
             last_macro_reg: None,
             cmdline: None,
             level_index: 0,
+            task_keystrokes: 0,
         }
     }
 
@@ -323,10 +329,16 @@ impl App {
                 self.scoring.award_survival();
             }
             self.engine.record_scroll();
+            self.energy.drain_tick();
             needs_render = true;
 
             // Game over: cursor scrolled above viewport
             if self.cursor.line < self.viewport.top_line {
+                self.engine.state = GameState::GameOver;
+            }
+
+            // Game over: energy depleted
+            if self.energy.is_depleted() {
                 self.engine.state = GameState::GameOver;
             }
 
@@ -411,6 +423,7 @@ impl App {
         self.viewport = Viewport::new(self.viewport.height);
         self.engine.reset();
         self.scoring.reset(self.tasks.len());
+        self.energy.reset();
         self.parser = CommandParser::new();
         self.registers = RegisterFile::new();
         self.undo = UndoHistory::new();
@@ -422,6 +435,7 @@ impl App {
         self.macro_recording = None;
         self.last_macro_reg = None;
         self.cmdline = None;
+        self.task_keystrokes = 0;
     }
 
     /// Move cursor (and viewport) by `lines` in a direction.
@@ -644,30 +658,35 @@ impl App {
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             match key.code {
                 KeyCode::Char('r') => {
-                    self.scoring.penalize_keystroke();
+                    self.scoring.record_keystroke();
+                    self.task_keystrokes += 1;
+                    self.energy.drain_keystroke();
                     if let Some((rope, cursor)) = self.undo.redo() {
                         self.buffer.set_rope(rope);
                         self.cursor = cursor;
                     }
                     return true;
                 }
+                // Page/half-page movements are free: no energy drain,
+                // no task keystroke count. They're for catching up with
+                // the scroll, not for task execution.
                 KeyCode::Char('d') => {
-                    self.scoring.penalize_keystroke();
+                    self.scoring.record_keystroke();
                     self.scroll_cursor(self.viewport.height / 2, true);
                     return true;
                 }
                 KeyCode::Char('u') => {
-                    self.scoring.penalize_keystroke();
+                    self.scoring.record_keystroke();
                     self.scroll_cursor(self.viewport.height / 2, false);
                     return true;
                 }
                 KeyCode::Char('f') => {
-                    self.scoring.penalize_keystroke();
+                    self.scoring.record_keystroke();
                     self.scroll_cursor(self.viewport.height.saturating_sub(2), true);
                     return true;
                 }
                 KeyCode::Char('b') => {
-                    self.scoring.penalize_keystroke();
+                    self.scoring.record_keystroke();
                     self.scroll_cursor(self.viewport.height.saturating_sub(2), false);
                     return true;
                 }
@@ -681,7 +700,9 @@ impl App {
                 true
             }
             KeyCode::Char(ch) => {
-                self.scoring.penalize_keystroke();
+                self.scoring.record_keystroke();
+                self.task_keystrokes += 1;
+                self.energy.drain_keystroke();
 
                 match self.parser.feed(ch) {
                     ParseResult::Action(action, count) => {
@@ -833,7 +854,9 @@ impl App {
             _ => return false,
         };
 
-        self.scoring.penalize_keystroke();
+        self.scoring.record_keystroke();
+        self.task_keystrokes += 1;
+        self.energy.drain_keystroke();
         if action.is_edit() {
             self.undo.push(self.buffer.rope(), self.cursor);
         }
@@ -851,7 +874,9 @@ impl App {
             _ => return false,
         };
 
-        self.scoring.penalize_keystroke();
+        self.scoring.record_keystroke();
+        self.task_keystrokes += 1;
+        self.energy.drain_keystroke();
         if action.is_edit() {
             self.undo.push(self.buffer.rope(), self.cursor);
         }
@@ -865,12 +890,16 @@ impl App {
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             match key.code {
                 KeyCode::Char('d') => {
-                    self.scoring.penalize_keystroke();
+                    self.scoring.record_keystroke();
+                    self.task_keystrokes += 1;
+                    self.energy.drain_keystroke();
                     self.scroll_cursor(self.viewport.height / 2, true);
                     return true;
                 }
                 KeyCode::Char('u') => {
-                    self.scoring.penalize_keystroke();
+                    self.scoring.record_keystroke();
+                    self.task_keystrokes += 1;
+                    self.energy.drain_keystroke();
                     self.scroll_cursor(self.viewport.height / 2, false);
                     return true;
                 }
@@ -885,7 +914,9 @@ impl App {
                 true
             }
             KeyCode::Char(ch) => {
-                self.scoring.penalize_keystroke();
+                self.scoring.record_keystroke();
+                self.task_keystrokes += 1;
+                self.energy.drain_keystroke();
 
                 // Operators act on the visual selection
                 match ch {
@@ -1121,8 +1152,23 @@ impl App {
                 }
             };
             if completed {
+                use crate::game::task::CompletionQuality;
                 task.mark_completed();
+                // Determine completion quality: Perfect > Good > Done
+                let is_perfect = task.perfect_keys > 0
+                    && self.task_keystrokes <= task.perfect_keys;
+                let is_good = task.good_keys > 0
+                    && self.task_keystrokes <= task.good_keys;
+                if is_perfect {
+                    task.quality = CompletionQuality::Perfect;
+                    self.scoring.award_perfect();
+                } else if is_good {
+                    task.quality = CompletionQuality::Good;
+                    self.scoring.award_good();
+                }
                 self.scoring.complete_task(task.points);
+                self.energy.restore_task(is_good || is_perfect, self.scoring.combo);
+                self.task_keystrokes = 0;
             }
         }
     }

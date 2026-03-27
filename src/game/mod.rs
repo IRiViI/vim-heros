@@ -1,3 +1,4 @@
+pub mod energy;
 pub mod engine;
 pub mod scoring;
 pub mod task;

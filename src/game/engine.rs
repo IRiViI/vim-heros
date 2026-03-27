@@ -75,16 +75,6 @@ impl Engine {
         self.last_scroll = Instant::now();
     }
 
-    /// Add survival points (called each scroll tick).
-    pub fn award_survival_points(&mut self) {
-        self.score += 10;
-    }
-
-    /// Deduct keystroke penalty.
-    pub fn penalize_keystroke(&mut self) {
-        self.score -= 2;
-    }
-
     /// Seconds elapsed since game start.
     pub fn elapsed_secs(&self) -> u64 {
         self.start_time.elapsed().as_secs()
@@ -111,15 +101,6 @@ mod tests {
         let engine = Engine::new(2000);
         assert_eq!(engine.state, GameState::Countdown);
         assert_eq!(engine.score, 0);
-    }
-
-    #[test]
-    fn test_scoring() {
-        let mut engine = Engine::new(2000);
-        engine.award_survival_points();
-        assert_eq!(engine.score, 10);
-        engine.penalize_keystroke();
-        assert_eq!(engine.score, 8);
     }
 
     #[test]

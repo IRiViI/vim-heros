@@ -5,7 +5,7 @@ use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
 use crate::app::App;
 use crate::game::engine::GameState;
-use crate::game::task::{Task, TaskState};
+use crate::game::task::{CompletionQuality, Task, TaskState};
 use crate::vim::mode::Mode;
 
 /// Render the full game view into a ratatui frame.
@@ -14,21 +14,23 @@ pub fn render(frame: &mut ratatui::Frame, app: &App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(1), // HUD bar
+            Constraint::Length(1), // Energy bar
             Constraint::Min(3),    // buffer area
             Constraint::Length(1), // status bar
         ])
         .split(frame.area());
 
     render_hud(frame, app, chunks[0]);
-    render_buffer(frame, app, chunks[1]);
-    render_status_bar(frame, app, chunks[2]);
+    render_energy_bar(frame, app, chunks[1]);
+    render_buffer(frame, app, chunks[2]);
+    render_status_bar(frame, app, chunks[3]);
 
     if matches!(app.engine.state, GameState::GameOver | GameState::LevelComplete) {
-        render_results(frame, app, chunks[1]);
+        render_results(frame, app, chunks[2]);
     }
 
     if app.engine.state == GameState::Countdown {
-        render_countdown(frame, app, chunks[1]);
+        render_countdown(frame, app, chunks[2]);
     }
 }
 
@@ -76,16 +78,75 @@ fn render_hud(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     frame.render_widget(hud, area);
 }
 
+/// Render the energy bar: colored bar with percentage and optional restore popup.
+fn render_energy_bar(frame: &mut ratatui::Frame, app: &App, area: Rect) {
+    let pct = app.energy.percentage();
+    let bar_width = area.width.saturating_sub(20) as usize; // reserve space for label + pct
+    let filled = ((pct / 100.0) * bar_width as f64).round() as usize;
+    let empty = bar_width.saturating_sub(filled);
+
+    // Color based on energy level
+    let bar_color = if pct > 60.0 {
+        Color::Green
+    } else if pct > 30.0 {
+        Color::Yellow
+    } else if pct > 15.0 {
+        Color::Red
+    } else {
+        // Pulsing effect at critical levels: alternate between red and dark red
+        let secs = app.engine.elapsed_secs();
+        if secs % 2 == 0 {
+            Color::Red
+        } else {
+            Color::Rgb(180, 0, 0)
+        }
+    };
+
+    let filled_str = "\u{2588}".repeat(filled);
+    let empty_str = "\u{2591}".repeat(empty);
+
+    let mut spans = vec![
+        Span::styled(" Energy: ", Style::default().fg(Color::DarkGray)),
+        Span::styled(filled_str, Style::default().fg(bar_color)),
+        Span::styled(empty_str, Style::default().fg(Color::Rgb(60, 60, 60))),
+        Span::styled(
+            format!(" {:>5.1}% ", pct),
+            Style::default().fg(bar_color).add_modifier(Modifier::BOLD),
+        ),
+    ];
+
+    // Show "+N" restore popup if available
+    if let Some(restore) = app.energy.last_restore {
+        spans.push(Span::styled(
+            format!("+{:.0}", restore),
+            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+        ));
+    }
+
+    let bar = Paragraph::new(Line::from(spans))
+        .style(Style::default().bg(Color::Rgb(20, 20, 35)));
+    frame.render_widget(bar, area);
+}
+
+/// Gold color for perfect completions.
+const GOLD: Color = Color::Rgb(255, 215, 0);
+
 /// Task highlight style for the single target character.
 fn task_char_style(task: &Task) -> Style {
-    match task.state {
-        TaskState::Pending | TaskState::Active => {
+    match (task.state, task.quality) {
+        (TaskState::Pending | TaskState::Active, _) => {
             Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD)
         }
-        TaskState::Completed => {
+        (TaskState::Completed, CompletionQuality::Perfect) => {
+            Style::default().bg(GOLD).fg(Color::Black).add_modifier(Modifier::BOLD)
+        }
+        (TaskState::Completed, CompletionQuality::Good) => {
+            Style::default().bg(Color::Cyan).fg(Color::Black).add_modifier(Modifier::BOLD)
+        }
+        (TaskState::Completed, CompletionQuality::Done) => {
             Style::default().bg(Color::Green).fg(Color::Black).add_modifier(Modifier::BOLD)
         }
-        TaskState::Missed => {
+        (TaskState::Missed, _) => {
             Style::default().bg(Color::Yellow).fg(Color::Black)
         }
     }
@@ -93,16 +154,24 @@ fn task_char_style(task: &Task) -> Style {
 
 /// Gutter annotation for a task.
 fn task_annotation(task: &Task) -> (String, Color) {
-    match task.state {
-        TaskState::Pending | TaskState::Active => (
+    match (task.state, task.quality) {
+        (TaskState::Pending | TaskState::Active, _) => (
             format!("  \u{25c0} {} ", task.gutter_text),
             Color::Red,
         ),
-        TaskState::Completed => (
+        (TaskState::Completed, CompletionQuality::Perfect) => (
+            " \u{2605} PERFECT ".to_string(),
+            GOLD,
+        ),
+        (TaskState::Completed, CompletionQuality::Good) => (
+            " \u{2713} GOOD ".to_string(),
+            Color::Cyan,
+        ),
+        (TaskState::Completed, CompletionQuality::Done) => (
             " \u{2713} DONE ".to_string(),
             Color::Green,
         ),
-        TaskState::Missed => (
+        (TaskState::Missed, _) => (
             " \u{2717} MISSED ".to_string(),
             Color::Yellow,
         ),
@@ -142,11 +211,18 @@ fn render_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         }
 
         let line_content = buffer.line(line_idx).unwrap_or_default();
-        let line_num = format!("{:>width$} ", line_idx + 1, width = gutter_width - 1);
 
         // Check if this line has a task
         let task = task_for_line(&app.tasks, line_idx);
         let is_cursor_line = line_idx == cursor.line;
+
+        // Relative line numbers: absolute on cursor line, distance on others
+        let line_num = if is_cursor_line {
+            format!("{:>width$} ", line_idx + 1, width = gutter_width - 1)
+        } else {
+            let rel = (line_idx as isize - cursor.line as isize).unsigned_abs();
+            format!("{:>width$} ", rel, width = gutter_width - 1)
+        };
 
         let line_num_style = if is_cursor_line {
             Style::default().fg(Color::Yellow)
@@ -425,11 +501,14 @@ fn render_status_bar(frame: &mut ratatui::Frame, app: &App, area: Rect) {
 /// Render the results overlay (game over or level complete).
 fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     let s = &app.scoring;
-    let stars = s.star_display();
+    let stars = s.star_display_full();
+    let star_color = if s.is_perfect() { GOLD } else { Color::Yellow };
     let tasks_missed = app.tasks.iter().filter(|t| t.state == TaskState::Missed).count();
     let is_complete = app.engine.state == GameState::LevelComplete;
 
-    let (title_text, title_color, border_color, border_title) = if is_complete {
+    let (title_text, title_color, border_color, border_title) = if is_complete && s.is_perfect() {
+        ("PERFECT RUN!", GOLD, GOLD, " Results ")
+    } else if is_complete {
         ("LEVEL COMPLETE!", Color::Green, Color::Green, " Results ")
     } else {
         ("GAME OVER", Color::Red, Color::Red, " Results ")
@@ -447,7 +526,7 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         Line::from(Span::styled(
             stars,
             Style::default()
-                .fg(Color::Yellow)
+                .fg(star_color)
                 .add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
@@ -471,6 +550,22 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             },
         ]),
         Line::from(vec![
+            Span::styled("Good: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                format!("{}", s.tasks_good),
+                Style::default().fg(Color::Cyan),
+            ),
+            Span::styled("  Perfect: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                format!("{}", s.tasks_perfect),
+                Style::default().fg(if s.is_perfect() { GOLD } else { Color::Yellow }),
+            ),
+            Span::styled(
+                format!("  /{}", s.tasks_total),
+                Style::default().fg(Color::DarkGray),
+            ),
+        ]),
+        Line::from(vec![
             Span::styled("Keys: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 format!("{}", s.keystrokes),
@@ -489,6 +584,17 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             Span::styled(
                 format!("{}s", app.engine.elapsed_secs()),
                 Style::default().fg(Color::Cyan),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("Energy: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                format!("{:.0}%", app.energy.percentage()),
+                Style::default().fg(if app.energy.percentage() > 30.0 {
+                    Color::Green
+                } else {
+                    Color::Red
+                }),
             ),
         ]),
         Line::from(""),

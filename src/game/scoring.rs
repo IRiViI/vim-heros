@@ -5,7 +5,10 @@ pub struct Scoring {
     pub max_combo: usize,
     pub tasks_completed: usize,
     pub tasks_total: usize,
-    pub tasks_optimal: usize,
+    /// Tasks completed at Good quality or better (Good + Perfect).
+    pub tasks_good: usize,
+    /// Tasks completed at Perfect quality (absolute optimal).
+    pub tasks_perfect: usize,
     pub keystrokes: usize,
 }
 
@@ -17,7 +20,8 @@ impl Scoring {
             max_combo: 0,
             tasks_completed: 0,
             tasks_total,
-            tasks_optimal: 0,
+            tasks_good: 0,
+            tasks_perfect: 0,
             keystrokes: 0,
         }
     }
@@ -43,9 +47,16 @@ impl Scoring {
         self.score += points;
     }
 
-    /// Award bonus for completing a task within optimal keystrokes.
-    pub fn award_optimal_bonus(&mut self) {
-        self.tasks_optimal += 1;
+    /// Award bonus for Good completion (within world-constrained optimal).
+    pub fn award_good(&mut self) {
+        self.tasks_good += 1;
+        self.score += 50;
+    }
+
+    /// Award bonus for Perfect completion (absolute optimal).
+    pub fn award_perfect(&mut self) {
+        self.tasks_good += 1;
+        self.tasks_perfect += 1;
         self.score += 100;
     }
 
@@ -65,27 +76,39 @@ impl Scoring {
         self.score += 10;
     }
 
-    /// Deduct keystroke penalty.
-    pub fn penalize_keystroke(&mut self) {
+    /// Record a keystroke (for stats display). No score penalty — energy handles that.
+    pub fn record_keystroke(&mut self) {
         self.keystrokes += 1;
-        self.score -= 2;
     }
 
-    /// Calculate star rating (1-3).
-    /// 1 star: survived to the end
-    /// 2 stars: completed all tasks
-    /// 3 stars: completed all tasks with majority optimal
+    /// Calculate star rating (0-3).
+    /// 0 stars: didn't complete all tasks
+    /// 1 star: completed all tasks
+    /// 2 stars: completed all tasks + ≥40% optimal
+    /// 3 stars: completed all tasks + all but 2 optimal
     pub fn stars(&self) -> usize {
         if self.tasks_total == 0 {
             return 1;
         }
-        if self.tasks_completed == self.tasks_total && self.tasks_optimal >= self.tasks_total / 2 {
+        if self.tasks_completed < self.tasks_total {
+            return 0;
+        }
+        let good_threshold_2 = (self.tasks_total as f64 * 0.4).ceil() as usize;
+        let good_threshold_3 = self.tasks_total.saturating_sub(2);
+        if self.tasks_good >= good_threshold_3 {
             3
-        } else if self.tasks_completed == self.tasks_total {
+        } else if self.tasks_good >= good_threshold_2 {
             2
         } else {
             1
         }
+    }
+
+    /// Whether this is a perfect run (all tasks completed at Perfect quality).
+    pub fn is_perfect(&self) -> bool {
+        self.tasks_total > 0
+            && self.tasks_completed == self.tasks_total
+            && self.tasks_perfect == self.tasks_total
     }
 
     /// Star display string: "★★☆" etc.
@@ -93,6 +116,16 @@ impl Scoring {
         let filled = self.stars();
         let empty = 3 - filled;
         "\u{2605}".repeat(filled) + &"\u{2606}".repeat(empty)
+    }
+
+    /// Star display with PERFECT suffix for perfect runs.
+    pub fn star_display_full(&self) -> String {
+        let base = self.star_display();
+        if self.is_perfect() {
+            format!("{} PERFECT", base)
+        } else {
+            base
+        }
     }
 
     /// Combo display string for HUD.
@@ -120,7 +153,7 @@ mod tests {
         assert_eq!(s.score, 0);
         assert_eq!(s.combo, 0);
         assert_eq!(s.combo_multiplier(), 1.0);
-        assert_eq!(s.stars(), 1);
+        assert_eq!(s.stars(), 0);
     }
 
     #[test]
@@ -166,32 +199,92 @@ mod tests {
     #[test]
     fn test_stars_none_completed() {
         let s = Scoring::new(5);
+        assert_eq!(s.stars(), 0);
+    }
+
+    #[test]
+    fn test_stars_all_completed_no_good() {
+        let mut s = Scoring::new(5);
+        s.tasks_completed = 5;
+        s.tasks_good = 1; // 1/5 = 20%, below 40%
         assert_eq!(s.stars(), 1);
     }
 
     #[test]
-    fn test_stars_all_completed() {
-        let mut s = Scoring::new(3);
-        s.tasks_completed = 3;
+    fn test_stars_40_percent_good() {
+        let mut s = Scoring::new(5);
+        s.tasks_completed = 5;
+        s.tasks_good = 2; // 2/5 = 40%
         assert_eq!(s.stars(), 2);
     }
 
     #[test]
-    fn test_stars_all_optimal() {
-        let mut s = Scoring::new(4);
-        s.tasks_completed = 4;
-        s.tasks_optimal = 3; // >= 4/2 = 2
+    fn test_stars_all_but_two_good() {
+        let mut s = Scoring::new(5);
+        s.tasks_completed = 5;
+        s.tasks_good = 3; // 5-2 = 3
         assert_eq!(s.stars(), 3);
     }
 
     #[test]
+    fn test_stars_3_stars_not_perfect() {
+        let mut s = Scoring::new(5);
+        s.tasks_completed = 5;
+        s.tasks_good = 5; // all good
+        s.tasks_perfect = 3; // but only 3 perfect
+        assert_eq!(s.stars(), 3);
+        assert!(!s.is_perfect());
+    }
+
+    #[test]
+    fn test_stars_perfect_run() {
+        let mut s = Scoring::new(5);
+        s.tasks_completed = 5;
+        s.tasks_good = 5;
+        s.tasks_perfect = 5; // all perfect
+        assert_eq!(s.stars(), 3);
+        assert!(s.is_perfect());
+    }
+
+    #[test]
+    fn test_stars_partial_completion() {
+        let mut s = Scoring::new(5);
+        s.tasks_completed = 4; // not all
+        s.tasks_good = 4;
+        assert_eq!(s.stars(), 0);
+        assert!(!s.is_perfect());
+    }
+
+    #[test]
+    fn test_award_good_and_perfect() {
+        let mut s = Scoring::new(5);
+        s.award_good();
+        assert_eq!(s.tasks_good, 1);
+        assert_eq!(s.tasks_perfect, 0);
+        s.award_perfect();
+        assert_eq!(s.tasks_good, 2); // perfect also counts as good
+        assert_eq!(s.tasks_perfect, 1);
+    }
+
+    #[test]
     fn test_star_display() {
+        let mut s = Scoring::new(5);
+        assert_eq!(s.star_display(), "\u{2606}\u{2606}\u{2606}"); // 0 stars
+        s.tasks_completed = 5;
+        assert_eq!(s.star_display(), "\u{2605}\u{2606}\u{2606}"); // 1 star
+        s.tasks_good = 2;
+        assert_eq!(s.star_display(), "\u{2605}\u{2605}\u{2606}"); // 2 stars
+        s.tasks_good = 3;
+        assert_eq!(s.star_display(), "\u{2605}\u{2605}\u{2605}"); // 3 stars
+    }
+
+    #[test]
+    fn test_star_display_perfect() {
         let mut s = Scoring::new(3);
-        assert_eq!(s.star_display(), "\u{2605}\u{2606}\u{2606}");
         s.tasks_completed = 3;
-        assert_eq!(s.star_display(), "\u{2605}\u{2605}\u{2606}");
-        s.tasks_optimal = 2;
-        assert_eq!(s.star_display(), "\u{2605}\u{2605}\u{2605}");
+        s.tasks_good = 3;
+        s.tasks_perfect = 3;
+        assert_eq!(s.star_display_full(), "\u{2605}\u{2605}\u{2605} PERFECT");
     }
 
     #[test]
@@ -199,8 +292,8 @@ mod tests {
         let mut s = Scoring::new(0);
         s.award_survival();
         assert_eq!(s.score, 10);
-        s.penalize_keystroke();
-        assert_eq!(s.score, 8);
+        s.record_keystroke();
+        assert_eq!(s.score, 10); // no score penalty — energy handles drain
         assert_eq!(s.keystrokes, 1);
     }
 

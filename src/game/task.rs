@@ -65,6 +65,17 @@ pub enum TaskKind {
     },
 }
 
+/// How well a task was completed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompletionQuality {
+    /// Completed, but not within any optimal budget.
+    Done,
+    /// Completed within the world-constrained optimal budget.
+    Good,
+    /// Completed within the absolute optimal budget.
+    Perfect,
+}
+
 #[derive(Debug, Clone)]
 pub struct Task {
     pub kind: TaskKind,
@@ -74,6 +85,12 @@ pub struct Task {
     pub description: String,
     pub points: i64,
     pub gutter_text: String,
+    /// Optimal keystrokes for this world's available commands (0 = no tracking).
+    pub good_keys: usize,
+    /// Absolute optimal keystrokes with any vim command (0 = no tracking).
+    pub perfect_keys: usize,
+    /// How well this task was completed.
+    pub quality: CompletionQuality,
 }
 
 impl Task {
@@ -92,6 +109,9 @@ impl Task {
             description: description.into(),
             points,
             gutter_text: gutter_text.into(),
+            good_keys: 0,
+            perfect_keys: 0,
+            quality: CompletionQuality::Done,
         }
     }
 
@@ -112,6 +132,9 @@ impl Task {
             description: description.into(),
             points,
             gutter_text: gutter_text.into(),
+            good_keys: 0,
+            perfect_keys: 0,
+            quality: CompletionQuality::Done,
         }
     }
 
@@ -133,6 +156,9 @@ impl Task {
             description: description.into(),
             points,
             gutter_text: gutter_text.into(),
+            good_keys: 0,
+            perfect_keys: 0,
+            quality: CompletionQuality::Done,
         }
     }
 
@@ -157,6 +183,9 @@ impl Task {
             description: description.into(),
             points,
             gutter_text: gutter_text.into(),
+            good_keys: 0,
+            perfect_keys: 0,
+            quality: CompletionQuality::Done,
         }
     }
 
@@ -176,6 +205,9 @@ impl Task {
             description: description.into(),
             points,
             gutter_text: gutter_text.into(),
+            good_keys: 0,
+            perfect_keys: 0,
+            quality: CompletionQuality::Done,
         }
     }
 
@@ -199,6 +231,9 @@ impl Task {
             description: description.into(),
             points,
             gutter_text: gutter_text.into(),
+            good_keys: 0,
+            perfect_keys: 0,
+            quality: CompletionQuality::Done,
         }
     }
 
@@ -220,6 +255,9 @@ impl Task {
             description: description.into(),
             points,
             gutter_text: gutter_text.into(),
+            good_keys: 0,
+            perfect_keys: 0,
+            quality: CompletionQuality::Done,
         }
     }
 
@@ -238,6 +276,9 @@ impl Task {
             description: description.into(),
             points,
             gutter_text: gutter_text.into(),
+            good_keys: 0,
+            perfect_keys: 0,
+            quality: CompletionQuality::Done,
         }
     }
 
@@ -258,6 +299,9 @@ impl Task {
             description: description.into(),
             points,
             gutter_text: gutter_text.into(),
+            good_keys: 0,
+            perfect_keys: 0,
+            quality: CompletionQuality::Done,
         }
     }
 

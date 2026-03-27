@@ -41,6 +41,9 @@ pub struct SegmentTask {
     pub points: i64,
     #[serde(default)]
     pub optimal_keys: usize,
+    /// Absolute optimal keystrokes (best possible with any vim command).
+    #[serde(default)]
+    pub perfect_keys: usize,
     /// For change_word tasks: the new text to change to.
     #[serde(default)]
     pub new_text: Option<String>,

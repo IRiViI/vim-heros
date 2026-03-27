@@ -1,0 +1,28 @@
+# Energy Bar System — Tuning Config
+#
+# The energy bar is the core survival mechanic. Every keystroke drains energy,
+# completing tasks restores it. Hit 0 = game over.
+#
+# All values can be tweaked here without recompile.
+
+[energy]
+max = 100.0
+start = 100.0
+
+[energy.drain]
+keystroke_base = 1.0          # energy drained per keystroke
+time_drain_per_tick = 0.5     # energy drained per scroll tick (passive)
+
+[energy.restore]
+task_complete = 15.0          # energy restored on task completion
+task_optimal = 25.0           # energy restored on optimal completion (within keystroke budget)
+combo_bonus = 5.0             # extra energy per combo level (combo 3 = +15 extra)
+
+# Difficulty multipliers applied to drain and restore values.
+# Higher drain = harder. Lower restore = harder.
+[energy.difficulty_multipliers]
+nano_user = { drain = 0.5, restore = 1.5 }
+wq_survivor = { drain = 0.75, restore = 1.25 }
+keyboard_warrior = { drain = 1.0, restore = 1.0 }
+ten_x_engineer = { drain = 1.5, restore = 0.75 }
+uses_arch_btw = { drain = 2.0, restore = 0.5 }
