@@ -210,10 +210,10 @@ fn build_level_hints(ctx: &LevelContext) -> String {
 /// Comment separator between segments, keyed by language.
 fn separator(language: &str) -> &'static str {
     match language {
-        "python" => "\n# ---",
-        "typescript" | "javascript" => "\n// ---",
-        "rust" | "cpp" | "c" => "\n// ---",
-        _ => "\n// ---",
+        "python" => "\n# ---\n",
+        "typescript" | "javascript" => "\n// ---\n",
+        "rust" | "cpp" | "c" => "\n// ---\n",
+        _ => "\n// ---\n",
     }
 }
 

@@ -1,6 +1,6 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::content::assembler;
 use crate::content::loader;
@@ -203,6 +203,8 @@ pub struct App {
     level_index: usize,
     /// Keystrokes since last task completion (for per-task optimal tracking).
     task_keystrokes: usize,
+    /// When the last task was completed (for catch-up scroll delay).
+    last_task_completion: Option<Instant>,
 }
 
 impl App {
@@ -236,6 +238,7 @@ impl App {
             cmdline: None,
             level_index: 0,
             task_keystrokes: 0,
+            last_task_completion: None,
         }
     }
 
@@ -387,6 +390,64 @@ impl App {
             }
         }
 
+        // Catch-up scroll: if no incomplete task is visible and it's been >500ms
+        // since the last completion, jump the viewport to the next task.
+        let has_visible_incomplete = self.tasks.iter().any(|t| {
+            t.is_completable()
+                && t.target_line >= self.viewport.top_line
+                && t.target_line <= self.viewport.bottom_line()
+        });
+        let catchup_ready = self
+            .last_task_completion
+            .map(|t| t.elapsed() >= Duration::from_millis(500))
+            .unwrap_or(false);
+
+        if !has_visible_incomplete && catchup_ready {
+            let next_task_line = self
+                .tasks
+                .iter()
+                .filter(|t| t.is_completable() && t.target_line > self.viewport.bottom_line())
+                .map(|t| t.target_line)
+                .min();
+
+            if let Some(target_line) = next_task_line {
+                // Scroll so the task appears ~5 lines from the bottom
+                let desired_top =
+                    target_line.saturating_sub(self.viewport.height.saturating_sub(5));
+                let max_scroll = self
+                    .buffer
+                    .line_count()
+                    .saturating_sub(self.viewport.height);
+                let desired_top = desired_top.min(max_scroll);
+
+                while self.viewport.top_line < desired_top {
+                    self.viewport.scroll_down();
+                    self.scoring.award_survival();
+                }
+
+                // Move cursor with viewport so it doesn't get left behind
+                if self.cursor.line < self.viewport.top_line {
+                    self.cursor.line = self.viewport.top_line;
+                    self.cursor.col = 0;
+                }
+
+                // Activate tasks now in/near the viewport
+                let activation_bottom = self.viewport.bottom_line() + 5;
+                for task in &mut self.tasks {
+                    if task.state == TaskState::Pending
+                        && task.target_line >= self.viewport.top_line
+                        && task.target_line <= activation_bottom
+                    {
+                        task.mark_active();
+                    }
+                }
+
+                self.engine.record_scroll();
+                self.last_task_completion = None; // reset so it doesn't re-trigger
+                needs_render = true;
+            }
+        }
+
         // Check level complete: all tasks resolved (completed or missed)
         // and viewport has scrolled past the buffer
         let all_resolved = self.tasks.iter().all(|t| !t.is_completable());
@@ -462,6 +523,7 @@ impl App {
         self.last_macro_reg = None;
         self.cmdline = None;
         self.task_keystrokes = 0;
+        self.last_task_completion = None;
     }
 
     /// Move cursor (and viewport) by `lines` in a direction.
@@ -1195,6 +1257,7 @@ impl App {
                 self.scoring.complete_task(task.points);
                 self.energy.restore_task(is_great || is_perfect, self.scoring.combo);
                 self.task_keystrokes = 0;
+                self.last_task_completion = Some(Instant::now());
             }
         }
     }
