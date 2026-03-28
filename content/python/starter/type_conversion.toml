@@ -56,6 +56,7 @@ anchor = { pattern = "truncates", occurrence = 1 }
 description = "Move to 'truncates'"
 points = 50
 optimal_keys = 5
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -63,3 +64,4 @@ anchor = { pattern = "Boolean", occurrence = 1 }
 description = "Move to 'Boolean'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5

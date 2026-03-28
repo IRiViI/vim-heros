@@ -48,6 +48,7 @@ anchor = { pattern = "Shorthand", occurrence = 1 }
 description = "Move to 'Shorthand'"
 points = 50
 optimal_keys = 5
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -55,6 +56,7 @@ anchor = { pattern = "Negative", occurrence = 1 }
 description = "Move to 'Negative'"
 points = 75
 optimal_keys = 6
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -62,3 +64,4 @@ anchor = { pattern = "reversed_list", occurrence = 1 }
 description = "Move to 'reversed_list'"
 points = 75
 optimal_keys = 8
+perfect_keys = 5

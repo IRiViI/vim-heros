@@ -54,6 +54,7 @@ anchor = { pattern = "falsyValues", occurrence = 1 }
 description = "Move to 'falsyValues'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -61,3 +62,4 @@ anchor = { pattern = "displayName", occurrence = 1 }
 description = "Move to 'displayName'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5

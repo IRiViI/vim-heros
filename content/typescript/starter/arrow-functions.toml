@@ -41,6 +41,7 @@ anchor = { pattern = "double", occurrence = 1 }
 description = "Move to 'double'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -48,6 +49,7 @@ anchor = { pattern = "square", occurrence = 1 }
 description = "Move to 'square'"
 points = 50
 optimal_keys = 4
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -55,3 +57,4 @@ anchor = { pattern = "toUpperCase", occurrence = 1 }
 description = "Move to 'toUpperCase'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5

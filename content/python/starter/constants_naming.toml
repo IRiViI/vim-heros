@@ -54,6 +54,7 @@ anchor = { pattern = "UPPER_SNAKE_CASE", occurrence = 1 }
 description = "Move to 'UPPER_SNAKE_CASE'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -61,3 +62,4 @@ anchor = { pattern = "PascalCase", occurrence = 1 }
 description = "Move to 'PascalCase'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5

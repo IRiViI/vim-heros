@@ -71,7 +71,7 @@ pub enum CompletionQuality {
     /// Completed, but not within any optimal budget.
     Done,
     /// Completed within the world-constrained optimal budget.
-    Good,
+    Great,
     /// Completed within the absolute optimal budget.
     Perfect,
 }

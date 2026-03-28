@@ -47,6 +47,7 @@ anchor = { pattern = "Combine", occurrence = 1 }
 description = "Move to first 'Combine'"
 points = 50
 optimal_keys = 4
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -54,3 +55,4 @@ anchor = { pattern = "Unzipping", occurrence = 1 }
 description = "Move to 'Unzipping'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5

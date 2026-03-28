@@ -12,6 +12,14 @@ pub struct AssembledLevel {
     pub tasks: Vec<Task>,
 }
 
+/// Optional level context for generating hint comments in the runway.
+pub struct LevelContext {
+    pub world: usize,
+    pub level: usize,
+    pub name: String,
+    pub language: String,
+}
+
 /// Import runway pools per language. Each entry is one import line.
 /// The assembler randomly picks 5–10 of these to prepend before the first segment.
 fn import_pool(language: &str) -> Vec<&'static str> {
@@ -96,7 +104,7 @@ fn build_runway(language: &str) -> String {
     }
 
     let mut rng = thread_rng();
-    let count = 5 + (rand::random::<usize>() % 6); // 5..=10
+    let count = 3 + (rand::random::<usize>() % 3); // 3..=5
     let count = count.min(pool.len());
 
     let mut selected: Vec<&str> = pool.clone();
@@ -108,13 +116,104 @@ fn build_runway(language: &str) -> String {
     runway
 }
 
+/// Build a comment block explaining the key Vim motions for this level.
+/// Returns empty string if no level context is provided.
+fn build_level_hints(ctx: &LevelContext) -> String {
+    let comment = match ctx.language.as_str() {
+        "python" => "#",
+        _ => "//",
+    };
+
+    let motions: &[&str] = match (ctx.world, ctx.level) {
+        (1, 1) => &[
+            "h / l      move left / right",
+            "j / k      move down / up",
+            "w          jump to next word",
+            "b          jump back a word",
+        ],
+        (1, 2) => &[
+            "w / b      next word / back a word",
+            "e          jump to end of word",
+            "0 / $      start / end of line",
+            "f<char>    jump to character on line",
+        ],
+        (1, 3) => &[
+            "0 / $      start / end of line",
+            "^ / g_     first / last non-blank",
+            "gg / G     top / bottom of file",
+            "<n>G       go to line n",
+        ],
+        (2, 1) => &[
+            "x          delete character",
+            "dd         delete entire line",
+            "dw         delete word",
+            "D          delete to end of line",
+        ],
+        (2, 2) => &[
+            "yy         yank (copy) line",
+            "yw         yank word",
+            "p / P      paste after / before",
+            "dd + p     cut and paste a line",
+        ],
+        (3, 1) => &[
+            "f<c> / t<c>  find / till character",
+            ";            repeat last f/t",
+            "/pattern     search forward",
+            "n / N        next / prev match",
+        ],
+        (3, 2) => &[
+            "cw         change word",
+            "ci\"        change inside quotes",
+            "ci(        change inside parens",
+            "diw        delete inner word",
+        ],
+        (3, 3) => &[
+            "/pattern   search for text",
+            "n          jump to next match",
+            "dw / dd    delete word / line",
+            "combine search + delete for speed",
+        ],
+        (4, _) => &[
+            "combine all motions for speed!",
+            "f/t + ; for fast horizontal moves",
+            "/pattern for long-distance jumps",
+            "operator + motion = power",
+        ],
+        _ => &[
+            "h/j/k/l    basic movement",
+            "w/b/e      word motions",
+            "f<c>       find character",
+        ],
+    };
+
+    let bar = format!("{} {}", comment, "═".repeat(42));
+    let thin = format!("{} {}", comment, "─".repeat(42));
+
+    let mut lines = Vec::new();
+    lines.push(bar.clone());
+    lines.push(format!(
+        "{} LEVEL {}-{}: {}",
+        comment, ctx.world, ctx.level, ctx.name
+    ));
+    lines.push(thin);
+    lines.push(format!("{} KEY MOTIONS FOR ★★★:", comment));
+    for motion in motions {
+        lines.push(format!("{}   {}", comment, motion));
+    }
+    lines.push(bar);
+
+    let mut result = lines.join("\n");
+    result.push('\n');
+    result
+}
+
 /// Comment separator between segments, keyed by language.
 fn separator(language: &str) -> &'static str {
     match language {
-        "python" => "\n# ---\n",
-        "typescript" | "javascript" => "\n// ---\n",
-        "rust" | "cpp" | "c" => "\n// ---\n",
-        _ => "\n// ---\n",
+        "python" => "\n# ---",
+        "typescript" | "javascript" => "\n// ---",
+        "rust" | "cpp" | "c" => "\n// ---",
+        _ => "\n// ---",
     }
 }
 
@@ -142,8 +241,8 @@ pub fn select_segments<'a>(
 }
 
 /// Assemble selected segments into a single buffer with resolved tasks.
-/// Prepends an import runway (task-free lines) before the first segment.
-pub fn assemble(segments: &[&Segment]) -> AssembledLevel {
+/// Prepends level hints and an import runway (task-free lines) before the first segment.
+pub fn assemble(segments: &[&Segment], level_ctx: Option<&LevelContext>) -> AssembledLevel {
     if segments.is_empty() {
         return AssembledLevel {
             buffer: Buffer::from_str(""),
@@ -154,8 +253,12 @@ pub fn assemble(segments: &[&Segment]) -> AssembledLevel {
     let language = &segments[0].meta.language;
     let sep = separator(language);
 
-    // Start with import runway
-    let mut full_code = build_runway(language);
+    // Start with level hints (if context provided) + import runway
+    let mut full_code = String::new();
+    if let Some(ctx) = level_ctx {
+        full_code.push_str(&build_level_hints(ctx));
+    }
+    full_code.push_str(&build_runway(language));
     if !full_code.is_empty() {
         full_code.push_str(sep);
     }
@@ -192,10 +295,302 @@ pub fn assemble(segments: &[&Segment]) -> AssembledLevel {
     // Sort tasks top-to-bottom
     all_tasks.sort_by_key(|t| (t.target_line, t.target_col));
 
+    let buffer = Buffer::from_str(&full_code);
+
+    // Fill gaps larger than MAX_GAP lines with auto-generated navigation tasks
+    fill_gaps(&buffer, &mut all_tasks, MAX_GAP);
+
+    // Recalculate keystroke budgets based on available motions for this world
+    if let Some(ctx) = level_ctx {
+        recalculate_keystroke_budgets(&buffer, &mut all_tasks, ctx.world);
+    }
+
     AssembledLevel {
-        buffer: Buffer::from_str(&full_code),
+        buffer,
         tasks: all_tasks,
     }
+}
+
+/// Maximum gap (in lines) allowed between consecutive tasks before auto-fill kicks in.
+const MAX_GAP: usize = 10;
+
+/// Boring tokens to skip when auto-generating navigation tasks.
+const SKIP_TOKENS: &[&str] = &[
+    "import", "from", "def", "return", "class", "self", "None", "True", "False",
+    "const", "let", "var", "function", "return", "export", "default", "async",
+    "await", "type", "interface", "enum", "struct", "impl", "pub", "use", "mod",
+    "crate", "super", "where", "trait", "match", "else", "elif", "except",
+    "finally", "with", "pass", "break", "continue", "yield", "raise", "assert",
+    "print", "println", "console", "void", "null", "undefined", "typeof",
+    "instanceof", "this", "new", "try", "catch", "throw", "throws",
+];
+
+/// Fill gaps larger than `max_gap` lines between consecutive tasks by inserting
+/// auto-generated MoveTo tasks targeting interesting identifiers in the code.
+fn fill_gaps(buffer: &Buffer, tasks: &mut Vec<Task>, max_gap: usize) {
+    // Build list of (start_line, end_line) gaps to fill.
+    // Include gap before first task and after last task.
+    let mut gaps: Vec<(usize, usize)> = Vec::new();
+
+    if tasks.is_empty() {
+        return;
+    }
+
+    // Gap before first task
+    if tasks[0].target_line > max_gap {
+        gaps.push((0, tasks[0].target_line));
+    }
+
+    // Gaps between consecutive tasks
+    for i in 0..tasks.len() - 1 {
+        let gap_start = tasks[i].target_line;
+        let gap_end = tasks[i + 1].target_line;
+        if gap_end - gap_start > max_gap {
+            gaps.push((gap_start + 1, gap_end));
+        }
+    }
+
+    // Gap after last task (no need — level ends soon after last task)
+
+    let mut new_tasks: Vec<Task> = Vec::new();
+
+    for (gap_start, gap_end) in gaps {
+        let gap_size = gap_end - gap_start;
+        // How many filler tasks to inject: roughly 1 per max_gap lines
+        let fill_count = gap_size / max_gap;
+        if fill_count == 0 {
+            continue;
+        }
+
+        // Collect candidate tokens from lines in this gap
+        let mut candidates: Vec<(usize, usize, String)> = Vec::new(); // (line, col, token)
+        for line_idx in gap_start..gap_end {
+            if let Some(line_text) = buffer.line(line_idx) {
+                let trimmed = line_text.trim();
+                // Skip empty lines, comment-only lines, separator lines
+                if trimmed.is_empty()
+                    || trimmed.starts_with('#')
+                    || trimmed.starts_with("//")
+                    || trimmed == "---"
+                {
+                    continue;
+                }
+                // Extract word-like tokens
+                for token in extract_identifiers(&line_text) {
+                    if token.text.len() >= 4
+                        && !SKIP_TOKENS.contains(&token.text.as_str())
+                    {
+                        candidates.push((line_idx, token.col, token.text));
+                    }
+                }
+            }
+        }
+
+        if candidates.is_empty() {
+            continue;
+        }
+
+        // Pick candidates at roughly even intervals through the gap
+        let step = candidates.len() / (fill_count + 1);
+        if step == 0 {
+            // Not enough candidates; just pick the middle one
+            let mid = candidates.len() / 2;
+            let (line, col, ref token) = candidates[mid];
+            new_tasks.push(Task::move_to(
+                line,
+                col,
+                format!("Navigate to '{}'", token),
+                "NAV",
+                25,
+            ));
+        } else {
+            for i in 0..fill_count {
+                let idx = step * (i + 1);
+                let idx = idx.min(candidates.len() - 1);
+                let (line, col, ref token) = candidates[idx];
+                new_tasks.push(Task::move_to(
+                    line,
+                    col,
+                    format!("Navigate to '{}'", token),
+                    "NAV",
+                    25,
+                ));
+            }
+        }
+    }
+
+    tasks.extend(new_tasks);
+    tasks.sort_by_key(|t| (t.target_line, t.target_col));
+}
+
+/// Recalculate keystroke budgets for MoveTo tasks based on actual distance between
+/// consecutive tasks and which Vim motions are available.
+///
+/// `perfect_keys` = absolute optimal (any Vim motion: count prefixes, f/t, /search).
+///   Computed from actual distance. Takes the min of computed vs TOML (only tighter).
+///
+/// `good_keys` = world-constrained optimal + buffer.
+///   World 1-2: basic motions only (h/j/k/l/w/b/e, no count prefixes, no f/t, no search).
+///   World 3+:  keeps TOML values (player has f/t, /search).
+fn recalculate_keystroke_budgets(buffer: &Buffer, tasks: &mut [Task], world: usize) {
+    use crate::game::task::TaskKind;
+
+    if tasks.is_empty() {
+        return;
+    }
+
+    let mut prev_line: usize = 0;
+
+    for task in tasks.iter_mut() {
+        if task.kind != TaskKind::MoveTo {
+            prev_line = task.target_line;
+            continue;
+        }
+
+        let line_dist = if task.target_line >= prev_line {
+            task.target_line - prev_line
+        } else {
+            prev_line - task.target_line
+        };
+
+        let word_hops = count_word_hops_to_col(buffer, task.target_line, task.target_col);
+
+        // --- perfect_keys: absolute optimal (all motions, all worlds) ---
+        // Vertical: count prefix + j/k (e.g., "3j" = 2 keys, "15j" = 3 keys)
+        let vertical_perfect = if line_dist == 0 {
+            0
+        } else if line_dist == 1 {
+            1 // just "j" or "k"
+        } else {
+            digit_count(line_dist) + 1 // e.g., "3j" = 2, "12j" = 3
+        };
+        // Horizontal: f<char> = 2 keys if not at col 0, else 0
+        let horizontal_perfect = if word_hops == 0 {
+            0
+        } else {
+            word_hops.min(2) // f<char> is 2 keys and usually available
+        };
+        let computed_perfect = vertical_perfect + horizontal_perfect;
+
+        // Only tighten: use the minimum of computed vs TOML
+        if task.perfect_keys == 0 || computed_perfect < task.perfect_keys {
+            task.perfect_keys = computed_perfect;
+        }
+
+        // --- good_keys: world-constrained optimal ---
+        if world <= 2 {
+            // World 1-2: no count prefixes, no f/t, no search.
+            // Vertical: one j/k per line. Horizontal: one w per word boundary.
+            let world_optimal = line_dist + word_hops;
+            let good = world_optimal + 2; // small buffer for imperfect play
+
+            // Only widen: use the max of computed vs TOML
+            if good > task.good_keys {
+                task.good_keys = good;
+            }
+        }
+
+        prev_line = task.target_line;
+    }
+}
+
+/// Number of decimal digits in a positive integer (e.g., 3 → 1, 12 → 2, 100 → 3).
+fn digit_count(n: usize) -> usize {
+    if n == 0 {
+        return 1;
+    }
+    let mut count = 0;
+    let mut v = n;
+    while v > 0 {
+        count += 1;
+        v /= 10;
+    }
+    count
+}
+
+/// Count the minimum number of 'w' (word-forward) presses needed to reach
+/// `target_col` from column 0 on the given line. Returns 0 if target is at col 0.
+fn count_word_hops_to_col(buffer: &Buffer, line_idx: usize, target_col: usize) -> usize {
+    if target_col == 0 {
+        return 0;
+    }
+
+    let line = match buffer.line(line_idx) {
+        Some(l) => l,
+        None => return 0,
+    };
+
+    let chars: Vec<char> = line.chars().collect();
+    if chars.is_empty() {
+        return 0;
+    }
+
+    // Simulate word-forward motion: skip current word, skip whitespace, land on next word start
+    let mut col = 0;
+    let mut hops = 0;
+
+    while col < target_col && col < chars.len() {
+        // Skip current word (non-whitespace, same word class)
+        let start_is_alnum = chars[col].is_alphanumeric() || chars[col] == '_';
+        if start_is_alnum {
+            while col < chars.len() && (chars[col].is_alphanumeric() || chars[col] == '_') {
+                col += 1;
+            }
+        } else if !chars[col].is_whitespace() {
+            // Punctuation word
+            while col < chars.len() && !chars[col].is_whitespace()
+                && !(chars[col].is_alphanumeric() || chars[col] == '_')
+            {
+                col += 1;
+            }
+        }
+        // Skip whitespace
+        while col < chars.len() && chars[col].is_whitespace() {
+            col += 1;
+        }
+        hops += 1;
+
+        if col >= target_col {
+            break;
+        }
+    }
+
+    hops
+}
+
+/// A token found in a line of code.
+struct Token {
+    col: usize,
+    text: String,
+}
+
+/// Extract identifier-like tokens from a line of code.
+fn extract_identifiers(line: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let mut chars = line.char_indices().peekable();
+
+    while let Some(&(i, c)) = chars.peek() {
+        if c.is_alphabetic() || c == '_' {
+            let start = i;
+            let mut end = i;
+            let mut text = String::new();
+            while let Some(&(j, ch)) = chars.peek() {
+                if ch.is_alphanumeric() || ch == '_' {
+                    text.push(ch);
+                    end = j;
+                    chars.next();
+                } else {
+                    break;
+                }
+            }
+            let _ = end; // suppress unused warning
+            tokens.push(Token { col: start, text });
+        } else {
+            chars.next();
+        }
+    }
+
+    tokens
 }
 
 /// Resolve a segment task's anchor to an absolute position and create a Task.
@@ -360,7 +755,7 @@ points = 50
     #[test]
     fn test_assemble_single_segment() {
         let seg = make_segment("s1", "name = \"Alice\"", "Alice");
-        let result = assemble(&[&seg]);
+        let result = assemble(&[&seg], None);
         assert!(result.buffer.line_count() >= 1);
         assert_eq!(result.tasks.len(), 1);
         assert_eq!(result.tasks[0].description, "Move to 'Alice'");
@@ -370,7 +765,7 @@ points = 50
     fn test_assemble_multiple_segments() {
         let s1 = make_segment("s1", "x = 1\ny = 2", "x");
         let s2 = make_segment("s2", "a = 10\nb = 20", "b");
-        let result = assemble(&[&s1, &s2]);
+        let result = assemble(&[&s1, &s2], None);
 
         assert_eq!(result.tasks.len(), 2);
         // First task should be on an earlier line than the second
@@ -379,7 +774,7 @@ points = 50
 
     #[test]
     fn test_assemble_empty() {
-        let result = assemble(&[]);
+        let result = assemble(&[], None);
         assert_eq!(result.tasks.len(), 0);
     }
 

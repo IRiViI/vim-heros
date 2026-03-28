@@ -55,6 +55,7 @@ anchor = { pattern = "Address", occurrence = 1 }
 description = "Move to 'Address'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -62,6 +63,7 @@ anchor = { pattern = "Customer", occurrence = 1 }
 description = "Move to 'Customer'"
 points = 50
 optimal_keys = 5
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -69,3 +71,4 @@ anchor = { pattern = "emailLength", occurrence = 1 }
 description = "Move to 'emailLength'"
 points = 75
 optimal_keys = 8
+perfect_keys = 5

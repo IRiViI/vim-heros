@@ -49,6 +49,7 @@ anchor = { pattern = "Arithmetic", occurrence = 1 }
 description = "Move to 'Arithmetic'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -56,6 +57,7 @@ anchor = { pattern = "floor_division", occurrence = 1 }
 description = "Move to 'floor_division'"
 points = 75
 optimal_keys = 6
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -63,3 +65,4 @@ anchor = { pattern = "Augmented", occurrence = 1 }
 description = "Move to 'Augmented'"
 points = 75
 optimal_keys = 8
+perfect_keys = 5

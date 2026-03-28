@@ -46,6 +46,7 @@ anchor = { pattern = "fahrenheit_to_celsius", occurrence = 1 }
 description = "Move to 'fahrenheit_to_celsius'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -53,3 +54,4 @@ anchor = { pattern = "boiling_f", occurrence = 1 }
 description = "Move to 'boiling_f'"
 points = 75
 optimal_keys = 6
+perfect_keys = 4

@@ -3,7 +3,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
-use crate::app::App;
+use crate::app::{App, GameOverReason};
 use crate::game::engine::GameState;
 use crate::game::task::{CompletionQuality, Task, TaskState};
 use crate::vim::mode::Mode;
@@ -140,7 +140,7 @@ fn task_char_style(task: &Task) -> Style {
         (TaskState::Completed, CompletionQuality::Perfect) => {
             Style::default().bg(GOLD).fg(Color::Black).add_modifier(Modifier::BOLD)
         }
-        (TaskState::Completed, CompletionQuality::Good) => {
+        (TaskState::Completed, CompletionQuality::Great) => {
             Style::default().bg(Color::Cyan).fg(Color::Black).add_modifier(Modifier::BOLD)
         }
         (TaskState::Completed, CompletionQuality::Done) => {
@@ -163,8 +163,8 @@ fn task_annotation(task: &Task) -> (String, Color) {
             " \u{2605} PERFECT ".to_string(),
             GOLD,
         ),
-        (TaskState::Completed, CompletionQuality::Good) => (
-            " \u{2713} GOOD ".to_string(),
+        (TaskState::Completed, CompletionQuality::Great) => (
+            " \u{2713} GREAT ".to_string(),
             Color::Cyan,
         ),
         (TaskState::Completed, CompletionQuality::Done) => (
@@ -514,6 +514,13 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         ("GAME OVER", Color::Red, Color::Red, " Results ")
     };
 
+    let reason_text = match app.game_over_reason {
+        GameOverReason::MissedTask => "Task missed!",
+        GameOverReason::CursorOffScreen => "Cursor left the screen!",
+        GameOverReason::EnergyDepleted => "Out of energy!",
+        GameOverReason::None => "",
+    };
+
     let text = vec![
         Line::from(""),
         Line::from(Span::styled(
@@ -522,6 +529,14 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
                 .fg(title_color)
                 .add_modifier(Modifier::BOLD),
         )),
+        if reason_text.is_empty() {
+            Line::from("")
+        } else {
+            Line::from(Span::styled(
+                reason_text,
+                Style::default().fg(Color::Red),
+            ))
+        },
         Line::from(""),
         Line::from(Span::styled(
             stars,
@@ -550,9 +565,9 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             },
         ]),
         Line::from(vec![
-            Span::styled("Good: ", Style::default().fg(Color::DarkGray)),
+            Span::styled("Great: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                format!("{}", s.tasks_good),
+                format!("{}", s.tasks_great),
                 Style::default().fg(Color::Cyan),
             ),
             Span::styled("  Perfect: ", Style::default().fg(Color::DarkGray)),

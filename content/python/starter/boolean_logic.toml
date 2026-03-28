@@ -58,6 +58,7 @@ anchor = { pattern = "Logical", occurrence = 1 }
 description = "Move to first 'Logical'"
 points = 50
 optimal_keys = 4
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -65,6 +66,7 @@ anchor = { pattern = "Truthiness", occurrence = 1 }
 description = "Move to 'Truthiness'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5
 
 [[tasks]]
 type = "move_to"
@@ -72,3 +74,4 @@ anchor = { pattern = "Anonymous", occurrence = 1 }
 description = "Move to 'Anonymous'"
 points = 75
 optimal_keys = 9
+perfect_keys = 5

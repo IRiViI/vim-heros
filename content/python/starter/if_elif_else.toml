@@ -50,6 +50,7 @@ anchor = { pattern = "temperature", occurrence = 1 }
 description = "Move to 'temperature'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -57,6 +58,7 @@ anchor = { pattern = "grade", occurrence = 1 }
 description = "Move to first 'grade'"
 points = 50
 optimal_keys = 6
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -64,3 +66,4 @@ anchor = { pattern = "license", occurrence = 1 }
 description = "Move to 'license'"
 points = 75
 optimal_keys = 8
+perfect_keys = 5

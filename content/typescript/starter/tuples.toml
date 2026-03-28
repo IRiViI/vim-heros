@@ -46,6 +46,7 @@ anchor = { pattern = "coordinate", occurrence = 1 }
 description = "Move to 'coordinate'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -53,3 +54,4 @@ anchor = { pattern = "divide", occurrence = 1 }
 description = "Move to 'divide'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5

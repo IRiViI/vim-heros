@@ -52,6 +52,7 @@ anchor = { pattern = "appName", occurrence = 1 }
 description = "Move to 'appName'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -59,3 +60,4 @@ anchor = { pattern = "config", occurrence = 1 }
 description = "Move to 'config'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5

@@ -26,6 +26,7 @@ anchor = { pattern = "cherry", occurrence = 1 }
 description = "Move to 'cherry'"
 points = 50
 optimal_keys = 5
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -33,3 +34,4 @@ anchor = { pattern = "average", occurrence = 1 }
 description = "Move to 'average'"
 points = 75
 optimal_keys = 6
+perfect_keys = 4

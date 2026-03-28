@@ -53,6 +53,7 @@ anchor = { pattern = "duplicates", occurrence = 1 }
 description = "Move to 'duplicates'"
 points = 50
 optimal_keys = 5
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -60,6 +61,7 @@ anchor = { pattern = "intersection", occurrence = 1 }
 description = "Move to 'intersection'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5
 
 [[tasks]]
 type = "move_to"
@@ -67,3 +69,4 @@ anchor = { pattern = "Membership", occurrence = 1 }
 description = "Move to 'Membership'"
 points = 75
 optimal_keys = 8
+perfect_keys = 5

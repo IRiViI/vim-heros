@@ -45,6 +45,7 @@ anchor = { pattern = "numbers", occurrence = 1 }
 description = "Move to 'numbers'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -52,6 +53,7 @@ anchor = { pattern = "sentence", occurrence = 1 }
 description = "Move to 'sentence'"
 points = 75
 optimal_keys = 6
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -59,3 +61,4 @@ anchor = { pattern = "highest", occurrence = 1 }
 description = "Move to 'highest'"
 points = 50
 optimal_keys = 4
+perfect_keys = 3

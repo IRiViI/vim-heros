@@ -50,6 +50,7 @@ anchor = { pattern = "backwards", occurrence = 1 }
 description = "Move to 'backwards'"
 points = 50
 optimal_keys = 5
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -57,3 +58,4 @@ anchor = { pattern = "repetition", occurrence = 1 }
 description = "Move to 'repetition'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5

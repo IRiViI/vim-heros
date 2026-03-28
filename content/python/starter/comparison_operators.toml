@@ -57,6 +57,7 @@ anchor = { pattern = "Chained", occurrence = 1 }
 description = "Move to 'Chained'"
 points = 50
 optimal_keys = 5
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -64,3 +65,4 @@ anchor = { pattern = "Identity", occurrence = 1 }
 description = "Move to 'Identity'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5

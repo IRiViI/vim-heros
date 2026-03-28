@@ -52,6 +52,7 @@ anchor = { pattern = "swapcase", occurrence = 1 }
 description = "Move to 'swapcase'"
 points = 50
 optimal_keys = 5
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -59,3 +60,4 @@ anchor = { pattern = "Replacing", occurrence = 1 }
 description = "Move to 'Replacing'"
 points = 75
 optimal_keys = 7
+perfect_keys = 5

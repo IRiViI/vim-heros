@@ -26,6 +26,7 @@ anchor = { pattern = "uppercase", occurrence = 1 }
 description = "Move to 'uppercase'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -33,3 +34,4 @@ anchor = { pattern = "capitalized", occurrence = 1 }
 description = "Move to 'capitalized'"
 points = 75
 optimal_keys = 5
+perfect_keys = 4

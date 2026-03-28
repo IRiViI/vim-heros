@@ -59,6 +59,7 @@ anchor = { pattern = "Direction", occurrence = 1 }
 description = "Move to 'Direction'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -66,6 +67,7 @@ anchor = { pattern = "HttpCode", occurrence = 1 }
 description = "Move to 'HttpCode'"
 points = 75
 optimal_keys = 6
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -73,3 +75,4 @@ anchor = { pattern = "handleStatus", occurrence = 1 }
 description = "Move to 'handleStatus'"
 points = 50
 optimal_keys = 5
+perfect_keys = 4

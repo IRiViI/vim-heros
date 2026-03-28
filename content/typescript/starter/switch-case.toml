@@ -44,6 +44,7 @@ anchor = { pattern = "dayOfWeek", occurrence = 1 }
 description = "Move to 'dayOfWeek'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -51,3 +52,4 @@ anchor = { pattern = "schedule", occurrence = 1 }
 description = "Move to 'schedule'"
 points = 75
 optimal_keys = 5
+perfect_keys = 4

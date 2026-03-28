@@ -47,6 +47,7 @@ anchor = { pattern = "immutable", occurrence = 1 }
 description = "Move to 'immutable'"
 points = 50
 optimal_keys = 4
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -54,3 +55,4 @@ anchor = { pattern = "singleton", occurrence = 1 }
 description = "Move to 'singleton'"
 points = 75
 optimal_keys = 6
+perfect_keys = 4

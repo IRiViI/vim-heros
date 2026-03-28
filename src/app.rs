@@ -156,6 +156,19 @@ struct RepeatableEdit {
     insert_text: Vec<char>,
 }
 
+/// Why the game ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GameOverReason {
+    /// Cursor scrolled above the viewport.
+    CursorOffScreen,
+    /// Energy bar reached 0.
+    EnergyDepleted,
+    /// A task scrolled past without completion.
+    MissedTask,
+    /// Not game over (or level complete).
+    None,
+}
+
 pub struct App {
     pub buffer: Buffer,
     pub cursor: Cursor,
@@ -165,6 +178,7 @@ pub struct App {
     pub engine: Engine,
     pub scoring: Scoring,
     pub energy: Energy,
+    pub game_over_reason: GameOverReason,
     pub tasks: Vec<Task>,
     pub level: LevelInfo,
     parser: CommandParser,
@@ -205,6 +219,7 @@ impl App {
             engine: Engine::new(level.scroll_speed_ms),
             scoring: Scoring::new(tasks_total),
             energy: Energy::default_new(),
+            game_over_reason: GameOverReason::None,
             tasks,
             level,
             parser: CommandParser::new(),
@@ -240,7 +255,13 @@ impl App {
 
         let selected = assembler::select_segments(&pool, SEGMENTS_PER_LEVEL, recently_seen);
         let ids: Vec<String> = selected.iter().map(|s| s.meta.id.clone()).collect();
-        let assembled = assembler::assemble(&selected);
+        let ctx = assembler::LevelContext {
+            world: level.world,
+            level: level.level,
+            name: level.name.clone(),
+            language: level.language.clone(),
+        };
+        let assembled = assembler::assemble(&selected, Some(&ctx));
         (assembled.buffer, assembled.tasks, ids)
     }
 
@@ -335,18 +356,22 @@ impl App {
             // Game over: cursor scrolled above viewport
             if self.cursor.line < self.viewport.top_line {
                 self.engine.state = GameState::GameOver;
+                self.game_over_reason = GameOverReason::CursorOffScreen;
             }
 
             // Game over: energy depleted
             if self.energy.is_depleted() {
                 self.engine.state = GameState::GameOver;
+                self.game_over_reason = GameOverReason::EnergyDepleted;
             }
 
-            // Check for missed tasks (scrolled above viewport)
+            // Check for missed tasks (scrolled above viewport) — instant game over
             for task in &mut self.tasks {
                 if task.is_completable() && task.target_line < self.viewport.top_line {
                     task.mark_missed();
                     self.scoring.miss_task();
+                    self.engine.state = GameState::GameOver;
+                    self.game_over_reason = GameOverReason::MissedTask;
                 }
             }
 
@@ -424,6 +449,7 @@ impl App {
         self.engine.reset();
         self.scoring.reset(self.tasks.len());
         self.energy.reset();
+        self.game_over_reason = GameOverReason::None;
         self.parser = CommandParser::new();
         self.registers = RegisterFile::new();
         self.undo = UndoHistory::new();
@@ -1154,20 +1180,20 @@ impl App {
             if completed {
                 use crate::game::task::CompletionQuality;
                 task.mark_completed();
-                // Determine completion quality: Perfect > Good > Done
+                // Determine completion quality: Perfect > Great > Done
                 let is_perfect = task.perfect_keys > 0
                     && self.task_keystrokes <= task.perfect_keys;
-                let is_good = task.good_keys > 0
+                let is_great = task.good_keys > 0
                     && self.task_keystrokes <= task.good_keys;
                 if is_perfect {
                     task.quality = CompletionQuality::Perfect;
                     self.scoring.award_perfect();
-                } else if is_good {
-                    task.quality = CompletionQuality::Good;
-                    self.scoring.award_good();
+                } else if is_great {
+                    task.quality = CompletionQuality::Great;
+                    self.scoring.award_great();
                 }
                 self.scoring.complete_task(task.points);
-                self.energy.restore_task(is_good || is_perfect, self.scoring.combo);
+                self.energy.restore_task(is_great || is_perfect, self.scoring.combo);
                 self.task_keystrokes = 0;
             }
         }

@@ -55,6 +55,7 @@ anchor = { pattern = "remainder", occurrence = 1 }
 description = "Move to 'remainder'"
 points = 50
 optimal_keys = 3
+perfect_keys = 3
 
 [[tasks]]
 type = "move_to"
@@ -62,6 +63,7 @@ anchor = { pattern = "divisible", occurrence = 1 }
 description = "Move to 'divisible'"
 points = 50
 optimal_keys = 5
+perfect_keys = 4
 
 [[tasks]]
 type = "move_to"
@@ -69,3 +71,4 @@ anchor = { pattern = "Extract", occurrence = 1 }
 description = "Move to 'Extract'"
 points = 75
 optimal_keys = 8
+perfect_keys = 5
