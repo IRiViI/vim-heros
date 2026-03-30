@@ -16,6 +16,8 @@ pub struct Engine {
     pub state: GameState,
     pub score: i64,
     pub scroll_speed: Duration,
+    /// When true, scroll speed is 10x faster to catch up to the next task.
+    pub catching_up: bool,
     last_scroll: Instant,
     start_time: Instant,
     countdown_start: Instant,
@@ -28,6 +30,7 @@ impl Engine {
             state: GameState::Countdown,
             score: 0,
             scroll_speed: Duration::from_millis(scroll_speed_ms),
+            catching_up: false,
             last_scroll: now,
             start_time: now,
             countdown_start: now,
@@ -59,15 +62,24 @@ impl Engine {
         }
     }
 
+    /// Current effective scroll speed, accounting for catch-up mode.
+    fn effective_scroll_speed(&self) -> Duration {
+        if self.catching_up {
+            self.scroll_speed / 10
+        } else {
+            self.scroll_speed
+        }
+    }
+
     /// Time remaining until the next scroll tick.
     pub fn time_until_next_scroll(&self) -> Duration {
         let elapsed = self.last_scroll.elapsed();
-        self.scroll_speed.saturating_sub(elapsed)
+        self.effective_scroll_speed().saturating_sub(elapsed)
     }
 
     /// Returns true if a scroll tick is due.
     pub fn should_scroll(&self) -> bool {
-        self.last_scroll.elapsed() >= self.scroll_speed
+        self.last_scroll.elapsed() >= self.effective_scroll_speed()
     }
 
     /// Mark that a scroll tick occurred.
@@ -85,6 +97,7 @@ impl Engine {
         let now = Instant::now();
         self.state = GameState::Countdown;
         self.score = 0;
+        self.catching_up = false;
         self.last_scroll = now;
         self.start_time = now;
         self.countdown_start = now;

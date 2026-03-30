@@ -91,6 +91,8 @@ pub struct Task {
     pub perfect_keys: usize,
     /// How well this task was completed.
     pub quality: CompletionQuality,
+    /// Precomputed hint for practice mode (world-appropriate command suggestion).
+    pub hint_command: String,
 }
 
 impl Task {
@@ -112,6 +114,7 @@ impl Task {
             good_keys: 0,
             perfect_keys: 0,
             quality: CompletionQuality::Done,
+            hint_command: String::new(),
         }
     }
 
@@ -135,6 +138,7 @@ impl Task {
             good_keys: 0,
             perfect_keys: 0,
             quality: CompletionQuality::Done,
+            hint_command: String::new(),
         }
     }
 
@@ -159,6 +163,7 @@ impl Task {
             good_keys: 0,
             perfect_keys: 0,
             quality: CompletionQuality::Done,
+            hint_command: String::new(),
         }
     }
 
@@ -186,6 +191,7 @@ impl Task {
             good_keys: 0,
             perfect_keys: 0,
             quality: CompletionQuality::Done,
+            hint_command: String::new(),
         }
     }
 
@@ -208,6 +214,7 @@ impl Task {
             good_keys: 0,
             perfect_keys: 0,
             quality: CompletionQuality::Done,
+            hint_command: String::new(),
         }
     }
 
@@ -234,6 +241,7 @@ impl Task {
             good_keys: 0,
             perfect_keys: 0,
             quality: CompletionQuality::Done,
+            hint_command: String::new(),
         }
     }
 
@@ -258,6 +266,7 @@ impl Task {
             good_keys: 0,
             perfect_keys: 0,
             quality: CompletionQuality::Done,
+            hint_command: String::new(),
         }
     }
 
@@ -279,6 +288,7 @@ impl Task {
             good_keys: 0,
             perfect_keys: 0,
             quality: CompletionQuality::Done,
+            hint_command: String::new(),
         }
     }
 
@@ -302,6 +312,7 @@ impl Task {
             good_keys: 0,
             perfect_keys: 0,
             quality: CompletionQuality::Done,
+            hint_command: String::new(),
         }
     }
 
@@ -324,6 +335,46 @@ impl Task {
     pub fn mark_missed(&mut self) {
         if self.is_completable() {
             self.state = TaskState::Missed;
+        }
+    }
+
+    /// Derive the expected vim command from the task kind.
+    /// Returns the precomputed hint if set (by the assembler), otherwise falls back
+    /// to a generic derivation from the TaskKind.
+    pub fn expected_command(&self) -> String {
+        if !self.hint_command.is_empty() {
+            return self.hint_command.clone();
+        }
+        match &self.kind {
+            TaskKind::MoveTo => {
+                // Fallback for tasks not processed by assembler (e.g., hardcoded tasks).
+                let pattern = self.description.as_str()
+                    .trim_start_matches("Move to '")
+                    .trim_start_matches("Navigate to '")
+                    .trim_end_matches('\'');
+                format!("/{}", pattern)
+            }
+            TaskKind::DeleteLine { .. } => "dd".to_string(),
+            TaskKind::DeleteWord { .. } => "dw".to_string(),
+            TaskKind::ChangeWord { new_text, .. } => {
+                format!("cw{}<Esc>", new_text)
+            }
+            TaskKind::ReplaceChar { expected } => {
+                format!("r{}", expected)
+            }
+            TaskKind::ChangeInside { delimiter, new_text } => {
+                format!("ci{}{}<Esc>", delimiter, new_text)
+            }
+            TaskKind::YankPaste { .. } => "yy p".to_string(),
+            TaskKind::DeleteBlock { original_lines } => {
+                let count = original_lines.len();
+                if count > 1 {
+                    format!("{}dd", count)
+                } else {
+                    "dd".to_string()
+                }
+            }
+            TaskKind::Indent { .. } => ">> or <<".to_string(),
         }
     }
 }

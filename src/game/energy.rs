@@ -1,183 +1,106 @@
-use serde::Deserialize;
+use std::time::{Duration, Instant};
 
-/// Difficulty multipliers for energy drain and restore rates.
-#[derive(Debug, Clone, Deserialize)]
-pub struct DifficultyMultiplier {
-    pub drain: f64,
-    pub restore: f64,
-}
+/// Default time limit per task (seconds).
+const DEFAULT_TIMER_SECS: f64 = 20.0;
 
-/// Configuration for the energy system, loaded from TOML.
-#[derive(Debug, Clone, Deserialize)]
-pub struct EnergyConfig {
-    pub max: f64,
-    pub start: f64,
-    pub drain: DrainConfig,
-    pub restore: RestoreConfig,
-    pub difficulty_multipliers: DifficultyMultipliers,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct DrainConfig {
-    pub keystroke_base: f64,
-    pub time_drain_per_tick: f64,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct RestoreConfig {
-    pub task_complete: f64,
-    pub task_optimal: f64,
-    pub combo_bonus: f64,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct DifficultyMultipliers {
-    pub nano_user: DifficultyMultiplier,
-    pub wq_survivor: DifficultyMultiplier,
-    pub keyboard_warrior: DifficultyMultiplier,
-    pub ten_x_engineer: DifficultyMultiplier,
-    pub uses_arch_btw: DifficultyMultiplier,
-}
-
-impl Default for EnergyConfig {
-    fn default() -> Self {
-        Self {
-            max: 100.0,
-            start: 100.0,
-            drain: DrainConfig {
-                keystroke_base: 1.0,
-                time_drain_per_tick: 0.5,
-            },
-            restore: RestoreConfig {
-                task_complete: 15.0,
-                task_optimal: 25.0,
-                combo_bonus: 5.0,
-            },
-            difficulty_multipliers: DifficultyMultipliers {
-                nano_user: DifficultyMultiplier { drain: 0.5, restore: 1.5 },
-                wq_survivor: DifficultyMultiplier { drain: 0.75, restore: 1.25 },
-                keyboard_warrior: DifficultyMultiplier { drain: 1.0, restore: 1.0 },
-                ten_x_engineer: DifficultyMultiplier { drain: 1.5, restore: 0.75 },
-                uses_arch_btw: DifficultyMultiplier { drain: 2.0, restore: 0.5 },
-            },
-        }
-    }
-}
-
-/// Difficulty level selection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Difficulty {
-    NanoUser,
-    WqSurvivor,
-    KeyboardWarrior,
-    TenXEngineer,
-    UsesArchBtw,
-}
-
-impl Difficulty {
-    pub fn name(&self) -> &'static str {
-        match self {
-            Difficulty::NanoUser => "Nano User",
-            Difficulty::WqSurvivor => ":wq Survivor",
-            Difficulty::KeyboardWarrior => "Keyboard Warrior",
-            Difficulty::TenXEngineer => "10x Engineer",
-            Difficulty::UsesArchBtw => "Uses Arch btw",
-        }
-    }
-
-    fn multiplier<'a>(&self, config: &'a EnergyConfig) -> &'a DifficultyMultiplier {
-        match self {
-            Difficulty::NanoUser => &config.difficulty_multipliers.nano_user,
-            Difficulty::WqSurvivor => &config.difficulty_multipliers.wq_survivor,
-            Difficulty::KeyboardWarrior => &config.difficulty_multipliers.keyboard_warrior,
-            Difficulty::TenXEngineer => &config.difficulty_multipliers.ten_x_engineer,
-            Difficulty::UsesArchBtw => &config.difficulty_multipliers.uses_arch_btw,
-        }
-    }
-}
-
-/// The energy bar — core survival mechanic.
+/// A countdown timer — the core survival mechanic.
 ///
-/// Energy drains on every keystroke and every scroll tick.
-/// Completing tasks restores energy. Hit 0 = game over.
+/// The timer counts down in real time. Completing a task resets it.
+/// If the timer reaches 0 the game is over.
 pub struct Energy {
-    pub current: f64,
-    pub max: f64,
-    config: EnergyConfig,
-    difficulty: Difficulty,
-    /// Last energy restore amount, for "+N" popup display.
+    /// Maximum seconds on the clock (reset value).
+    pub max_seconds: f64,
+    /// When the timer was last reset (game start or task completion).
+    last_reset: Instant,
+    /// Paused duration accumulator (for countdown phase).
+    paused_duration: Duration,
+    /// Whether the timer is currently paused.
+    paused: bool,
+    /// Last restore info for "+time" popup display.
     pub last_restore: Option<f64>,
 }
 
 impl Energy {
-    pub fn new(config: EnergyConfig, difficulty: Difficulty) -> Self {
-        let max = config.max;
-        let start = config.start.min(max);
+    pub fn new(max_seconds: f64) -> Self {
         Self {
-            current: start,
-            max,
-            config,
-            difficulty,
+            max_seconds,
+            last_reset: Instant::now(),
+            paused_duration: Duration::ZERO,
+            paused: true, // Start paused (countdown phase)
             last_restore: None,
         }
     }
 
-    /// Create with default config and keyboard warrior difficulty.
+    /// Create with default timer duration.
     pub fn default_new() -> Self {
-        Self::new(EnergyConfig::default(), Difficulty::KeyboardWarrior)
+        Self::new(DEFAULT_TIMER_SECS)
     }
 
-    /// Drain energy for a keystroke. Returns the amount drained.
-    pub fn drain_keystroke(&mut self) -> f64 {
-        let mult = self.difficulty.multiplier(&self.config);
-        let drain = self.config.drain.keystroke_base * mult.drain;
-        self.current = (self.current - drain).max(0.0);
-        self.last_restore = None;
-        drain
-    }
-
-    /// Drain energy for a scroll tick (passive time drain).
-    pub fn drain_tick(&mut self) -> f64 {
-        let mult = self.difficulty.multiplier(&self.config);
-        let drain = self.config.drain.time_drain_per_tick * mult.drain;
-        self.current = (self.current - drain).max(0.0);
-        drain
-    }
-
-    /// Restore energy on task completion.
-    /// `optimal` = true if the task was completed within optimal keystrokes.
-    /// `combo` = current combo count (for combo bonus).
-    pub fn restore_task(&mut self, optimal: bool, combo: usize) -> f64 {
-        let mult = self.difficulty.multiplier(&self.config);
-        let base = if optimal {
-            self.config.restore.task_optimal
+    /// Seconds remaining on the timer.
+    pub fn remaining_seconds(&self) -> f64 {
+        let elapsed = if self.paused {
+            self.paused_duration
         } else {
-            self.config.restore.task_complete
+            self.paused_duration + self.last_reset.elapsed()
         };
-        let combo_bonus = self.config.restore.combo_bonus * combo as f64;
-        let restore = (base + combo_bonus) * mult.restore;
-        self.current = (self.current + restore).min(self.max);
-        self.last_restore = Some(restore);
-        restore
+        (self.max_seconds - elapsed.as_secs_f64()).max(0.0)
     }
 
-    /// Is the energy depleted (game over)?
+    /// Is the timer depleted (game over)?
     pub fn is_depleted(&self) -> bool {
-        self.current <= 0.0
+        self.remaining_seconds() <= 0.0
     }
 
-    /// Current energy as a percentage (0.0 to 100.0).
+    /// Current timer as a percentage (0.0 to 100.0).
     pub fn percentage(&self) -> f64 {
-        if self.max <= 0.0 {
+        if self.max_seconds <= 0.0 {
             return 0.0;
         }
-        (self.current / self.max) * 100.0
+        (self.remaining_seconds() / self.max_seconds * 100.0).clamp(0.0, 100.0)
     }
 
-    /// Reset energy to full (for new level).
+    /// Start the timer (after countdown finishes).
+    pub fn start(&mut self) {
+        self.paused = false;
+        self.paused_duration = Duration::ZERO;
+        self.last_reset = Instant::now();
+    }
+
+    /// Reset the timer to full (on task completion).
+    pub fn restore_task(&mut self) {
+        let remaining = self.remaining_seconds();
+        self.last_restore = Some(self.max_seconds - remaining);
+        self.paused_duration = Duration::ZERO;
+        self.last_reset = Instant::now();
+    }
+
+    /// Reset everything (for new level / restart).
     pub fn reset(&mut self) {
-        self.current = self.config.start.min(self.max);
+        self.paused_duration = Duration::ZERO;
+        self.last_reset = Instant::now();
+        self.paused = true;
         self.last_restore = None;
+    }
+
+    /// Pause the timer (for practice mode).
+    pub fn pause(&mut self) {
+        if !self.paused {
+            self.paused_duration += self.last_reset.elapsed();
+            self.paused = true;
+        }
+    }
+
+    /// Resume the timer (leaving practice mode).
+    pub fn resume(&mut self) {
+        if self.paused {
+            self.paused = false;
+            self.last_reset = Instant::now();
+        }
+    }
+
+    /// Whether the timer is currently paused.
+    pub fn is_paused(&self) -> bool {
+        self.paused
     }
 
     /// Clear the last restore popup.
@@ -189,126 +112,58 @@ impl Energy {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn test_energy() -> Energy {
-        Energy::new(EnergyConfig::default(), Difficulty::KeyboardWarrior)
-    }
+    use std::thread;
 
     #[test]
     fn test_initial_state() {
-        let e = test_energy();
-        assert_eq!(e.current, 100.0);
-        assert_eq!(e.max, 100.0);
-        assert_eq!(e.percentage(), 100.0);
+        let e = Energy::default_new();
+        assert!((e.remaining_seconds() - DEFAULT_TIMER_SECS).abs() < 0.1);
+        assert!((e.percentage() - 100.0).abs() < 1.0);
         assert!(!e.is_depleted());
     }
 
     #[test]
-    fn test_drain_keystroke() {
-        let mut e = test_energy();
-        // KeyboardWarrior has drain multiplier 1.0, keystroke_base = 1.0
-        e.drain_keystroke();
-        assert_eq!(e.current, 99.0);
-        assert_eq!(e.percentage(), 99.0);
+    fn test_timer_stays_paused() {
+        let e = Energy::new(1.0); // 1 second timer, paused
+        thread::sleep(Duration::from_millis(50));
+        // Should still be full because paused
+        assert!((e.remaining_seconds() - 1.0).abs() < 0.1);
     }
 
     #[test]
-    fn test_drain_tick() {
-        let mut e = test_energy();
-        // KeyboardWarrior drain 1.0, time_drain_per_tick = 0.5
-        e.drain_tick();
-        assert_eq!(e.current, 99.5);
+    fn test_timer_drains_when_started() {
+        let mut e = Energy::new(2.0);
+        e.start();
+        thread::sleep(Duration::from_millis(100));
+        assert!(e.remaining_seconds() < 2.0);
+        assert!(!e.is_depleted());
     }
 
     #[test]
-    fn test_restore_task_normal() {
-        let mut e = test_energy();
-        e.current = 50.0;
-        // task_complete = 15.0, combo = 0, restore mult = 1.0
-        let restored = e.restore_task(false, 0);
-        assert_eq!(restored, 15.0);
-        assert_eq!(e.current, 65.0);
+    fn test_restore_resets_timer() {
+        let mut e = Energy::new(2.0);
+        e.start();
+        thread::sleep(Duration::from_millis(100));
+        let before = e.remaining_seconds();
+        e.restore_task();
+        assert!(e.remaining_seconds() > before);
+        assert!((e.remaining_seconds() - 2.0).abs() < 0.1);
     }
 
     #[test]
-    fn test_restore_task_optimal() {
-        let mut e = test_energy();
-        e.current = 50.0;
-        // task_optimal = 25.0, combo = 0, restore mult = 1.0
-        let restored = e.restore_task(true, 0);
-        assert_eq!(restored, 25.0);
-        assert_eq!(e.current, 75.0);
-    }
-
-    #[test]
-    fn test_restore_with_combo() {
-        let mut e = test_energy();
-        e.current = 50.0;
-        // task_complete = 15.0, combo_bonus = 5.0 * 3 = 15.0, total = 30.0
-        let restored = e.restore_task(false, 3);
-        assert_eq!(restored, 30.0);
-        assert_eq!(e.current, 80.0);
-    }
-
-    #[test]
-    fn test_restore_capped_at_max() {
-        let mut e = test_energy();
-        e.current = 95.0;
-        let restored = e.restore_task(true, 5); // would be 25 + 25 = 50
-        assert_eq!(e.current, 100.0); // capped at max
-        assert_eq!(restored, 50.0); // restore amount before cap
-    }
-
-    #[test]
-    fn test_drain_capped_at_zero() {
-        let mut e = test_energy();
-        e.current = 0.5;
-        e.drain_keystroke(); // drains 1.0, but capped at 0
-        assert_eq!(e.current, 0.0);
+    fn test_depleted() {
+        let mut e = Energy::new(0.05); // 50ms timer
+        e.start();
+        thread::sleep(Duration::from_millis(100));
         assert!(e.is_depleted());
     }
 
     #[test]
-    fn test_difficulty_nano_user() {
-        let mut e = Energy::new(EnergyConfig::default(), Difficulty::NanoUser);
-        // drain mult = 0.5, so keystroke drains 0.5
-        e.drain_keystroke();
-        assert_eq!(e.current, 99.5);
-        // restore mult = 1.5, so task_complete = 15 * 1.5 = 22.5
-        e.current = 50.0;
-        let restored = e.restore_task(false, 0);
-        assert_eq!(restored, 22.5);
-    }
-
-    #[test]
-    fn test_difficulty_uses_arch_btw() {
-        let mut e = Energy::new(EnergyConfig::default(), Difficulty::UsesArchBtw);
-        // drain mult = 2.0, so keystroke drains 2.0
-        e.drain_keystroke();
-        assert_eq!(e.current, 98.0);
-        // restore mult = 0.5, so task_complete = 15 * 0.5 = 7.5
-        e.current = 50.0;
-        let restored = e.restore_task(false, 0);
-        assert_eq!(restored, 7.5);
-    }
-
-    #[test]
     fn test_reset() {
-        let mut e = test_energy();
-        e.current = 10.0;
-        e.last_restore = Some(15.0);
+        let mut e = Energy::new(2.0);
+        e.start();
+        thread::sleep(Duration::from_millis(100));
         e.reset();
-        assert_eq!(e.current, 100.0);
-        assert!(e.last_restore.is_none());
-    }
-
-    #[test]
-    fn test_last_restore_popup() {
-        let mut e = test_energy();
-        e.current = 50.0;
-        e.restore_task(false, 0);
-        assert_eq!(e.last_restore, Some(15.0));
-        e.drain_keystroke();
-        assert!(e.last_restore.is_none()); // cleared on keystroke
+        assert!((e.remaining_seconds() - 2.0).abs() < 0.1);
     }
 }

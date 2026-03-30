@@ -1,0 +1,86 @@
+[meta]
+id = "py-nav-strings-zigzag"
+zone = "nav"
+language = "python"
+tags = ["strings", "navigation", "zigzag"]
+difficulty = 1
+
+[code]
+content = """
+# String Operations
+
+message = "Hello, World!"
+whisper = message.lower()
+shout = message.upper()
+
+first_word = message.split(",")[0]
+char_count = len(message)
+
+print(f"Original: {message}")
+print(f"Whisper: {whisper}")
+print(f"Shout: {shout}")
+print(f"First word: {first_word}")
+"""
+
+# Task 1: move to "message" (warm up)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "message", occurrence = 1 }
+description = "Move to 'message'"
+points = 50
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 2: down and right to "lower" method call
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "lower", occurrence = 1 }
+description = "Move to 'lower'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 3: down to "upper" method call (close, same column area)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "upper", occurrence = 1 }
+description = "Move to 'upper'"
+points = 50
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 4: BACK UP to "World" in the original string
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "World", occurrence = 1 }
+description = "Back up to 'World'"
+points = 75
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 5: jump down to "char_count"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "char_count", occurrence = 1 }
+description = "Jump to 'char_count'"
+points = 75
+optimal_keys = 6
+perfect_keys = 3
+
+# Task 6: BACK UP to "first_word"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "first_word", occurrence = 1 }
+description = "Back to 'first_word'"
+points = 75
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 7: jump to "Shout" in the print
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Shout", occurrence = 1 }
+description = "Jump to 'Shout' print"
+points = 75
+optimal_keys = 6
+perfect_keys = 3

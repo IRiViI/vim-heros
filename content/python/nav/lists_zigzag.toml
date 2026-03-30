@@ -1,0 +1,86 @@
+[meta]
+id = "py-nav-lists-zigzag"
+zone = "nav"
+language = "python"
+tags = ["lists", "navigation", "zigzag"]
+difficulty = 1
+
+[code]
+content = """
+# Working with Lists
+
+fruits = ["apple", "banana", "cherry"]
+colors = ["red", "yellow", "pink"]
+
+print(f"Fruit: {fruits[0]}")
+print(f"Color: {colors[0]}")
+
+combined = list(zip(fruits, colors))
+print(combined)
+
+favorites = fruits + ["mango", "grape"]
+print(favorites)
+"""
+
+# Task 1: move to "apple" (down + right into the list)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "apple", occurrence = 1 }
+description = "Move to 'apple'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 2: down to "colors" definition
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "colors", occurrence = 1 }
+description = "Move to 'colors'"
+points = 50
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 3: BACK UP to "fruits" (k + stay left)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fruits", occurrence = 1 }
+description = "Go back up to 'fruits'"
+points = 75
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 4: jump down to "Color" in the print (deep right)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Color", occurrence = 1 }
+description = "Jump to 'Color' in print"
+points = 75
+optimal_keys = 6
+perfect_keys = 3
+
+# Task 5: BACK UP to "Fruit" in the other print
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Fruit", occurrence = 1 }
+description = "Back up to 'Fruit' in print"
+points = 75
+optimal_keys = 4
+perfect_keys = 2
+
+# Task 6: jump down to "combined"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "combined", occurrence = 1 }
+description = "Jump to 'combined'"
+points = 50
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 7: down to "mango"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "mango", occurrence = 1 }
+description = "Move to 'mango'"
+points = 75
+optimal_keys = 5
+perfect_keys = 3

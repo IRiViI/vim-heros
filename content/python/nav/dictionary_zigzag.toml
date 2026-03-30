@@ -1,0 +1,87 @@
+[meta]
+id = "py-nav-dictionary-zigzag"
+zone = "nav"
+language = "python"
+tags = ["dictionary", "navigation", "zigzag"]
+difficulty = 1
+
+[code]
+content = """
+# Student Record
+
+student = {
+    "name": "Maria",
+    "grade": 95,
+    "subject": "Math",
+}
+
+passed = student["grade"] >= 60
+honor = student["grade"] >= 90
+
+print(f"Student: {student['name']}")
+print(f"Subject: {student['subject']}")
+print(f"Passed: {passed}, Honor: {honor}")
+"""
+
+# Task 1: move to "student" (warm up)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "student", occurrence = 1 }
+description = "Move to 'student'"
+points = 50
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 2: down and right to "Maria"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Maria", occurrence = 1 }
+description = "Move to 'Maria'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 3: down to "Math" (same column area)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Math", occurrence = 1 }
+description = "Move to 'Math'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 4: BACK UP to "grade" value
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "grade", occurrence = 1 }
+description = "Back to 'grade'"
+points = 75
+optimal_keys = 4
+perfect_keys = 2
+
+# Task 5: jump down to "honor"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "honor", occurrence = 1 }
+description = "Jump to 'honor'"
+points = 75
+optimal_keys = 6
+perfect_keys = 3
+
+# Task 6: BACK UP to "passed"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "passed", occurrence = 1 }
+description = "Back to 'passed'"
+points = 75
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 7: jump to "Subject" in the print
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Subject", occurrence = 1 }
+description = "Jump to 'Subject' print"
+points = 75
+optimal_keys = 6
+perfect_keys = 3

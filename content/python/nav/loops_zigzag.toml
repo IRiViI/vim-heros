@@ -1,0 +1,86 @@
+[meta]
+id = "py-nav-loops-zigzag"
+zone = "nav"
+language = "python"
+tags = ["loops", "navigation", "zigzag"]
+difficulty = 1
+
+[code]
+content = """
+# Counting Things
+
+numbers = [4, 8, 15, 16, 23, 42]
+total = 0
+
+for num in numbers:
+    total = total + num
+
+average = total / len(numbers)
+
+print(f"Numbers: {numbers}")
+print(f"Total: {total}")
+print(f"Average: {average:.1f}")
+"""
+
+# Task 1: move to "numbers" (warm up)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "numbers", occurrence = 1 }
+description = "Move to 'numbers'"
+points = 50
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 2: down to "total" in the loop body
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "total", occurrence = 2 }
+description = "Move to 'total' in loop"
+points = 50
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 3: BACK UP to the "42" at end of numbers list (teaches k + w to deep position)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "42", occurrence = 1 }
+description = "Back up to '42' in list"
+points = 75
+optimal_keys = 6
+perfect_keys = 3
+
+# Task 4: jump down to "average"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "average", occurrence = 1 }
+description = "Jump to 'average'"
+points = 75
+optimal_keys = 6
+perfect_keys = 3
+
+# Task 5: BACK UP to "num" in the for loop
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "num in", occurrence = 1 }
+description = "Back to 'num' in for loop"
+points = 75
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 6: jump down to "Total" in the print
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Total", occurrence = 1 }
+description = "Jump to 'Total' print"
+points = 75
+optimal_keys = 7
+perfect_keys = 4
+
+# Task 7: down to "Average" in the last print
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Average", occurrence = 1 }
+description = "Move to 'Average'"
+points = 50
+optimal_keys = 4
+perfect_keys = 2

@@ -43,7 +43,7 @@ fn render_hud(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     let tasks_done = app.tasks.iter().filter(|t| t.state == TaskState::Completed).count();
     let tasks_total = app.tasks.len();
 
-    let spans = vec![
+    let mut spans = vec![
         Span::styled(
             format!(" {} ", stars),
             Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
@@ -73,6 +73,16 @@ fn render_hud(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         },
     ];
 
+    // Completion flash — show for 1.5 seconds after task completion
+    if let Some((ref text, when, color)) = app.completion_flash {
+        if when.elapsed() < std::time::Duration::from_millis(1500) {
+            spans.push(Span::styled(
+                format!("  {} ", text),
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
+            ));
+        }
+    }
+
     let hud = Paragraph::new(Line::from(spans))
         .style(Style::default().bg(Color::Rgb(25, 25, 40)));
     frame.render_widget(hud, area);
@@ -80,6 +90,27 @@ fn render_hud(frame: &mut ratatui::Frame, app: &App, area: Rect) {
 
 /// Render the energy bar: colored bar with percentage and optional restore popup.
 fn render_energy_bar(frame: &mut ratatui::Frame, app: &App, area: Rect) {
+    // Practice mode: show a label instead of the timer bar
+    if app.practice_mode {
+        let spans = vec![
+            Span::styled(
+                " PRACTICE MODE ",
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                " No timer \u{2014} type :practice to resume normal mode ",
+                Style::default().fg(Color::DarkGray),
+            ),
+        ];
+        let bar = Paragraph::new(Line::from(spans))
+            .style(Style::default().bg(Color::Rgb(20, 20, 35)));
+        frame.render_widget(bar, area);
+        return;
+    }
+
     let pct = app.energy.percentage();
     let bar_width = area.width.saturating_sub(20) as usize; // reserve space for label + pct
     let filled = ((pct / 100.0) * bar_width as f64).round() as usize;
@@ -106,19 +137,19 @@ fn render_energy_bar(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     let empty_str = "\u{2591}".repeat(empty);
 
     let mut spans = vec![
-        Span::styled(" Energy: ", Style::default().fg(Color::DarkGray)),
+        Span::styled(" Timer: ", Style::default().fg(Color::DarkGray)),
         Span::styled(filled_str, Style::default().fg(bar_color)),
         Span::styled(empty_str, Style::default().fg(Color::Rgb(60, 60, 60))),
         Span::styled(
-            format!(" {:>5.1}% ", pct),
+            format!(" {:>4.1}s ", app.energy.remaining_seconds()),
             Style::default().fg(bar_color).add_modifier(Modifier::BOLD),
         ),
     ];
 
-    // Show "+N" restore popup if available
-    if let Some(restore) = app.energy.last_restore {
+    // Show "reset!" popup after task completion
+    if app.energy.last_restore.is_some() {
         spans.push(Span::styled(
-            format!("+{:.0}", restore),
+            "+reset",
             Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
         ));
     }
@@ -132,10 +163,14 @@ fn render_energy_bar(frame: &mut ratatui::Frame, app: &App, area: Rect) {
 const GOLD: Color = Color::Rgb(255, 215, 0);
 
 /// Task highlight style for the single target character.
-fn task_char_style(task: &Task) -> Style {
+fn task_char_style(task: &Task, is_primary: bool) -> Style {
     match (task.state, task.quality) {
         (TaskState::Pending | TaskState::Active, _) => {
-            Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD)
+            if is_primary {
+                Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().bg(Color::Rgb(60, 60, 80)).fg(Color::Rgb(140, 140, 160))
+            }
         }
         (TaskState::Completed, CompletionQuality::Perfect) => {
             Style::default().bg(GOLD).fg(Color::Black).add_modifier(Modifier::BOLD)
@@ -152,35 +187,43 @@ fn task_char_style(task: &Task) -> Style {
     }
 }
 
-/// Gutter annotation for a task.
-fn task_annotation(task: &Task) -> (String, Color) {
-    match (task.state, task.quality) {
-        (TaskState::Pending | TaskState::Active, _) => (
+/// Gutter annotation for a task — only shown for pending/active tasks.
+/// Completed tasks show quality via the character highlight color only.
+fn task_annotation(task: &Task, is_primary: bool) -> Option<(String, Color)> {
+    match task.state {
+        TaskState::Pending | TaskState::Active => Some((
             format!("  \u{25c0} {} ", task.gutter_text),
-            Color::Red,
-        ),
-        (TaskState::Completed, CompletionQuality::Perfect) => (
-            " \u{2605} PERFECT ".to_string(),
-            GOLD,
-        ),
-        (TaskState::Completed, CompletionQuality::Great) => (
-            " \u{2713} GREAT ".to_string(),
-            Color::Cyan,
-        ),
-        (TaskState::Completed, CompletionQuality::Done) => (
-            " \u{2713} DONE ".to_string(),
-            Color::Green,
-        ),
-        (TaskState::Missed, _) => (
-            " \u{2717} MISSED ".to_string(),
-            Color::Yellow,
-        ),
+            if is_primary { Color::Red } else { Color::DarkGray },
+        )),
+        _ => None,
     }
 }
 
-/// Find the task (if any) for a given line index.
-fn task_for_line(tasks: &[Task], line_idx: usize) -> Option<&Task> {
-    tasks.iter().find(|t| t.target_line == line_idx)
+/// Find the most relevant task for a given line index:
+/// prioritize Active > Pending > Completed, so the active task highlight isn't hidden
+/// behind a completed one on the same line.
+fn task_for_line(tasks: &[Task], line_idx: usize, primary_line: Option<usize>) -> Option<(&Task, bool)> {
+    let mut best: Option<&Task> = None;
+    for t in tasks {
+        if t.target_line != line_idx {
+            continue;
+        }
+        match (&best, t.state) {
+            // Active always wins
+            (_, TaskState::Active) => { best = Some(t); break; }
+            // Pending beats Completed
+            (None, _) => { best = Some(t); }
+            (Some(prev), TaskState::Pending) if prev.state == TaskState::Completed => {
+                best = Some(t);
+            }
+            _ => {}
+        }
+    }
+    best.map(|t| {
+        let is_primary = primary_line == Some(line_idx)
+            && matches!(t.state, TaskState::Pending | TaskState::Active);
+        (t, is_primary)
+    })
 }
 
 /// Render the text buffer with line numbers, cursor, and task overlays.
@@ -196,6 +239,13 @@ fn render_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     let gutter_width = format!("{}", max_line_num).len() + 1; // +1 for separator space
 
     let scroll_top = viewport.top_line;
+
+    // The primary task is the first Pending/Active task in script order.
+    let primary_task_line: Option<usize> = app
+        .tasks
+        .iter()
+        .find(|t| matches!(t.state, TaskState::Pending | TaskState::Active))
+        .map(|t| t.target_line);
 
     let mut lines: Vec<Line> = Vec::with_capacity(inner_height);
 
@@ -213,7 +263,9 @@ fn render_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         let line_content = buffer.line(line_idx).unwrap_or_default();
 
         // Check if this line has a task
-        let task = task_for_line(&app.tasks, line_idx);
+        let task_info = task_for_line(&app.tasks, line_idx, primary_task_line);
+        let task = task_info.map(|(t, _)| t);
+        let is_primary_task = task_info.map(|(_, p)| p).unwrap_or(false);
         let is_cursor_line = line_idx == cursor.line;
 
         // Relative line numbers: absolute on cursor line, distance on others
@@ -245,7 +297,7 @@ fn render_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             };
 
             let task_col = task.map(|t| t.target_col);
-            let task_style = task.map(|t| task_char_style(t));
+            let task_style = task.map(|t| task_char_style(t, is_primary_task));
 
             // Compute visual selection range for this line
             let visual_range = if app.mode.is_visual() {
@@ -323,10 +375,11 @@ fn render_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             }
         }
 
-        // Append task annotation
+        // Append task annotation (only for pending/active tasks)
         if let Some(t) = task {
-            let (annotation, ann_color) = task_annotation(t);
-            spans.push(Span::styled(annotation, Style::default().fg(ann_color)));
+            if let Some((annotation, ann_color)) = task_annotation(t, is_primary_task) {
+                spans.push(Span::styled(annotation, Style::default().fg(ann_color)));
+            }
         }
 
         lines.push(Line::from(spans));
@@ -468,12 +521,16 @@ fn render_status_bar(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         Some(t) => format!(" \u{25b8} {} ", t.description),
         None => String::new(),
     };
+    let hint_info = match next_task {
+        Some(t) if app.practice_mode => format!(" [{}] ", t.expected_command()),
+        _ => String::new(),
+    };
 
     let tasks_done = app.tasks.iter().filter(|t| t.state == TaskState::Completed).count();
     let tasks_total = app.tasks.len();
     let task_progress = format!(" Tasks: {}/{} ", tasks_done, tasks_total);
 
-    let spans = vec![
+    let mut spans = vec![
         Span::styled(
             mode_str,
             Style::default()
@@ -492,6 +549,15 @@ fn render_status_bar(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         Span::styled(task_progress, Style::default().fg(Color::Magenta)),
         Span::styled(task_info, Style::default().fg(Color::Red)),
     ];
+    if !hint_info.is_empty() {
+        spans.push(Span::styled(
+            hint_info,
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ));
+    }
 
     let status_line = Paragraph::new(Line::from(spans))
         .style(Style::default().bg(Color::Rgb(30, 30, 30)));
@@ -515,9 +581,7 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
     };
 
     let reason_text = match app.game_over_reason {
-        GameOverReason::MissedTask => "Task missed!",
-        GameOverReason::CursorOffScreen => "Cursor left the screen!",
-        GameOverReason::EnergyDepleted => "Out of energy!",
+        GameOverReason::TimerExpired => "Time's up!",
         GameOverReason::None => "",
     };
 
@@ -602,9 +666,9 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             ),
         ]),
         Line::from(vec![
-            Span::styled("Energy: ", Style::default().fg(Color::DarkGray)),
+            Span::styled("Timer: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                format!("{:.0}%", app.energy.percentage()),
+                format!("{:.1}s remaining", app.energy.remaining_seconds()),
                 Style::default().fg(if app.energy.percentage() > 30.0 {
                     Color::Green
                 } else {

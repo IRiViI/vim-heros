@@ -1,0 +1,86 @@
+[meta]
+id = "py-nav-calculator-zigzag"
+zone = "nav"
+language = "python"
+tags = ["math", "navigation", "zigzag"]
+difficulty = 1
+
+[code]
+content = """
+# Simple Calculator
+
+price = 49.99
+quantity = 3
+subtotal = price * quantity
+
+tax_rate = 0.08
+tax = subtotal * tax_rate
+total = subtotal + tax
+
+print(f"Subtotal: ${subtotal:.2f}")
+print(f"Tax: ${tax:.2f}")
+print(f"Total: ${total:.2f}")
+"""
+
+# Task 1: go to "price" (warm up)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "price", occurrence = 1 }
+description = "Move to 'price'"
+points = 50
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 2: down to "subtotal" definition
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "subtotal", occurrence = 1 }
+description = "Move to 'subtotal'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 3: BACK UP to "quantity" (teaches k)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "quantity", occurrence = 1 }
+description = "Go back to 'quantity'"
+points = 75
+optimal_keys = 4
+perfect_keys = 2
+
+# Task 4: jump down to "tax_rate"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "tax_rate", occurrence = 1 }
+description = "Jump to 'tax_rate'"
+points = 50
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 5: down to "total" (teaches precise movement — one line down, left side)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "total =", occurrence = 2 }
+description = "Move to 'total'"
+points = 50
+optimal_keys = 4
+perfect_keys = 2
+
+# Task 6: BACKTRACK to "tax" on the tax line (go up, then to right position)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "tax =", occurrence = 1 }
+description = "Go back to 'tax' calculation"
+points = 75
+optimal_keys = 4
+perfect_keys = 2
+
+# Task 7: jump all the way down to "Total" in print
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Total", occurrence = 1 }
+description = "Jump to 'Total' in print"
+points = 75
+optimal_keys = 7
+perfect_keys = 4

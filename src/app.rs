@@ -1,4 +1,5 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use ratatui::style::Color;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -128,7 +129,7 @@ impl LevelInfo {
 /// All available levels.
 fn level_list() -> Vec<LevelInfo> {
     vec![
-        LevelInfo { world: 1, level: 1, name: "First Steps".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2500 },
+        LevelInfo { world: 1, level: 1, name: "First Steps".into(), zone: "nav".into(), language: "python".into(), scroll_speed_ms: 2500 },
         LevelInfo { world: 1, level: 2, name: "Word Jumps".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2500 },
         LevelInfo { world: 1, level: 3, name: "Line Moves".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2500 },
         LevelInfo { world: 2, level: 1, name: "First Edits".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2200 },
@@ -159,12 +160,8 @@ struct RepeatableEdit {
 /// Why the game ended.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameOverReason {
-    /// Cursor scrolled above the viewport.
-    CursorOffScreen,
-    /// Energy bar reached 0.
-    EnergyDepleted,
-    /// A task scrolled past without completion.
-    MissedTask,
+    /// Timer countdown reached 0.
+    TimerExpired,
     /// Not game over (or level complete).
     None,
 }
@@ -205,6 +202,10 @@ pub struct App {
     task_keystrokes: usize,
     /// When the last task was completed (for catch-up scroll delay).
     last_task_completion: Option<Instant>,
+    /// Flash popup for task completion quality (text, when, color).
+    pub completion_flash: Option<(String, Instant, Color)>,
+    /// Practice mode: show expected commands, disable timer.
+    pub practice_mode: bool,
 }
 
 impl App {
@@ -239,6 +240,8 @@ impl App {
             level_index: 0,
             task_keystrokes: 0,
             last_task_completion: None,
+            completion_flash: None,
+            practice_mode: false,
         }
     }
 
@@ -287,6 +290,9 @@ impl App {
     fn tick_countdown(&mut self) -> bool {
         // Check if countdown is done
         if self.engine.check_countdown() {
+            if !self.practice_mode {
+                self.energy.start(); // Start the timer when countdown finishes
+            }
             return true;
         }
 
@@ -311,149 +317,58 @@ impl App {
     }
 
     fn tick_playing(&mut self) -> bool {
-        let timeout = self
-            .engine
-            .time_until_next_scroll()
-            .min(Duration::from_millis(50));
         let mut needs_render = false;
 
         // Poll for input
-        if event::poll(timeout).unwrap_or(false) {
+        if event::poll(Duration::from_millis(50)).unwrap_or(false) {
             if let Ok(Event::Key(key)) = event::read() {
                 needs_render = self.handle_key(key);
             }
         }
 
-        // Scroll boost: if cursor moved past viewport bottom, snap viewport forward
-        if self.cursor.line > self.viewport.bottom_line() {
-            let overshoot = self.cursor.line - self.viewport.bottom_line();
-            let max_scroll = self
-                .buffer
-                .line_count()
-                .saturating_sub(self.viewport.height);
-            for _ in 0..overshoot {
-                if self.viewport.top_line < max_scroll {
-                    self.viewport.scroll_down();
-                    self.scoring.award_survival();
-                }
+        // Smart camera: keep both cursor AND next task visible.
+        // Compute a viewport that fits both, preferring to show the task if too far apart.
+        let max_line = self.buffer.line_count().saturating_sub(1);
+        if let Some(next_task_line) = self.next_incomplete_task_line() {
+            let lo = self.cursor.line.min(next_task_line);
+            let hi = self.cursor.line.max(next_task_line);
+            let span = hi - lo;
+            let usable = self.viewport.height.saturating_sub(4); // 2-line padding each side
+            if span <= usable {
+                // Both fit: center the viewport on the midpoint
+                let mid = lo + span / 2;
+                let half = self.viewport.height / 2;
+                let new_top = mid.saturating_sub(half);
+                let max_top = max_line.saturating_sub(self.viewport.height.saturating_sub(1));
+                self.viewport.top_line = new_top.min(max_top);
+            } else {
+                // Too far apart: prioritize showing the task (player needs to see target)
+                self.viewport.ensure_visible(next_task_line, 2, max_line);
             }
-            // Reset scroll timer so the player isn't immediately punished
-            self.engine.record_scroll();
             needs_render = true;
+        } else {
+            self.viewport.ensure_visible(self.cursor.line, 2, max_line);
         }
 
-        // Check scroll tick
-        if self.engine.should_scroll() {
-            let max_scroll = self
-                .buffer
-                .line_count()
-                .saturating_sub(self.viewport.height);
-            if self.viewport.top_line < max_scroll {
-                self.viewport.scroll_down();
-                self.scoring.award_survival();
-            }
-            self.engine.record_scroll();
-            self.energy.drain_tick();
-            needs_render = true;
-
-            // Game over: cursor scrolled above viewport
-            if self.cursor.line < self.viewport.top_line {
-                self.engine.state = GameState::GameOver;
-                self.game_over_reason = GameOverReason::CursorOffScreen;
-            }
-
-            // Game over: energy depleted
-            if self.energy.is_depleted() {
-                self.engine.state = GameState::GameOver;
-                self.game_over_reason = GameOverReason::EnergyDepleted;
-            }
-
-            // Check for missed tasks (scrolled above viewport) — instant game over
-            for task in &mut self.tasks {
-                if task.is_completable() && task.target_line < self.viewport.top_line {
-                    task.mark_missed();
-                    self.scoring.miss_task();
-                    self.engine.state = GameState::GameOver;
-                    self.game_over_reason = GameOverReason::MissedTask;
-                }
-            }
-
-            // Activate tasks that are within or near the viewport
-            let activation_bottom = self.viewport.bottom_line() + 5;
-            for task in &mut self.tasks {
-                if task.state == TaskState::Pending
-                    && task.target_line >= self.viewport.top_line
-                    && task.target_line <= activation_bottom
-                {
+        // Activate the next incomplete task (tasks follow TOML order, not position)
+        for task in &mut self.tasks {
+            if task.is_completable() {
+                if task.state == TaskState::Pending {
                     task.mark_active();
                 }
+                break;
             }
         }
 
-        // Catch-up scroll: if no incomplete task is visible and it's been >500ms
-        // since the last completion, jump the viewport to the next task.
-        let has_visible_incomplete = self.tasks.iter().any(|t| {
-            t.is_completable()
-                && t.target_line >= self.viewport.top_line
-                && t.target_line <= self.viewport.bottom_line()
-        });
-        let catchup_ready = self
-            .last_task_completion
-            .map(|t| t.elapsed() >= Duration::from_millis(500))
-            .unwrap_or(false);
-
-        if !has_visible_incomplete && catchup_ready {
-            let next_task_line = self
-                .tasks
-                .iter()
-                .filter(|t| t.is_completable() && t.target_line > self.viewport.bottom_line())
-                .map(|t| t.target_line)
-                .min();
-
-            if let Some(target_line) = next_task_line {
-                // Scroll so the task appears ~5 lines from the bottom
-                let desired_top =
-                    target_line.saturating_sub(self.viewport.height.saturating_sub(5));
-                let max_scroll = self
-                    .buffer
-                    .line_count()
-                    .saturating_sub(self.viewport.height);
-                let desired_top = desired_top.min(max_scroll);
-
-                while self.viewport.top_line < desired_top {
-                    self.viewport.scroll_down();
-                    self.scoring.award_survival();
-                }
-
-                // Move cursor with viewport so it doesn't get left behind
-                if self.cursor.line < self.viewport.top_line {
-                    self.cursor.line = self.viewport.top_line;
-                    self.cursor.col = 0;
-                }
-
-                // Activate tasks now in/near the viewport
-                let activation_bottom = self.viewport.bottom_line() + 5;
-                for task in &mut self.tasks {
-                    if task.state == TaskState::Pending
-                        && task.target_line >= self.viewport.top_line
-                        && task.target_line <= activation_bottom
-                    {
-                        task.mark_active();
-                    }
-                }
-
-                self.engine.record_scroll();
-                self.last_task_completion = None; // reset so it doesn't re-trigger
-                needs_render = true;
-            }
+        // Game over: timer depleted (skip in practice mode)
+        if !self.practice_mode && self.energy.is_depleted() {
+            self.engine.state = GameState::GameOver;
+            self.game_over_reason = GameOverReason::TimerExpired;
         }
 
-        // Check level complete: all tasks resolved (completed or missed)
-        // and viewport has scrolled past the buffer
+        // Check level complete: all tasks resolved
         let all_resolved = self.tasks.iter().all(|t| !t.is_completable());
-        let buffer_done = self.viewport.top_line + self.viewport.height
-            >= self.buffer.line_count();
-        if all_resolved && buffer_done {
+        if all_resolved && !self.tasks.is_empty() {
             self.engine.state = GameState::LevelComplete;
             needs_render = true;
         }
@@ -524,6 +439,7 @@ impl App {
         self.cmdline = None;
         self.task_keystrokes = 0;
         self.last_task_completion = None;
+        self.completion_flash = None;
     }
 
     /// Move cursor (and viewport) by `lines` in a direction.
@@ -536,6 +452,11 @@ impl App {
         }
         self.cursor.clamp(&self.buffer, false);
         self.check_task_completion();
+    }
+
+    /// Return the target line of the next incomplete task (in task order).
+    fn next_incomplete_task_line(&self) -> Option<usize> {
+        self.tasks.iter().find(|t| t.is_completable()).map(|t| t.target_line)
     }
 
     fn next_level(&mut self) {
@@ -657,6 +578,16 @@ impl App {
             "n" | "next" => {
                 self.next_level();
             }
+            "practice" => {
+                self.practice_mode = !self.practice_mode;
+                if self.practice_mode {
+                    // Pause the energy timer in practice mode
+                    self.energy.pause();
+                } else {
+                    // Resume the energy timer when leaving practice mode
+                    self.energy.resume();
+                }
+            }
             _ => {
                 // Unknown command — just dismiss
             }
@@ -748,7 +679,7 @@ impl App {
                 KeyCode::Char('r') => {
                     self.scoring.record_keystroke();
                     self.task_keystrokes += 1;
-                    self.energy.drain_keystroke();
+                    // Timer-based: no keystroke drain
                     if let Some((rope, cursor)) = self.undo.redo() {
                         self.buffer.set_rope(rope);
                         self.cursor = cursor;
@@ -790,7 +721,7 @@ impl App {
             KeyCode::Char(ch) => {
                 self.scoring.record_keystroke();
                 self.task_keystrokes += 1;
-                self.energy.drain_keystroke();
+                // Timer-based: no keystroke drain
 
                 match self.parser.feed(ch) {
                     ParseResult::Action(action, count) => {
@@ -944,7 +875,7 @@ impl App {
 
         self.scoring.record_keystroke();
         self.task_keystrokes += 1;
-        self.energy.drain_keystroke();
+        // Timer-based: no keystroke drain
         if action.is_edit() {
             self.undo.push(self.buffer.rope(), self.cursor);
         }
@@ -964,7 +895,7 @@ impl App {
 
         self.scoring.record_keystroke();
         self.task_keystrokes += 1;
-        self.energy.drain_keystroke();
+        // Timer-based: no keystroke drain
         if action.is_edit() {
             self.undo.push(self.buffer.rope(), self.cursor);
         }
@@ -980,14 +911,14 @@ impl App {
                 KeyCode::Char('d') => {
                     self.scoring.record_keystroke();
                     self.task_keystrokes += 1;
-                    self.energy.drain_keystroke();
+                    // Timer-based: no keystroke drain
                     self.scroll_cursor(self.viewport.height / 2, true);
                     return true;
                 }
                 KeyCode::Char('u') => {
                     self.scoring.record_keystroke();
                     self.task_keystrokes += 1;
-                    self.energy.drain_keystroke();
+                    // Timer-based: no keystroke drain
                     self.scroll_cursor(self.viewport.height / 2, false);
                     return true;
                 }
@@ -1004,7 +935,7 @@ impl App {
             KeyCode::Char(ch) => {
                 self.scoring.record_keystroke();
                 self.task_keystrokes += 1;
-                self.energy.drain_keystroke();
+                // Timer-based: no keystroke drain
 
                 // Operators act on the visual selection
                 match ch {
@@ -1174,6 +1105,10 @@ impl App {
             if !task.is_completable() {
                 continue;
             }
+            // Only check the first completable task (the active one)
+            if task.state != TaskState::Active {
+                break;
+            }
             let completed = match &task.kind {
                 TaskKind::MoveTo => {
                     self.cursor.line == task.target_line
@@ -1255,7 +1190,14 @@ impl App {
                     self.scoring.award_great();
                 }
                 self.scoring.complete_task(task.points);
-                self.energy.restore_task(is_great || is_perfect, self.scoring.combo);
+                self.energy.restore_task();
+                // Flash popup for completion quality
+                let (flash_text, flash_color) = match task.quality {
+                    CompletionQuality::Perfect => ("\u{2605} PERFECT".to_string(), Color::Rgb(255, 215, 0)),
+                    CompletionQuality::Great => ("\u{2713} GREAT".to_string(), Color::Cyan),
+                    CompletionQuality::Done => ("\u{2713} DONE".to_string(), Color::Green),
+                };
+                self.completion_flash = Some((flash_text, Instant::now(), flash_color));
                 self.task_keystrokes = 0;
                 self.last_task_completion = Some(Instant::now());
             }

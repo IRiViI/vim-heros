@@ -116,6 +116,22 @@ mod tests {
     }
 
     #[test]
+    fn test_load_python_nav() {
+        let segments = load_segments("python", "nav");
+        assert!(
+            segments.len() >= 6,
+            "Expected at least 6 Python nav segments, got {}",
+            segments.len()
+        );
+        for seg in &segments {
+            assert_eq!(seg.meta.language, "python");
+            assert_eq!(seg.meta.zone, "nav");
+            assert!(!seg.code.content.is_empty());
+            assert!(!seg.tasks.is_empty(), "Segment {} has no tasks", seg.meta.id);
+        }
+    }
+
+    #[test]
     fn test_load_nonexistent_returns_empty() {
         let segments = load_segments("haskell", "starter");
         assert!(segments.is_empty());

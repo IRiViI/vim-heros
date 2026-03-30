@@ -1,0 +1,84 @@
+[meta]
+id = "py-nav-variables-zigzag"
+zone = "nav"
+language = "python"
+tags = ["variables", "navigation", "zigzag"]
+difficulty = 1
+
+[code]
+content = """
+# Variables and Printing
+
+name = "Alice"
+age = 30
+city = "New York"
+
+greeting = f"Hello, {name}!"
+print(greeting)
+
+info = f"{name} lives in {city}"
+print(info)
+"""
+
+# Task 1: warm up — go down and right to "Alice"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Alice", occurrence = 1 }
+description = "Move to 'Alice'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 2: keep going down and right to "New York"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "New York", occurrence = 1 }
+description = "Move to 'New York'"
+points = 50
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 3: BACKTRACK UP to "name" on line 2 (teaches k + b)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "name", occurrence = 1 }
+description = "Go back up to 'name'"
+points = 75
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 4: jump down to "Hello" deep in the greeting line
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Hello", occurrence = 1 }
+description = "Jump down to 'Hello'"
+points = 75
+optimal_keys = 7
+perfect_keys = 4
+
+# Task 5: down to start of line — "print" (teaches going left after deep position)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "print", occurrence = 1 }
+description = "Move to 'print'"
+points = 50
+optimal_keys = 4
+perfect_keys = 2
+
+# Task 6: BACKTRACK UP to "greeting" definition
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "greeting", occurrence = 1 }
+description = "Go back to 'greeting'"
+points = 75
+optimal_keys = 4
+perfect_keys = 2
+
+# Task 7: jump to "lives" deep in the info line
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "lives", occurrence = 1 }
+description = "Jump to 'lives'"
+points = 75
+optimal_keys = 8
+perfect_keys = 4

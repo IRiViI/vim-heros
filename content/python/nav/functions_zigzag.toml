@@ -1,0 +1,89 @@
+[meta]
+id = "py-nav-functions-zigzag"
+zone = "nav"
+language = "python"
+tags = ["functions", "navigation", "zigzag"]
+difficulty = 1
+
+[code]
+content = """
+# Rectangle Calculator
+
+def area(width, height):
+    return width * height
+
+def perimeter(width, height):
+    return 2 * (width + height)
+
+w = 10
+h = 5
+
+result_area = area(w, h)
+result_peri = perimeter(w, h)
+
+print(f"Area: {result_area}")
+print(f"Perimeter: {result_peri}")
+"""
+
+# Task 1: move to "area" function
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "area", occurrence = 1 }
+description = "Move to 'area'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 2: down to "perimeter" function
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "perimeter", occurrence = 1 }
+description = "Move to 'perimeter'"
+points = 50
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 3: BACK UP to "height" parameter in area (teaches k + w)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "height", occurrence = 1 }
+description = "Back to 'height' param"
+points = 75
+optimal_keys = 6
+perfect_keys = 3
+
+# Task 4: jump down past both functions to "w = 10"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "w = 10", occurrence = 1 }
+description = "Jump down to 'w'"
+points = 75
+optimal_keys = 7
+perfect_keys = 3
+
+# Task 5: down to "result_area" (right side)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "result_area", occurrence = 1 }
+description = "Move to 'result_area'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 6: BACK UP to "return" in area function
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "return", occurrence = 1 }
+description = "Back to first 'return'"
+points = 75
+optimal_keys = 8
+perfect_keys = 4
+
+# Task 7: jump to "Perimeter" in the print
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Perimeter", occurrence = 1 }
+description = "Jump to 'Perimeter' print"
+points = 75
+optimal_keys = 10
+perfect_keys = 5

@@ -1,0 +1,88 @@
+[meta]
+id = "py-nav-conditionals-zigzag"
+zone = "nav"
+language = "python"
+tags = ["if", "else", "navigation", "zigzag"]
+difficulty = 1
+
+[code]
+content = """
+# Weather Check
+
+temperature = 72
+humidity = 45
+is_sunny = True
+
+if temperature > 80:
+    status = "hot"
+elif temperature > 60:
+    status = "warm"
+else:
+    status = "cold"
+
+forecast = f"It is {status} and {humidity}% humid"
+print(forecast)
+"""
+
+# Task 1: move to "temperature" (warm up)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "temperature", occurrence = 1 }
+description = "Move to 'temperature'"
+points = 50
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 2: down to "is_sunny"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "is_sunny", occurrence = 1 }
+description = "Move to 'is_sunny'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 3: BACK UP to "humidity" (k + stay left)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "humidity", occurrence = 1 }
+description = "Go back to 'humidity'"
+points = 75
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 4: jump down to "hot" (deep right, inside the if)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "hot", occurrence = 1 }
+description = "Jump to 'hot'"
+points = 75
+optimal_keys = 7
+perfect_keys = 3
+
+# Task 5: down to "warm" (one line down, same column area)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "warm", occurrence = 1 }
+description = "Move to 'warm'"
+points = 50
+optimal_keys = 4
+perfect_keys = 2
+
+# Task 6: BACK UP to the "80" threshold
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "80", occurrence = 1 }
+description = "Back to the '80' threshold"
+points = 75
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 7: jump down to "forecast"
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "forecast", occurrence = 1 }
+description = "Jump to 'forecast'"
+points = 75
+optimal_keys = 8
+perfect_keys = 4

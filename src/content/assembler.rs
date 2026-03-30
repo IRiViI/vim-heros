@@ -292,13 +292,16 @@ pub fn assemble(segments: &[&Segment], level_ctx: Option<&LevelContext>) -> Asse
         }
     }
 
-    // Sort tasks top-to-bottom
-    all_tasks.sort_by_key(|t| (t.target_line, t.target_col));
-
     let buffer = Buffer::from_str(&full_code);
 
-    // Fill gaps larger than MAX_GAP lines with auto-generated navigation tasks
-    fill_gaps(&buffer, &mut all_tasks, MAX_GAP);
+    let world = level_ctx.map(|c| c.world).unwrap_or(0);
+
+    if world >= 2 {
+        // World 2+: sort top-to-bottom and fill gaps (classic scrolling style)
+        all_tasks.sort_by_key(|t| (t.target_line, t.target_col));
+        fill_gaps(&buffer, &mut all_tasks, MAX_GAP);
+    }
+    // World 1: preserve TOML task order for zigzag navigation patterns
 
     // Recalculate keystroke budgets based on available motions for this world
     if let Some(ctx) = level_ctx {
@@ -489,6 +492,39 @@ fn recalculate_keystroke_budgets(buffer: &Buffer, tasks: &mut [Task], world: usi
                 task.good_keys = good;
             }
         }
+
+        // --- hint_command: world-appropriate practice mode hint ---
+        let vertical_dir = if task.target_line >= prev_line { "j" } else { "k" };
+        task.hint_command = if world <= 2 {
+            // World 1-2: express as counted j/k + counted w
+            let mut parts = Vec::new();
+            if line_dist > 0 {
+                if line_dist == 1 {
+                    parts.push(vertical_dir.to_string());
+                } else {
+                    parts.push(format!("{}{}", line_dist, vertical_dir));
+                }
+            }
+            if word_hops > 0 {
+                if word_hops == 1 {
+                    parts.push("w".to_string());
+                } else {
+                    parts.push(format!("{}w", word_hops));
+                }
+            }
+            if parts.is_empty() {
+                "l".to_string()
+            } else {
+                parts.join(" ")
+            }
+        } else {
+            // World 3+: use search
+            let pattern = task.description.as_str()
+                .trim_start_matches("Move to '")
+                .trim_start_matches("Navigate to '")
+                .trim_end_matches('\'');
+            format!("/{}", pattern)
+        };
 
         prev_line = task.target_line;
     }
