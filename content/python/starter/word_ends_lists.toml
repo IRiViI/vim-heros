@@ -1,0 +1,80 @@
+[meta]
+id = "py-starter-word-ends-lists"
+zone = "starter"
+language = "python"
+tags = ["navigation", "end-of-word", "e-motion", "lists"]
+difficulty = 1
+
+[code]
+content = """
+# Student Grades
+
+student_names = ["Alice", "Bob", "Charlie", "Diana"]
+math_scores = [85, 92, 78, 95]
+science_scores = [90, 88, 82, 91]
+
+class_average = sum(math_scores) / len(math_scores)
+top_score = max(math_scores)
+lowest_score = min(math_scores)
+
+for name, math, science in zip(student_names, math_scores, science_scores):
+    combined = math + science
+    print(f"{name}: Math={math}, Science={science}, Total={combined}")
+
+print(f"Class average: {class_average:.1f}")
+print(f"Top score: {top_score}")
+"""
+
+# Task 1: end of 'student_names'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "student_names", occurrence = 1, at_end = true }
+description = "End of 'student_names'"
+points = 50
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 2: end of 'science_scores' (definition)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "science_scores", occurrence = 1, at_end = true }
+description = "End of 'science_scores'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 3: end of 'class_average'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "class_average", occurrence = 1, at_end = true }
+description = "End of 'class_average'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 4: move to 'lowest_score'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "lowest_score", occurrence = 1 }
+description = "Move to 'lowest_score'"
+points = 50
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 5: end of 'combined'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "combined", occurrence = 1, at_end = true }
+description = "End of 'combined'"
+points = 75
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 6: end of 'top_score' in print
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "top_score", occurrence = 2, at_end = true }
+description = "End of 'top_score' print"
+points = 75
+optimal_keys = 6
+perfect_keys = 4

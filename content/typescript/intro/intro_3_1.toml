@@ -1,0 +1,66 @@
+[meta]
+id = "intro-3-1-line-rider-ts"
+zone = "intro"
+language = "typescript"
+tags = ["intro", "line-motions", "f", "t", "0", "$"]
+difficulty = 1
+intro = true
+intro_level = "3-1"
+
+[code]
+content = """
+// =============================================
+// WORLD 3: Line Rider
+// =============================================
+//
+// Moving within a line is where speed lives.
+// These commands get you anywhere on a line:
+//
+//   0  jump to START of line
+//   $  jump to END of line
+//   ^  jump to first non-blank character
+//
+//   f<char>  FIND character forward
+//   t<char>  TILL character (one before it)
+//   F<char>  find character BACKWARD
+//   T<char>  till character backward
+//
+//   ;  repeat last f/t forward
+//   ,  repeat last f/t backward
+//
+// Example: f( jumps to the next '('
+// =============================================
+
+const config = { host: "localhost", port: 8080, debug: true };
+const databaseUrl = "postgres://user:pass@localhost:5432/mydb";
+const apiEndpoint = "https://api.example.com/v2/users";
+const maxRetries = 3;
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "config", occurrence = 1 }
+description = "Move to 'config'"
+points = 25
+optimal_keys = 2
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "databaseUrl", occurrence = 1, at_end = true }
+description = "End of 'databaseUrl'"
+points = 25
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "apiEndpoint", occurrence = 1 }
+description = "Move to 'apiEndpoint'"
+points = 25
+optimal_keys = 2
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "maxRetries", occurrence = 1 }
+description = "Move to 'maxRetries'"
+points = 25
+optimal_keys = 2

@@ -1,0 +1,81 @@
+[meta]
+id = "py-starter-word-ends-functions"
+zone = "starter"
+language = "python"
+tags = ["navigation", "end-of-word", "e-motion", "functions"]
+difficulty = 1
+
+[code]
+content = """
+# Temperature Converter
+
+def celsius_to_fahrenheit(celsius):
+    return celsius * 9 / 5 + 32
+
+def fahrenheit_to_celsius(fahrenheit):
+    return (fahrenheit - 32) * 5 / 9
+
+temp_celsius = 100
+temp_fahrenheit = celsius_to_fahrenheit(temp_celsius)
+
+print(f"{temp_celsius}C = {temp_fahrenheit}F")
+
+boiling_point = celsius_to_fahrenheit(100)
+freezing_point = celsius_to_fahrenheit(0)
+print(f"Boiling: {boiling_point}F")
+print(f"Freezing: {freezing_point}F")
+"""
+
+# Task 1: end of 'celsius_to_fahrenheit' (definition)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "celsius_to_fahrenheit", occurrence = 1, at_end = true }
+description = "End of 'celsius_to_fahrenheit'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 2: end of 'fahrenheit_to_celsius' (definition)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fahrenheit_to_celsius", occurrence = 1, at_end = true }
+description = "End of 'fahrenheit_to_celsius'"
+points = 50
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 3: move to 'temp_celsius' assignment
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "temp_celsius", occurrence = 1 }
+description = "Move to 'temp_celsius'"
+points = 50
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 4: end of 'temp_fahrenheit'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "temp_fahrenheit", occurrence = 1, at_end = true }
+description = "End of 'temp_fahrenheit'"
+points = 75
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 5: end of 'boiling_point'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "boiling_point", occurrence = 1, at_end = true }
+description = "End of 'boiling_point'"
+points = 75
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 6: end of 'freezing_point'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "freezing_point", occurrence = 1, at_end = true }
+description = "End of 'freezing_point'"
+points = 75
+optimal_keys = 4
+perfect_keys = 3

@@ -1,0 +1,76 @@
+[meta]
+id = "intro-2-1-word-surfer-ts"
+zone = "intro"
+language = "typescript"
+tags = ["intro", "word-motions", "w", "b", "e"]
+difficulty = 1
+intro = true
+intro_level = "2-1"
+
+[code]
+content = """
+// =============================================
+// WORLD 2: Word Surfer
+// =============================================
+//
+// You already know h/j/k/l.
+// But pressing 'lllllll' to cross a line
+// is slow. There's a better way:
+//
+//   w  jump to the NEXT word
+//   b  jump BACK a word
+//   e  jump to the END of a word
+//
+// Capital versions skip punctuation:
+//   W  next WORD (skip symbols)
+//   B  back WORD (skip symbols)
+//   E  end of WORD (skip symbols)
+//
+// Use counts too: 3w = jump 3 words forward
+//
+// Try these new motions on the code below!
+// =============================================
+
+const firstName = "Alice";
+const lastName = "Johnson";
+const fullName = firstName + " " + lastName;
+
+const totalStudents = 42;
+const passingGrade = 70;
+const averageScore = 85.5;
+"""
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "firstName", occurrence = 1 }
+description = "Move to 'firstName'"
+points = 25
+optimal_keys = 2
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "lastName", occurrence = 1, at_end = true }
+description = "End of 'lastName'"
+points = 25
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "fullName", occurrence = 1 }
+description = "Move to 'fullName'"
+points = 25
+optimal_keys = 2
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "passingGrade", occurrence = 1 }
+description = "Move to 'passingGrade'"
+points = 25
+optimal_keys = 3
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "averageScore", occurrence = 1, at_end = true }
+description = "End of 'averageScore'"
+points = 25
+optimal_keys = 3

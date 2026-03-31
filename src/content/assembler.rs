@@ -2,6 +2,7 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 
 use crate::game::task::{self, Task};
+use crate::game::worlds;
 use crate::vim::buffer::Buffer;
 
 use super::segment::{Segment, SegmentTask};
@@ -117,74 +118,21 @@ fn build_runway(language: &str) -> String {
 }
 
 /// Build a comment block explaining the key Vim motions for this level.
-/// Returns empty string if no level context is provided.
+/// Uses the world definitions from worlds.rs to show the right skills.
 fn build_level_hints(ctx: &LevelContext) -> String {
     let comment = match ctx.language.as_str() {
         "python" => "#",
         _ => "//",
     };
 
-    let motions: &[&str] = match (ctx.world, ctx.level) {
-        (1, 1) => &[
-            "h / l      move left / right",
-            "j / k      move down / up",
-            "w          jump to next word",
-            "b          jump back a word",
-        ],
-        (1, 2) => &[
-            "w / b      next word / back a word",
-            "e          jump to end of word",
-            "0 / $      start / end of line",
-            "f<char>    jump to character on line",
-        ],
-        (1, 3) => &[
-            "0 / $      start / end of line",
-            "^ / g_     first / last non-blank",
-            "gg / G     top / bottom of file",
-            "<n>G       go to line n",
-        ],
-        (2, 1) => &[
-            "x          delete character",
-            "dd         delete entire line",
-            "dw         delete word",
-            "D          delete to end of line",
-        ],
-        (2, 2) => &[
-            "yy         yank (copy) line",
-            "yw         yank word",
-            "p / P      paste after / before",
-            "dd + p     cut and paste a line",
-        ],
-        (3, 1) => &[
-            "f<c> / t<c>  find / till character",
-            ";            repeat last f/t",
-            "/pattern     search forward",
-            "n / N        next / prev match",
-        ],
-        (3, 2) => &[
-            "cw         change word",
-            "ci\"        change inside quotes",
-            "ci(        change inside parens",
-            "diw        delete inner word",
-        ],
-        (3, 3) => &[
-            "/pattern   search for text",
-            "n          jump to next match",
-            "dw / dd    delete word / line",
-            "combine search + delete for speed",
-        ],
-        (4, _) => &[
-            "combine all motions for speed!",
-            "f/t + ; for fast horizontal moves",
-            "/pattern for long-distance jumps",
-            "operator + motion = power",
-        ],
-        _ => &[
-            "h/j/k/l    basic movement",
-            "w/b/e      word motions",
-            "f<c>       find character",
-        ],
-    };
+    // Show this world's new skills (what the player just learned)
+    let motions = worlds::skill_hint_lines(ctx.world);
+
+    let world_name = worlds::WORLDS
+        .iter()
+        .find(|w| w.number == ctx.world)
+        .map(|w| w.name)
+        .unwrap_or("Unknown");
 
     let bar = format!("{} {}", comment, "═".repeat(42));
     let thin = format!("{} {}", comment, "─".repeat(42));
@@ -192,12 +140,12 @@ fn build_level_hints(ctx: &LevelContext) -> String {
     let mut lines = Vec::new();
     lines.push(bar.clone());
     lines.push(format!(
-        "{} LEVEL {}-{}: {}",
-        comment, ctx.world, ctx.level, ctx.name
+        "{} WORLD {} \u{2014} {} | Level {}-{}: {}",
+        comment, ctx.world, world_name, ctx.world, ctx.level, ctx.name
     ));
     lines.push(thin);
-    lines.push(format!("{} KEY MOTIONS FOR ★★★:", comment));
-    for motion in motions {
+    lines.push(format!("{} KEY MOTIONS FOR \u{2605}\u{2605}\u{2605}:", comment));
+    for motion in &motions {
         lines.push(format!("{}   {}", comment, motion));
     }
     lines.push(bar);
@@ -287,6 +235,7 @@ pub fn assemble(segments: &[&Segment], level_ctx: Option<&LevelContext>) -> Asse
             if let Some(mut task) = resolve_segment_task(seg_task, &code_buffer, line_offset) {
                 task.good_keys = seg_task.optimal_keys;
                 task.perfect_keys = seg_task.perfect_keys;
+                task.at_end = seg_task.anchor.at_end;
                 all_tasks.push(task);
             }
         }
@@ -481,13 +430,31 @@ fn recalculate_keystroke_budgets(buffer: &Buffer, tasks: &mut [Task], world: usi
         }
 
         // --- good_keys: world-constrained optimal ---
-        if world <= 2 {
-            // World 1-2: no count prefixes, no f/t, no search.
-            // Vertical: one j/k per line. Horizontal: one w per word boundary.
-            let world_optimal = line_dist + word_hops;
-            let good = world_optimal + 2; // small buffer for imperfect play
+        let skills = worlds::skills_for_world(world);
+        let has_counts = skills.contains(&worlds::VimSkill::Count);
+        let has_find = skills.contains(&worlds::VimSkill::FindChar);
+        let has_search = skills.contains(&worlds::VimSkill::Search);
+        let has_words = skills.contains(&worlds::VimSkill::WordForward);
 
-            // Only widen: use the max of computed vs TOML
+        if !has_find && !has_search {
+            // No f/t or search: vertical = j/k per line (or counted), horizontal = w per word
+            let vert_keys = if has_counts && line_dist > 1 {
+                digit_count(line_dist) + 1 // e.g., "5j" = 2 keys
+            } else {
+                line_dist // one j/k per line
+            };
+            let horiz_keys = if has_words {
+                if has_counts && word_hops > 1 {
+                    digit_count(word_hops) + 1
+                } else {
+                    word_hops
+                }
+            } else {
+                // Only h/l available
+                task.target_col
+            };
+            let world_optimal = vert_keys + horiz_keys;
+            let good = world_optimal + 2;
             if good > task.good_keys {
                 task.good_keys = good;
             }
@@ -495,21 +462,35 @@ fn recalculate_keystroke_budgets(buffer: &Buffer, tasks: &mut [Task], world: usi
 
         // --- hint_command: world-appropriate practice mode hint ---
         let vertical_dir = if task.target_line >= prev_line { "j" } else { "k" };
-        task.hint_command = if world <= 2 {
-            // World 1-2: express as counted j/k + counted w
+        task.hint_command = if has_search {
+            // Search available: suggest /pattern
+            let pattern = task.description.as_str()
+                .trim_start_matches("Move to '")
+                .trim_start_matches("Navigate to '")
+                .trim_start_matches("End of '")
+                .trim_end_matches('\'')
+                .trim_end_matches(" print");
+            format!("/{}", pattern)
+        } else {
+            // Express as counted j/k + counted w/e
             let mut parts = Vec::new();
             if line_dist > 0 {
-                if line_dist == 1 {
+                if has_counts && line_dist > 1 {
+                    parts.push(format!("{}{}", line_dist, vertical_dir));
+                } else if line_dist == 1 {
                     parts.push(vertical_dir.to_string());
                 } else {
                     parts.push(format!("{}{}", line_dist, vertical_dir));
                 }
             }
             if word_hops > 0 {
-                if word_hops == 1 {
-                    parts.push("w".to_string());
+                let motion = if task.at_end { "e" } else { "w" };
+                if has_counts && word_hops > 1 {
+                    parts.push(format!("{}{}", word_hops, motion));
+                } else if word_hops == 1 {
+                    parts.push(motion.to_string());
                 } else {
-                    parts.push(format!("{}w", word_hops));
+                    parts.push(format!("{}{}", word_hops, motion));
                 }
             }
             if parts.is_empty() {
@@ -517,13 +498,6 @@ fn recalculate_keystroke_budgets(buffer: &Buffer, tasks: &mut [Task], world: usi
             } else {
                 parts.join(" ")
             }
-        } else {
-            // World 3+: use search
-            let pattern = task.description.as_str()
-                .trim_start_matches("Move to '")
-                .trim_start_matches("Navigate to '")
-                .trim_end_matches('\'');
-            format!("/{}", pattern)
         };
 
         prev_line = task.target_line;
@@ -640,6 +614,13 @@ fn resolve_segment_task(
         &seg_task.anchor.pattern,
         seg_task.anchor.occurrence,
     )?;
+
+    // at_end: target the last character of the matched pattern (for `e` motion tasks)
+    let col = if seg_task.anchor.at_end {
+        col + seg_task.anchor.pattern.len().saturating_sub(1)
+    } else {
+        col
+    };
 
     let abs_line = line + line_offset;
 

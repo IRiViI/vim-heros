@@ -20,6 +20,12 @@ pub struct SegmentMeta {
     pub difficulty: u8,
     #[serde(default)]
     pub hints: Vec<String>,
+    /// Marks this as a tutorial intro segment (first segment of a world's first level).
+    #[serde(default)]
+    pub intro: bool,
+    /// Which level this intro belongs to, e.g. "2-1".
+    #[serde(default)]
+    pub intro_level: Option<String>,
 }
 
 fn default_difficulty() -> u8 {
@@ -73,6 +79,9 @@ pub struct TaskAnchor {
     pub pattern: String,
     #[serde(default = "default_occurrence")]
     pub occurrence: usize,
+    /// When true, target the last character of the matched pattern (for `e` motion tasks).
+    #[serde(default)]
+    pub at_end: bool,
 }
 
 fn default_occurrence() -> usize {
@@ -158,6 +167,34 @@ content = "x = 1"
         let seg = Segment::from_toml(toml).unwrap();
         assert_eq!(seg.meta.difficulty, 1); // default
         assert!(seg.tasks.is_empty());
+    }
+
+    #[test]
+    fn test_parse_at_end_anchor() {
+        let toml = r#"
+[meta]
+id = "test-at-end"
+zone = "starter"
+language = "python"
+
+[code]
+content = "result = 42"
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "result", occurrence = 1, at_end = true }
+description = "End of 'result'"
+points = 50
+"#;
+        let seg = Segment::from_toml(toml).unwrap();
+        assert_eq!(seg.tasks.len(), 1);
+        assert!(seg.tasks[0].anchor.at_end);
+    }
+
+    #[test]
+    fn test_at_end_defaults_false() {
+        let seg = Segment::from_toml(SAMPLE_TOML).unwrap();
+        assert!(!seg.tasks[0].anchor.at_end);
     }
 
     #[test]

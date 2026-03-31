@@ -1,0 +1,74 @@
+[meta]
+id = "intro-1-1-first-steps"
+zone = "intro"
+language = "python"
+tags = ["intro", "movement", "hjkl"]
+difficulty = 1
+intro = true
+intro_level = "1-1"
+
+[code]
+content = """
+# =============================================
+# WELCOME TO VIM HEROES!
+# =============================================
+#
+# The code scrolls down. Your cursor must
+# keep up or it's GAME OVER.
+#
+# Highlighted words are TASKS -- move your
+# cursor to them to complete them!
+#
+# YOUR FIRST COMMANDS:
+#
+#   h  move left
+#   j  move down
+#   k  move up
+#   l  move right
+#
+# You can also use COUNTS:
+#   5j  move down 5 lines
+#   3l  move right 3 characters
+#
+# Try it! Move to each highlighted target.
+# =============================================
+
+name = "hero"
+level = 1
+score = 0
+
+greeting = "Welcome to Vim Heroes!"
+message = "Use h, j, k, l to move"
+"""
+
+# Task 1: move to 'hero'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "hero", occurrence = 1 }
+description = "Move to 'hero'"
+points = 25
+optimal_keys = 3
+
+# Task 2: move to 'score'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "score", occurrence = 1 }
+description = "Move to 'score'"
+points = 25
+optimal_keys = 3
+
+# Task 3: move to 'greeting'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "greeting", occurrence = 1 }
+description = "Move to 'greeting'"
+points = 25
+optimal_keys = 2
+
+# Task 4: move to 'message'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "message", occurrence = 1 }
+description = "Move to 'message'"
+points = 25
+optimal_keys = 2

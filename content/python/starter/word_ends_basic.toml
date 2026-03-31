@@ -1,0 +1,79 @@
+[meta]
+id = "py-starter-word-ends-basic"
+zone = "starter"
+language = "python"
+tags = ["navigation", "end-of-word", "e-motion"]
+difficulty = 1
+
+[code]
+content = """
+# Shopping Cart
+
+item_name = "laptop"
+item_price = 999.99
+quantity = 2
+
+subtotal = item_price * quantity
+tax_rate = 0.08
+tax_amount = subtotal * tax_rate
+total_cost = subtotal + tax_amount
+
+print(f"Item: {item_name}")
+print(f"Subtotal: ${subtotal:.2f}")
+print(f"Tax: ${tax_amount:.2f}")
+print(f"Total: ${total_cost:.2f}")
+"""
+
+# Task 1: end of 'item_name'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "item_name", occurrence = 1, at_end = true }
+description = "End of 'item_name'"
+points = 50
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 2: end of 'quantity'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "quantity", occurrence = 1, at_end = true }
+description = "End of 'quantity'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 3: end of 'subtotal' (first assignment)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "subtotal", occurrence = 1, at_end = true }
+description = "End of 'subtotal'"
+points = 50
+optimal_keys = 4
+perfect_keys = 3
+
+# Task 4: move to 'tax_rate'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "tax_rate", occurrence = 1 }
+description = "Move to 'tax_rate'"
+points = 50
+optimal_keys = 3
+perfect_keys = 2
+
+# Task 5: end of 'total_cost'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "total_cost", occurrence = 1, at_end = true }
+description = "End of 'total_cost'"
+points = 75
+optimal_keys = 5
+perfect_keys = 3
+
+# Task 6: end of 'Subtotal' in print
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Subtotal", occurrence = 1, at_end = true }
+description = "End of 'Subtotal' print"
+points = 75
+optimal_keys = 6
+perfect_keys = 4

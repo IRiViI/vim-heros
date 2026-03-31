@@ -40,6 +40,33 @@ pub fn load_segments(language: &str, zone: &str) -> Vec<Segment> {
     segments
 }
 
+/// Load intro segment for a specific level (e.g., "1-1").
+/// Intro segments live in content/{language}/intro/ and have `intro = true`.
+pub fn load_intro_segment(language: &str, level_id: &str) -> Option<Segment> {
+    // Look in the intro zone directory
+    let path = format!("{}/intro", language);
+    let dir = CONTENT_DIR.get_dir(&path)?;
+
+    for file in dir.files() {
+        let ext = file.path().extension()?;
+        if ext != "toml" {
+            continue;
+        }
+        let contents = file.contents_utf8()?;
+        if let Ok(seg) = Segment::from_toml(contents) {
+            if seg.meta.intro {
+                if let Some(ref target) = seg.meta.intro_level {
+                    if target == level_id {
+                        return Some(seg);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
 /// Load all segments across all zones for a language.
 pub fn load_all_segments(language: &str) -> Vec<Segment> {
     let mut all = Vec::new();

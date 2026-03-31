@@ -83,6 +83,16 @@ fn render_hud(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         }
     }
 
+    // Locked key flash — show for 0.5 seconds when pressing an unlearned key
+    if let Some((ref text, when, color)) = app.locked_key_flash {
+        if when.elapsed() < std::time::Duration::from_millis(500) {
+            spans.push(Span::styled(
+                format!("  {} ", text),
+                Style::default().fg(color),
+            ));
+        }
+    }
+
     let hud = Paragraph::new(Line::from(spans))
         .style(Style::default().bg(Color::Rgb(25, 25, 40)));
     frame.render_widget(hud, area);
@@ -383,6 +393,31 @@ fn render_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         }
 
         lines.push(Line::from(spans));
+    }
+
+    // Off-screen task indicator: show arrow when the next target is above/below viewport
+    if let Some(target_line) = primary_task_line {
+        if target_line < scroll_top {
+            let distance = scroll_top - target_line;
+            if let Some(first_line) = lines.first_mut() {
+                first_line.spans.push(Span::styled(
+                    format!("  \u{25b2} target {} lines up \u{25b2}", distance),
+                    Style::default()
+                        .fg(Color::Red)
+                        .add_modifier(Modifier::BOLD),
+                ));
+            }
+        } else if target_line >= scroll_top + inner_height {
+            let distance = target_line - (scroll_top + inner_height - 1);
+            if let Some(last_line) = lines.last_mut() {
+                last_line.spans.push(Span::styled(
+                    format!("  \u{25bc} target {} lines down \u{25bc}", distance),
+                    Style::default()
+                        .fg(Color::Red)
+                        .add_modifier(Modifier::BOLD),
+                ));
+            }
+        }
     }
 
     let title = " Vim Heroes ";

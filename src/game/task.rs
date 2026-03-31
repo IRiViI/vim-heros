@@ -93,6 +93,8 @@ pub struct Task {
     pub quality: CompletionQuality,
     /// Precomputed hint for practice mode (world-appropriate command suggestion).
     pub hint_command: String,
+    /// Whether this task targets the end of a word (for `e` motion hints).
+    pub at_end: bool,
 }
 
 impl Task {
@@ -115,6 +117,7 @@ impl Task {
             perfect_keys: 0,
             quality: CompletionQuality::Done,
             hint_command: String::new(),
+            at_end: false,
         }
     }
 
@@ -139,6 +142,7 @@ impl Task {
             perfect_keys: 0,
             quality: CompletionQuality::Done,
             hint_command: String::new(),
+            at_end: false,
         }
     }
 
@@ -164,6 +168,7 @@ impl Task {
             perfect_keys: 0,
             quality: CompletionQuality::Done,
             hint_command: String::new(),
+            at_end: false,
         }
     }
 
@@ -192,6 +197,7 @@ impl Task {
             perfect_keys: 0,
             quality: CompletionQuality::Done,
             hint_command: String::new(),
+            at_end: false,
         }
     }
 
@@ -215,6 +221,7 @@ impl Task {
             perfect_keys: 0,
             quality: CompletionQuality::Done,
             hint_command: String::new(),
+            at_end: false,
         }
     }
 
@@ -242,6 +249,7 @@ impl Task {
             perfect_keys: 0,
             quality: CompletionQuality::Done,
             hint_command: String::new(),
+            at_end: false,
         }
     }
 
@@ -267,6 +275,7 @@ impl Task {
             perfect_keys: 0,
             quality: CompletionQuality::Done,
             hint_command: String::new(),
+            at_end: false,
         }
     }
 
@@ -289,6 +298,7 @@ impl Task {
             perfect_keys: 0,
             quality: CompletionQuality::Done,
             hint_command: String::new(),
+            at_end: false,
         }
     }
 
@@ -313,6 +323,7 @@ impl Task {
             perfect_keys: 0,
             quality: CompletionQuality::Done,
             hint_command: String::new(),
+            at_end: false,
         }
     }
 

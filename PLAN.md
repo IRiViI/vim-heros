@@ -2017,7 +2017,7 @@ u/Ctrl-r, visual mode, registers, macros, search, new task types.
 
 ---
 
-### Phase 10 — Energy Bar System
+### Phase 10 — Energy Bar System ✅
 
 **Goal**: Replace keystroke penalty with energy bar as core survival mechanic.
 
@@ -2036,7 +2036,7 @@ refilling on task completion, and game over when hitting 0.
 
 ---
 
-### Phase 11 — World System & Skill Gating
+### Phase 11 — World System & Skill Gating ✅
 
 **Goal**: 14 themed worlds with progressive skill unlocking.
 

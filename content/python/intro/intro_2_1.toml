@@ -1,0 +1,81 @@
+[meta]
+id = "intro-2-1-word-surfer"
+zone = "intro"
+language = "python"
+tags = ["intro", "word-motions", "w", "b", "e"]
+difficulty = 1
+intro = true
+intro_level = "2-1"
+
+[code]
+content = """
+# =============================================
+# WORLD 2: Word Surfer
+# =============================================
+#
+# You already know h/j/k/l.
+# But pressing 'lllllll' to cross a line
+# is slow. There's a better way:
+#
+#   w  jump to the NEXT word
+#   b  jump BACK a word
+#   e  jump to the END of a word
+#
+# Capital versions skip punctuation:
+#   W  next WORD (skip symbols)
+#   B  back WORD (skip symbols)
+#   E  end of WORD (skip symbols)
+#
+# Use counts too: 3w = jump 3 words forward
+#
+# Try these new motions on the code below!
+# =============================================
+
+first_name = "Alice"
+last_name = "Johnson"
+full_name = first_name + " " + last_name
+
+total_students = 42
+passing_grade = 70
+average_score = 85.5
+"""
+
+# Task 1: move to 'first_name'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "first_name", occurrence = 1 }
+description = "Move to 'first_name'"
+points = 25
+optimal_keys = 2
+
+# Task 2: end of 'last_name'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "last_name", occurrence = 1, at_end = true }
+description = "End of 'last_name'"
+points = 25
+optimal_keys = 3
+
+# Task 3: move to 'full_name'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "full_name", occurrence = 1 }
+description = "Move to 'full_name'"
+points = 25
+optimal_keys = 2
+
+# Task 4: move to 'passing_grade'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "passing_grade", occurrence = 1 }
+description = "Move to 'passing_grade'"
+points = 25
+optimal_keys = 3
+
+# Task 5: end of 'average_score'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "average_score", occurrence = 1, at_end = true }
+description = "End of 'average_score'"
+points = 25
+optimal_keys = 3
