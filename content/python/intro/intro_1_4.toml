@@ -29,51 +29,152 @@ content = """
 # Prove you've mastered each one.
 # ===================================
 
-# -- h/l zone --
-x = 1
-y = 2
-z = x + y
 
-# -- w/b zone --
-first_name = "Alice"
-last_name = "Smith"
+# ~~~ h/l ZONE ~~~
+# Only h and l for horizontal movement.
+# Character by character. Precision.
+
+name = "Alice"
+age = 30
+city = "London"
+score = 100
+active = True
+level = 5
+
+# ~~~ w/b ZONE ~~~
+# Only w W b B e for horizontal.
+# Jump word by word.
+
+first_name = "Bob"
+last_name = "Johnson"
+email_address = "bob.johnson@example.com"
+phone_number = "+1-555-0123"
 full_name = first_name + " " + last_name
+display_text = f"User: {full_name}"
 
-# -- f/t zone --
-items = ["apple", "banana", "cherry", "date"]
+# ~~~ f/t ZONE ~~~
+# Only f F t T for horizontal.
+# Snipe specific characters.
 
-# -- $/0 zone --
+items = ["apple", "banana", "cherry", "date", "elderberry"]
+prices = [1.50, 2.30, 3.75, 0.90, 4.20]
+config = {"host": "localhost", "port": 8080, "debug": True}
+query = "SELECT name, age FROM users WHERE active = true"
+
+# ~~~ $/0 ZONE ~~~
+# Only $ and 0 for horizontal.
+# Jump to line edges.
+
 result = sum(range(100))
+output = print(result)
+message = "Hello, World!"
+total = len(items) + len(prices)
 """
 
-# Task 1: h/l zone - move to 'z' (j then l)
+# --- h/l zone tasks ---
+# Close targets, character-level precision
+
 [[tasks]]
 type = "move_to"
-anchor = { pattern = "z = x", occurrence = 1 }
-description = "Move to 'z' (h/l zone: hint: jjl)"
+anchor = { pattern = "Alice", occurrence = 1 }
+description = "Move to 'Alice' (h/l zone — use l to reach it)"
 points = 50
-optimal_keys = 3
+optimal_keys = 6
+zone = "hl"
 
-# Task 2: w/b zone - move to 'full_name' (3j w)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "score", occurrence = 1 }
+description = "Move to 'score' (h/l zone — use j and h)"
+points = 50
+optimal_keys = 4
+zone = "hl"
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "level", occurrence = 1 }
+description = "Move to 'level' (h/l zone)"
+points = 50
+optimal_keys = 2
+zone = "hl"
+
+# --- w/b zone tasks ---
+# Further targets, word-level jumps needed
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "email_address", occurrence = 1 }
+description = "Move to 'email_address' (w/b zone — use w to jump words)"
+points = 75
+optimal_keys = 3
+zone = "wb"
+
 [[tasks]]
 type = "move_to"
 anchor = { pattern = "full_name", occurrence = 1 }
-description = "Move to 'full_name' (w/b zone: hint: 4j)"
+description = "Move to 'full_name' (w/b zone — use w or b)"
 points = 75
 optimal_keys = 3
+zone = "wb"
 
-# Task 3: f/t zone - move to 'cherry' (3j fc)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "display_text", occurrence = 1 }
+description = "Move to 'display_text' (w/b zone)"
+points = 75
+optimal_keys = 2
+zone = "wb"
+
+# --- f/t zone tasks ---
+# Target specific characters within lines
+
 [[tasks]]
 type = "move_to"
 anchor = { pattern = "cherry", occurrence = 1 }
-description = "Move to 'cherry' (f/t zone: hint: 3j fc)"
+description = "Move to 'cherry' (f/t zone — try fc)"
 points = 75
 optimal_keys = 3
+zone = "ft"
 
-# Task 4: $/0 zone - move to 'result' (3j 0)
 [[tasks]]
 type = "move_to"
-anchor = { pattern = "result", occurrence = 1 }
-description = "Move to 'result' ($/0 zone: hint: 3j)"
-points = 50
+anchor = { pattern = "port", occurrence = 1 }
+description = "Move to 'port' (f/t zone — try fp)"
+points = 75
+optimal_keys = 3
+zone = "ft"
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "WHERE", occurrence = 1 }
+description = "Move to 'WHERE' (f/t zone — try fW)"
+points = 75
+optimal_keys = 3
+zone = "ft"
+
+# --- $/0 zone tasks ---
+# Line edge jumps: $ first, then 0 back
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "result", occurrence = 2, at_end = true }
+description = "Move to end of 'result' ($/0 zone — use $)"
+points = 75
 optimal_keys = 2
+zone = "line_edge"
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "message", occurrence = 1 }
+description = "Move to 'message' ($/0 zone — use 0)"
+points = 75
+optimal_keys = 2
+zone = "line_edge"
+
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "total", occurrence = 1 }
+description = "Move to 'total' ($/0 zone — use 0)"
+points = 75
+optimal_keys = 2
+zone = "line_edge"

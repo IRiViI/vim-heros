@@ -95,6 +95,10 @@ pub struct Task {
     pub hint_command: String,
     /// Whether this task targets the end of a word (for `e` motion hints).
     pub at_end: bool,
+    /// World 1 Level 4: restricted zone for this task.
+    /// "hl" = h/l only, "wb" = w/b only, "ft" = f/t only, "line_edge" = $/0 only.
+    /// None = no restriction.
+    pub zone: Option<String>,
 }
 
 impl Task {
@@ -118,6 +122,7 @@ impl Task {
             quality: CompletionQuality::Done,
             hint_command: String::new(),
             at_end: false,
+            zone: None,
         }
     }
 
@@ -143,6 +148,7 @@ impl Task {
             quality: CompletionQuality::Done,
             hint_command: String::new(),
             at_end: false,
+            zone: None,
         }
     }
 
@@ -169,6 +175,7 @@ impl Task {
             quality: CompletionQuality::Done,
             hint_command: String::new(),
             at_end: false,
+            zone: None,
         }
     }
 
@@ -198,6 +205,7 @@ impl Task {
             quality: CompletionQuality::Done,
             hint_command: String::new(),
             at_end: false,
+            zone: None,
         }
     }
 
@@ -222,6 +230,7 @@ impl Task {
             quality: CompletionQuality::Done,
             hint_command: String::new(),
             at_end: false,
+            zone: None,
         }
     }
 
@@ -250,6 +259,7 @@ impl Task {
             quality: CompletionQuality::Done,
             hint_command: String::new(),
             at_end: false,
+            zone: None,
         }
     }
 
@@ -276,6 +286,7 @@ impl Task {
             quality: CompletionQuality::Done,
             hint_command: String::new(),
             at_end: false,
+            zone: None,
         }
     }
 
@@ -299,6 +310,7 @@ impl Task {
             quality: CompletionQuality::Done,
             hint_command: String::new(),
             at_end: false,
+            zone: None,
         }
     }
 
@@ -324,6 +336,7 @@ impl Task {
             quality: CompletionQuality::Done,
             hint_command: String::new(),
             at_end: false,
+            zone: None,
         }
     }
 

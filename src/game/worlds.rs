@@ -93,7 +93,7 @@ pub const WORLDS: &[WorldDef] = &[
         new_skills: &[
             VimSkill::MoveLeft, VimSkill::MoveDown,
             VimSkill::MoveUp, VimSkill::MoveRight,
-            VimSkill::Count, VimSkill::GotoLine,
+            VimSkill::Count,
             VimSkill::ScrollPage,
         ],
     },
@@ -502,6 +502,55 @@ pub fn w1_allowed_skills(level: usize) -> HashSet<VimSkill> {
     skills
 }
 
+/// Returns the allowed skills for a World 1 Level 4 restricted zone.
+/// Vertical movement (j/k) and scroll are always allowed.
+/// Horizontal movement is restricted based on the zone.
+pub fn w1_zone_skills(zone: &str) -> HashSet<VimSkill> {
+    let mut skills = HashSet::new();
+    // Vertical always available
+    skills.insert(VimSkill::MoveDown);
+    skills.insert(VimSkill::MoveUp);
+    skills.insert(VimSkill::ScrollPage);
+    skills.insert(VimSkill::Count);
+
+    match zone {
+        "hl" => {
+            skills.insert(VimSkill::MoveLeft);
+            skills.insert(VimSkill::MoveRight);
+        }
+        "wb" => {
+            skills.insert(VimSkill::WordForward);
+            skills.insert(VimSkill::WordBackward);
+            skills.insert(VimSkill::WordEnd);
+            skills.insert(VimSkill::BigWordForward);
+            skills.insert(VimSkill::BigWordBackward);
+        }
+        "ft" => {
+            skills.insert(VimSkill::FindChar);
+            skills.insert(VimSkill::TillChar);
+        }
+        "line_edge" => {
+            skills.insert(VimSkill::LineStart);
+            skills.insert(VimSkill::LineEnd);
+        }
+        _ => {
+            // Unknown zone or "any" — allow everything in World 1
+            skills.insert(VimSkill::MoveLeft);
+            skills.insert(VimSkill::MoveRight);
+            skills.insert(VimSkill::WordForward);
+            skills.insert(VimSkill::WordBackward);
+            skills.insert(VimSkill::WordEnd);
+            skills.insert(VimSkill::BigWordForward);
+            skills.insert(VimSkill::BigWordBackward);
+            skills.insert(VimSkill::FindChar);
+            skills.insert(VimSkill::TillChar);
+            skills.insert(VimSkill::LineStart);
+            skills.insert(VimSkill::LineEnd);
+        }
+    }
+    skills
+}
+
 /// Check whether an action is a motion (moves the cursor without editing).
 pub fn is_motion_action(action: &Action) -> bool {
     matches!(action,
@@ -524,14 +573,46 @@ pub fn is_motion_action(action: &Action) -> bool {
 
 /// Format skill names for the level hint block.
 /// Returns lines like "w / b      next word / back a word".
-pub fn skill_hint_lines(world: usize) -> Vec<&'static str> {
+/// For World 1, hints are level-specific (progressive unlock).
+pub fn skill_hint_lines(world: usize, level: usize) -> Vec<&'static str> {
     match world {
-        1 => vec![
-            "h / l      move left / right",
-            "j / k      move down / up",
-            "5j / 3k    move with counts",
-            "gg / G     top / bottom of file",
-        ],
+        1 => match level {
+            1 => vec![
+                "h / l      move left / right",
+                "j / k      move down / up",
+            ],
+            2 => vec![
+                "h / l      move left / right",
+                "j / k      move down / up",
+                "w / b      next word / back a word",
+                "W / B / e  big-word motions / end of word",
+                "5j / 3w    move with counts",
+            ],
+            3 => vec![
+                "h / l      move left / right",
+                "j / k      move down / up",
+                "w / b      next word / back a word",
+                "W / B / e  big-word motions / end of word",
+                "5j / 3w    move with counts",
+                "f<c> / F<c>  find char forward / backward",
+                "t<c> / T<c>  till char forward / backward",
+            ],
+            4 => vec![
+                "ZONE RULES: j/k always work",
+                "h/l zones:  h and l only",
+                "w/b zones:  w W b B e only",
+                "f/t zones:  f F t T only",
+                "$/0 zones:  $ and 0 only",
+            ],
+            5 => vec![
+                "ALL World 1 motions available",
+                "Each target: exactly 1 motion",
+            ],
+            _ => vec![
+                "h / l      move left / right",
+                "j / k      move down / up",
+            ],
+        },
         2 => vec![
             "w / b      next word / back a word",
             "e          jump to end of word",

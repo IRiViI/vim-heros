@@ -1074,6 +1074,35 @@ impl App {
                             }
                         }
 
+                        // World 1 Level 4: zone-based horizontal restrictions
+                        if self.level.is_world1() && self.level.level == 4 {
+                            if let Some(skill) = worlds::skill_for_action(&action) {
+                                // Get the active task's zone
+                                let active_zone = self.tasks.iter()
+                                    .find(|t| t.state == task::TaskState::Active)
+                                    .and_then(|t| t.zone.as_deref());
+                                if let Some(zone) = active_zone {
+                                    let zone_skills = worlds::w1_zone_skills(zone);
+                                    if !zone_skills.contains(&skill) {
+                                        let zone_label = match zone {
+                                            "hl" => "h/l",
+                                            "wb" => "w/b",
+                                            "ft" => "f/t",
+                                            "line_edge" => "$/0",
+                                            _ => zone,
+                                        };
+                                        self.locked_key_flash = Some((
+                                            format!("\u{1f6ab} {} zone \u{2014} only {} keys allowed here",
+                                                zone_label, zone_label),
+                                            Instant::now(),
+                                            Color::Red,
+                                        ));
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+
                         // Handle undo specially
                         if matches!(action, Action::Undo) {
                             if let Some((rope, cursor)) = self.undo.undo(self.buffer.rope(), self.cursor) {

@@ -211,10 +211,224 @@ This gives us:
 2. **Death hints for free** — compare the player's actual motions to the optimal path and suggest the better alternative.
 3. **Level validation** — guarantees every target is reachable within the allowed keys before the player starts.
 
+## World 2: Basic Edit
+
+### Game mechanic
+
+Split-screen view. The right window shows the complete target code with highlighted differences. The left window shows the player's incomplete code. The player must add the missing text using insert mode commands, typing real code.
+
+No auto-scrolling. The player navigates freely. Energy drains over time — every X seconds, energy decreases. Completing a task restores energy. Hit 0 energy = game over.
+
+All World 1 motions are available for navigation (cumulative skill unlock).
+
+### Start condition
+
+No countdown. The game starts on the player's first keystroke.
+
+### Content theme
+
+Old school / legacy scripts: sorting algorithms (bubble sort, selection sort), fibonacci, factorial, binary search, linked list operations. Classic functions every programmer has written.
+
+### Split-screen rules
+
+- Left window: player's code (editable). Title: "Your Code".
+- Right window: target code (read-only). Title: "Target".
+- Differences are highlighted in the right window only — missing lines get a coloured background, missing inline text gets character-level highlighting.
+- Both viewports scroll independently. The target viewport auto-scrolls to show the next task's relevant line.
+
+### Energy
+
+Energy drains over time (not per motion). Same difficulty tiers as World 1:
+
+| Difficulty | Name | Energy drain | Errors allowed |
+|---|---|---|---|
+| 1 | Nano User | slow | 10 |
+| 2 | :wq Survivor | moderate | 5 |
+| 3 | Keyboard Warrior | fast | 3 |
+| 4 | 10x Engineer | very fast | 1 |
+| 5 | Uses Arch btw | extreme | 0 |
+
+Completing a task restores energy. An "error" is using the wrong insert entry point (e.g., using `i` when `A` would be optimal).
+
+### Levels
+
+#### Level 1 — Insert basics
+**Allowed insert commands:** `i` `a` `Esc`
+
+**Intro:**
+```
+# ═══════════════════════════════════
+# WORLD 2: Basic Edit
+# ═══════════════════════════════════
+#
+# Split screen! Right side shows the
+# target code. Left side is yours.
+#
+# Add the missing parts using:
+#   i — insert before cursor
+#   a — insert after cursor
+#   Esc — back to normal mode
+#
+# Type the actual code. Energy drains
+# over time — be quick!
+# ═══════════════════════════════════
+```
+
+Adding code top-to-bottom, one insertion per task. Simple completions: fill in parameters, values, operators. The player navigates to the right spot, enters insert mode with `i` or `a`, types the missing text, and presses `Esc`.
+
+#### Level 2 — Line edges
+**Allowed insert commands:** `i` `a` `I` `A` `Esc`
+
+**Intro:**
+```
+# ═══════════════════════════════════
+# Level 2-2: Line edges
+# ═══════════════════════════════════
+#
+# New entry points:
+#
+#   I — insert at beginning of line
+#   A — insert at end of line
+#
+# Use I to add text at the start.
+# Use A to append at the end.
+# Much faster than navigating there
+# with h/l first.
+# ═══════════════════════════════════
+```
+
+Still top-to-bottom, one line at a time. Tasks require inserting at line edges: add a comment prefix with `I`, append a closing bracket or semicolon with `A`. Player learns that `I` and `A` are shortcuts for "go to start/end of line + insert mode".
+
+#### Level 3 — New lines
+**Allowed insert commands:** `i` `a` `I` `A` `o` `O` `Esc`
+
+**Intro:**
+```
+# ═══════════════════════════════════
+# Level 2-3: New lines
+# ═══════════════════════════════════
+#
+# Now you can create new lines:
+#
+#   o — open line below, enter insert
+#   O — open line above, enter insert
+#
+# This is where it gets real.
+# Build entire functions line by line.
+# ═══════════════════════════════════
+```
+
+Adding lines within code blocks — not top-to-bottom anymore. The player builds functions in a natural coding style: for example, start with a skeleton (function signature + for loops), then fill in the body logic using `o`/`O`. The content is designed so the line insertions make sense as real coding steps.
+
+#### Level 4 — Restricted entry points
+**Allowed insert commands:** All (`i` `a` `I` `A` `o` `O` `Esc`), but per-task restrictions.
+
+**Intro:**
+```
+# ═══════════════════════════════════
+# Level 2-4: Restricted entry points
+# ═══════════════════════════════════
+#
+# You know all the insert commands.
+# Now prove it.
+#
+# Each task tells you which command
+# to use. A message in the HUD shows
+# the allowed keys for the current
+# task.
+#
+# No falling back on familiar ones.
+# ═══════════════════════════════════
+```
+
+Each task specifies which insert command to use. The HUD shows a message like "USE: I only" or "USE: o/O only". This forces the player to use the right tool for each situation instead of always defaulting to `i`.
+
+#### Level 5 — Perfect entry
+**Allowed insert commands:** All.
+
+**Intro:**
+```
+# ═══════════════════════════════════
+# Level 2-5: Perfect entry
+# ═══════════════════════════════════
+#
+# Final test.
+#
+# Every insertion must use the OPTIMAL
+# entry command. No wasted keystrokes.
+#
+#   End of line? Use A, not l l l i.
+#   New line below? Use o, not A Enter.
+#   Start of line? Use I, not 0 i.
+#
+# One command. Every time.
+# ═══════════════════════════════════
+```
+
+Every task must be completed using the optimal insert entry point. If the target text is at end of line, `A` is required — not `l l l i`. If a new line is needed below, `o` is required — not `A` then `Enter`. The game tracks which insert command was used and rejects non-optimal ones.
+
+### Content format
+
+TOML defines the target (complete) code in `[code]`. A `[[removals]]` list specifies what to remove to create the player's starting (incomplete) code. Each removal becomes a task.
+
+- `type = "inline"`: text is removed from within a line. Player must insert it back with `i`/`a`/`I`/`A`.
+- `type = "whole_line"`: entire line is removed. Player must add it with `o`/`O`.
+- `entry_point`: the optimal insert command for this task (for level 4 restrictions and level 5 enforcement).
+
 ## Missing / To Do
 
-Motions not yet assigned to a world or level:
+Motions and commands not yet assigned to a world or level:
 
+**Navigation:**
 - `gg` — jump to the first line of the file
 - `G` — jump to the last line of the file
 - `{n}G` — jump to line n (e.g. `42G` goes to line 42)
+- `^` — jump to first non-blank character on line
+- `;` `,` — repeat last f/t search forward/backward
+- `{` `}` — jump to previous/next empty line (paragraph motions)
+- `%` — jump to matching bracket
+- `R` — enter replace mode (overwrite characters)
+
+**Deletion:**
+- `x` — delete character under cursor
+- `X` — delete character before cursor
+- `dd` — delete entire line
+- `D` — delete from cursor to end of line
+
+**Operators (verb + noun):**
+- `d{motion}` — delete with motion (e.g. `dw`, `d$`, `d3j`)
+- `c{motion}` — change with motion (e.g. `cw`, `c$`)
+- `.` — repeat last change
+- `>>` `<<` — indent / dedent line
+- `r{char}` — replace character under cursor
+
+**Yank / paste:**
+- `y` `yy` — yank (copy) text / yank line
+- `p` `P` — paste after / paste before
+
+**Visual mode:**
+- `v` `V` — visual mode (character / line)
+- operators on visual selections
+
+**Text objects:**
+- `iw` `aw` — inner word / around word
+- `i"` `a"` `i(` `a(` `i{` `a{` — inner/around delimiters
+
+**Search:**
+- `/` `?` — search forward / backward
+- `n` `N` — next / previous match
+- `*` `#` — search word under cursor forward / backward
+
+**Undo / registers:**
+- `u` — undo
+- `Ctrl-R` — redo
+- `"a`-`"z` — named registers
+
+**Macros:**
+- `q{reg}` — start recording macro
+- `@{reg}` — replay macro
+- `@@` — replay last macro
+
+**Marks:**
+- `m{a-z}` — set mark
+- `'{a-z}` — jump to mark

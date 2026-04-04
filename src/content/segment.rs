@@ -68,6 +68,10 @@ pub struct SegmentTask {
     /// For delete_block tasks: the number of lines to delete.
     #[serde(default)]
     pub line_count: Option<usize>,
+    /// World 1 Level 4: which restricted zone this task belongs to.
+    /// Values: "hl", "wb", "ft", "line_edge". Omit for no restriction.
+    #[serde(default)]
+    pub zone: Option<String>,
 }
 
 fn default_points() -> i64 {

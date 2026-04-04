@@ -126,7 +126,7 @@ fn build_level_hints(ctx: &LevelContext) -> String {
     };
 
     // Show this world's new skills (what the player just learned)
-    let motions = worlds::skill_hint_lines(ctx.world);
+    let motions = worlds::skill_hint_lines(ctx.world, ctx.level);
 
     let world_name = worlds::WORLDS
         .iter()
@@ -236,6 +236,7 @@ pub fn assemble(segments: &[&Segment], level_ctx: Option<&LevelContext>) -> Asse
                 task.good_keys = seg_task.optimal_keys;
                 task.perfect_keys = seg_task.perfect_keys;
                 task.at_end = seg_task.anchor.at_end;
+                task.zone = seg_task.zone.clone();
                 all_tasks.push(task);
             }
         }
