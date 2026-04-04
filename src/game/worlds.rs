@@ -382,6 +382,146 @@ pub fn skill_unlock_world(skill: VimSkill) -> usize {
     1 // ScrollPage and fallback
 }
 
+// ── World 1 difficulty settings ──────────────────────────────────
+
+/// Difficulty level for World 1.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct W1Difficulty {
+    pub level: u8,
+    pub name: &'static str,
+    /// Scroll speed: milliseconds per line.
+    pub scroll_ms: u64,
+    /// Maximum errors (non-optimal motions) allowed.
+    pub max_errors: usize,
+}
+
+pub const W1_DIFFICULTIES: &[W1Difficulty] = &[
+    W1Difficulty { level: 1, name: "Nano User",       scroll_ms: 5000, max_errors: 10 },
+    W1Difficulty { level: 2, name: ":wq Survivor",    scroll_ms: 2000, max_errors: 5 },
+    W1Difficulty { level: 3, name: "Keyboard Warrior", scroll_ms: 1000, max_errors: 3 },
+    W1Difficulty { level: 4, name: "10x Engineer",    scroll_ms: 500,  max_errors: 1 },
+    W1Difficulty { level: 5, name: "Uses Arch btw",   scroll_ms: 200,  max_errors: 0 },
+];
+
+/// Get World 1 difficulty by level (1-indexed). Defaults to difficulty 1.
+pub fn w1_difficulty(difficulty: u8) -> &'static W1Difficulty {
+    W1_DIFFICULTIES.iter()
+        .find(|d| d.level == difficulty)
+        .unwrap_or(&W1_DIFFICULTIES[0])
+}
+
+// ── World 1 per-level allowed motions ───────────────────────────
+
+/// Restriction zone for World 1 Level 4 (horizontal keys restricted per zone).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum W1Zone {
+    /// h/l only for horizontal
+    HlOnly,
+    /// w/W/b/B/e only for horizontal
+    WordOnly,
+    /// f/F/t/T only for horizontal
+    FindOnly,
+    /// $/0 only for horizontal
+    LineEdgeOnly,
+    /// No restriction (between zones)
+    Any,
+}
+
+/// Get the set of allowed VimSkills for a World 1 sub-level.
+pub fn w1_allowed_skills(level: usize) -> HashSet<VimSkill> {
+    let mut skills = HashSet::new();
+    // Always available
+    skills.insert(VimSkill::ScrollPage);
+
+    match level {
+        1 => {
+            // h j k l only
+            skills.insert(VimSkill::MoveLeft);
+            skills.insert(VimSkill::MoveDown);
+            skills.insert(VimSkill::MoveUp);
+            skills.insert(VimSkill::MoveRight);
+        }
+        2 => {
+            // + w W b B e + count prefixes
+            skills.insert(VimSkill::MoveLeft);
+            skills.insert(VimSkill::MoveDown);
+            skills.insert(VimSkill::MoveUp);
+            skills.insert(VimSkill::MoveRight);
+            skills.insert(VimSkill::WordForward);
+            skills.insert(VimSkill::WordBackward);
+            skills.insert(VimSkill::WordEnd);
+            skills.insert(VimSkill::BigWordForward);
+            skills.insert(VimSkill::BigWordBackward);
+            skills.insert(VimSkill::Count);
+        }
+        3 => {
+            // + f F t T
+            skills.insert(VimSkill::MoveLeft);
+            skills.insert(VimSkill::MoveDown);
+            skills.insert(VimSkill::MoveUp);
+            skills.insert(VimSkill::MoveRight);
+            skills.insert(VimSkill::WordForward);
+            skills.insert(VimSkill::WordBackward);
+            skills.insert(VimSkill::WordEnd);
+            skills.insert(VimSkill::BigWordForward);
+            skills.insert(VimSkill::BigWordBackward);
+            skills.insert(VimSkill::Count);
+            skills.insert(VimSkill::FindChar);
+            skills.insert(VimSkill::TillChar);
+        }
+        4 | 5 => {
+            // All World 1 motions
+            skills.insert(VimSkill::MoveLeft);
+            skills.insert(VimSkill::MoveDown);
+            skills.insert(VimSkill::MoveUp);
+            skills.insert(VimSkill::MoveRight);
+            skills.insert(VimSkill::WordForward);
+            skills.insert(VimSkill::WordBackward);
+            skills.insert(VimSkill::WordEnd);
+            skills.insert(VimSkill::BigWordForward);
+            skills.insert(VimSkill::BigWordBackward);
+            skills.insert(VimSkill::Count);
+            skills.insert(VimSkill::FindChar);
+            skills.insert(VimSkill::TillChar);
+            skills.insert(VimSkill::LineStart);
+            skills.insert(VimSkill::LineEnd);
+        }
+        _ => {
+            // Default: everything in world 1
+            for &skill in &[
+                VimSkill::MoveLeft, VimSkill::MoveDown, VimSkill::MoveUp,
+                VimSkill::MoveRight, VimSkill::WordForward, VimSkill::WordBackward,
+                VimSkill::WordEnd, VimSkill::BigWordForward, VimSkill::BigWordBackward,
+                VimSkill::Count, VimSkill::FindChar, VimSkill::TillChar,
+                VimSkill::LineStart, VimSkill::LineEnd,
+            ] {
+                skills.insert(skill);
+            }
+        }
+    }
+    skills
+}
+
+/// Check whether an action is a motion (moves the cursor without editing).
+pub fn is_motion_action(action: &Action) -> bool {
+    matches!(action,
+        Action::MoveLeft | Action::MoveDown | Action::MoveUp | Action::MoveRight
+        | Action::WordForward | Action::WordBackward | Action::WordEnd
+        | Action::BigWordForward | Action::BigWordBackward | Action::BigWordEnd
+        | Action::LineStart | Action::LineFirstChar | Action::LineEnd
+        | Action::FindCharForward(_) | Action::FindCharBackward(_)
+        | Action::TillCharForward(_) | Action::TillCharBackward(_)
+        | Action::GotoFirstLine | Action::GotoLastLine | Action::GotoLine(_)
+        | Action::ParagraphForward | Action::ParagraphBackward
+        | Action::MatchBracket
+        | Action::SearchForward | Action::SearchBackward
+        | Action::SearchNext | Action::SearchPrev
+        | Action::SearchWordForward | Action::SearchWordBackward
+        | Action::ScrollHalfDown | Action::ScrollHalfUp
+        | Action::ScrollFullDown | Action::ScrollFullUp
+    )
+}
+
 /// Format skill names for the level hint block.
 /// Returns lines like "w / b      next word / back a word".
 pub fn skill_hint_lines(world: usize) -> Vec<&'static str> {

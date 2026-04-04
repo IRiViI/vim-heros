@@ -1,0 +1,79 @@
+[meta]
+id = "intro-1-4-restricted-zones"
+zone = "intro"
+language = "python"
+tags = ["intro", "movement", "zones", "restricted"]
+difficulty = 1
+intro = true
+intro_level = "1-4"
+
+[code]
+content = """
+# ===================================
+# Level 1-4: Restricted zones
+# ===================================
+#
+# You know all the motions now.
+# But do you REALLY know them?
+#
+# This level has ZONES. In each zone
+# only certain horizontal keys work:
+#
+#   h/l zones  -- character by character
+#   w/b zones  -- word by word
+#   f/t zones  -- find characters
+#   $/0 zones  -- line edges only
+#
+# j and k always work (vertical).
+# No falling back on familiar keys.
+# Prove you've mastered each one.
+# ===================================
+
+# -- h/l zone --
+x = 1
+y = 2
+z = x + y
+
+# -- w/b zone --
+first_name = "Alice"
+last_name = "Smith"
+full_name = first_name + " " + last_name
+
+# -- f/t zone --
+items = ["apple", "banana", "cherry", "date"]
+
+# -- $/0 zone --
+result = sum(range(100))
+"""
+
+# Task 1: h/l zone - move to 'z' (j then l)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "z = x", occurrence = 1 }
+description = "Move to 'z' (h/l zone: hint: jjl)"
+points = 50
+optimal_keys = 3
+
+# Task 2: w/b zone - move to 'full_name' (3j w)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "full_name", occurrence = 1 }
+description = "Move to 'full_name' (w/b zone: hint: 4j)"
+points = 75
+optimal_keys = 3
+
+# Task 3: f/t zone - move to 'cherry' (3j fc)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "cherry", occurrence = 1 }
+description = "Move to 'cherry' (f/t zone: hint: 3j fc)"
+points = 75
+optimal_keys = 3
+
+# Task 4: $/0 zone - move to 'result' (3j 0)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "result", occurrence = 1 }
+description = "Move to 'result' ($/0 zone: hint: 3j)"
+points = 50
+optimal_keys = 2

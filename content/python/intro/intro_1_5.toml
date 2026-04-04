@@ -1,0 +1,80 @@
+[meta]
+id = "intro-1-5-perfect-motions"
+zone = "intro"
+language = "python"
+tags = ["intro", "movement", "perfect", "final"]
+difficulty = 1
+intro = true
+intro_level = "1-5"
+
+[code]
+content = """
+# ===================================
+# Level 1-5: Perfect motions
+# ===================================
+#
+# Final test.
+#
+# Every target must be reached in
+# exactly ONE motion. No mistakes.
+#
+# You know the tools:
+#   h j k l w W b B e f F t T $ 0
+#   ...and counts (6j, 3fe, 2w)
+#
+# Pick the right one. Every time.
+# ===================================
+
+name = "Vim Master"
+skills = ["h", "j", "k", "l", "w", "b"]
+
+class Player:
+    def __init__(self, name, skills):
+        self.name = name
+        self.skills = skills
+        self.level = 1
+
+    def level_up(self):
+        self.level += 1
+        print(f"{self.name} is now level {self.level}!")
+
+    def show_skills(self):
+        for skill in self.skills:
+            print(f"  - {skill}")
+"""
+
+# Task 1: jump to 'skills' with exact motion (j)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "skills", occurrence = 1 }
+description = "Reach 'skills' in 1 motion (hint: j)"
+points = 100
+optimal_keys = 1
+perfect_keys = 1
+
+# Task 2: jump to 'Player' with exact motion (2j w)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "Player", occurrence = 1 }
+description = "Reach 'Player' in 1 motion (hint: 2j)"
+points = 100
+optimal_keys = 1
+perfect_keys = 1
+
+# Task 3: jump to 'level_up' (5j w)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "level_up", occurrence = 1 }
+description = "Reach 'level_up' in 1 motion (hint: 5j)"
+points = 100
+optimal_keys = 1
+perfect_keys = 1
+
+# Task 4: jump to 'show_skills' (4j)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "show_skills", occurrence = 1 }
+description = "Reach 'show_skills' in 1 motion (hint: 4j)"
+points = 100
+optimal_keys = 1
+perfect_keys = 1

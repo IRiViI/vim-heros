@@ -1,0 +1,73 @@
+[meta]
+id = "intro-1-3-line-targeting"
+zone = "intro"
+language = "python"
+tags = ["intro", "movement", "find", "till"]
+difficulty = 1
+intro = true
+intro_level = "1-3"
+
+[code]
+content = """
+# ===================================
+# Level 1-3: Line targeting
+# ===================================
+#
+# New precision tools:
+#
+#   f{char} -- jump forward TO {char}
+#   F{char} -- jump backward TO {char}
+#   t{char} -- jump forward UNTIL {char}
+#   T{char} -- jump backward UNTIL {char}
+#
+# Examples:
+#   fa -- jump to the next 'a'
+#   2fe -- jump to the second 'e'
+#
+# These are sniper rifles for
+# horizontal movement. Use them.
+# ===================================
+
+config = {"host": "localhost", "port": 8080}
+settings = {"debug": True, "verbose": False}
+credentials = {"username": "admin", "password": "secret"}
+
+def validate_config(config):
+    required = ["host", "port"]
+    for key in required:
+        if key not in config:
+            raise ValueError(f"Missing: {key}")
+    return True
+"""
+
+# Task 1: jump to 'host' inside config dict (j then fh)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "host", occurrence = 1 }
+description = "Jump to 'host' (hint: j fh)"
+points = 50
+optimal_keys = 2
+
+# Task 2: jump to 'debug' in settings (j fd)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "debug", occurrence = 1 }
+description = "Jump to 'debug' (hint: j fd)"
+points = 50
+optimal_keys = 2
+
+# Task 3: jump to 'password' in credentials (j fp)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "password", occurrence = 1 }
+description = "Jump to 'password' (hint: j fp)"
+points = 75
+optimal_keys = 2
+
+# Task 4: jump to 'ValueError' (3j fV)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "ValueError", occurrence = 1 }
+description = "Jump to 'ValueError' (hint: 3j fV)"
+points = 75
+optimal_keys = 3

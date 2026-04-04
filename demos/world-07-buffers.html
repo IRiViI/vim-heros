@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World 7: Buffers, Windows, Tabs — Vim Heroes</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Courier New', Courier, monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.back-link {
+  display: inline-block;
+  margin: 18px 0 0 24px;
+  color: #00d4ff;
+  text-decoration: none;
+  font-size: 14px;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+.back-link:hover { opacity: 1; text-decoration: underline; }
+
+h1 {
+  text-align: center;
+  font-size: 28px;
+  margin: 12px 0 6px;
+  color: #fff;
+  text-shadow: 0 0 18px #00d4ff88;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #00d4ff;
+  font-size: 13px;
+  margin-bottom: 14px;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+/* ---- Tabs ---- */
+.tab-bar {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+.tab-btn {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  color: #8893a8;
+  padding: 10px 22px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  transition: all 0.25s;
+  letter-spacing: 0.5px;
+}
+.tab-btn:hover { background: #1a2744; color: #ccc; }
+.tab-btn.active {
+  background: #0f3460;
+  color: #00d4ff;
+  border-color: #00d4ff;
+  box-shadow: 0 0 12px #00d4ff44;
+}
+
+/* ---- Canvas container ---- */
+.demo-container {
+  max-width: 820px;
+  margin: 0 auto;
+  background: #0d1b2a;
+  border: 1px solid #0f346066;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 30px #00000088;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 480px;
+}
+
+/* ---- Caption bar ---- */
+.caption-bar {
+  background: #16213e;
+  border-top: 1px solid #0f346066;
+  padding: 14px 24px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.caption-text {
+  color: #e0e0e0;
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.5;
+  transition: opacity 0.35s;
+}
+.caption-text .key {
+  color: #00d4ff;
+  background: #0f3460;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+/* ---- Keys reference ---- */
+.keys-ref {
+  max-width: 820px;
+  margin: 16px auto 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.key-tag {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  color: #00d4ff;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">&larr; Back to Overview</a>
+<h1>World 7: Buffers, Windows, Tabs</h1>
+<p class="subtitle">:e &middot; :bn &middot; :bp &middot; :split &middot; :vsplit &middot; Ctrl-w h/j/k/l &middot; :tabnew &middot; gt &middot; gT</p>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab(0)">A: Air Traffic Control</button>
+  <button class="tab-btn" onclick="switchTab(1)">B: Mission Control</button>
+  <button class="tab-btn" onclick="switchTab(2)">C: Kitchen Rush</button>
+</div>
+
+<div class="demo-container">
+  <canvas id="demoCanvas"></canvas>
+  <div class="caption-bar">
+    <div class="caption-text" id="captionText"></div>
+  </div>
+</div>
+
+<div class="keys-ref">
+  <span class="key-tag">:e file</span>
+  <span class="key-tag">:bn</span>
+  <span class="key-tag">:bp</span>
+  <span class="key-tag">:split</span>
+  <span class="key-tag">:vsplit</span>
+  <span class="key-tag">Ctrl-w h/j/k/l</span>
+  <span class="key-tag">:tabnew</span>
+  <span class="key-tag">gt</span>
+  <span class="key-tag">gT</span>
+</div>
+
+<script>
+// ============================================================
+//  SHARED STATE
+// ============================================================
+const canvas = document.getElementById('demoCanvas');
+const ctx = canvas.getContext('2d');
+const captionEl = document.getElementById('captionText');
+let W, H, dpr;
+let activeTab = 0;
+let animId = null;
+let startTime = 0;
+
+const CYCLE = 10000;       // 10s loop
+const CAPTION_CYCLE = 3500; // 3.5s per caption
+
+const captions = [
+  [ // A
+    'Files are incoming planes \u2014 open windows to land them',
+    '<span class="key">:split</span> and <span class="key">:vsplit</span> create landing strips (horizontal/vertical splits)',
+    '<span class="key">Ctrl-w h/j/k/l</span> navigates between windows \u2014 manage your airspace',
+  ],
+  [ // B
+    'Each monitor is a vim window \u2014 switch between them to handle alerts',
+    '<span class="key">Ctrl-w j</span> moves to window below, <span class="key">Ctrl-w l</span> moves to window right',
+    '<span class="key">:tabnew</span> creates a new monitoring station \u2014 <span class="key">gt</span>/<span class="key">gT</span> switches between them',
+  ],
+  [ // C
+    'Each cooking station is a vim window \u2014 recipes are your files',
+    '<span class="key">:bn</span> and <span class="key">:bp</span> cycle through ingredients (buffers) at your station',
+    'Don\'t let anything burn \u2014 switch windows fast with <span class="key">Ctrl-w h/j/k/l</span>',
+  ],
+];
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  W = rect.width;
+  H = rect.height;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+function switchTab(idx) {
+  activeTab = idx;
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+  startTime = performance.now();
+}
+
+// Ease helpers
+function lerp(a, b, t) { return a + (b - a) * t; }
+function ease(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// ============================================================
+//  OPTION A  —  Air Traffic Control
+// ============================================================
+function drawOptionA(t) {
+  const phase = (t % CYCLE) / CYCLE; // 0..1
+
+  // Background — dark radar
+  ctx.fillStyle = '#0a0f1a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Radar sweep
+  const cx = W / 2, cy = H / 2;
+  const sweepAngle = phase * Math.PI * 4;
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, Math.min(W, H) * 0.48, sweepAngle, sweepAngle + 0.5);
+  ctx.closePath();
+  ctx.fillStyle = '#00ff88';
+  ctx.fill();
+  ctx.restore();
+
+  // Radar rings
+  ctx.strokeStyle = '#00ff8822';
+  ctx.lineWidth = 1;
+  for (let r = 60; r < Math.min(W, H) * 0.5; r += 60) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // Cross lines
+  ctx.beginPath();
+  ctx.moveTo(0, cy); ctx.lineTo(W, cy);
+  ctx.moveTo(cx, 0); ctx.lineTo(cx, H);
+  ctx.stroke();
+
+  // --- Windows (landing strips) in center ---
+  const winConfigs = [
+    // evolving: first just 1 window, then split, then vsplit
+    { t0: 0, t1: 0.3, splits: [[cx-120, cy-80, 240, 160]] },
+    { t0: 0.3, t1: 0.6, splits: [[cx-120, cy-80, 240, 78],[cx-120, cy+4, 240, 78]], label: ':split' },
+    { t0: 0.6, t1: 1.0, splits: [[cx-120, cy-80, 118, 78],[cx+4, cy-80, 118, 78],[cx-120, cy+4, 240, 78]], label: ':vsplit' },
+  ];
+  let currentWins = winConfigs[0].splits;
+  let splitLabel = '';
+  for (const wc of winConfigs) {
+    if (phase >= wc.t0 && phase < wc.t1) {
+      currentWins = wc.splits;
+      splitLabel = wc.label || '';
+      break;
+    }
+  }
+
+  // Draw windows
+  currentWins.forEach((w, i) => {
+    ctx.fillStyle = '#0d1f0d';
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 2;
+    ctx.fillRect(w[0], w[1], w[2], w[3]);
+    ctx.strokeRect(w[0], w[1], w[2], w[3]);
+
+    // file content lines inside
+    ctx.fillStyle = '#00ff8844';
+    for (let ly = 0; ly < 4; ly++) {
+      const lw = 30 + Math.sin(i * 3 + ly * 2) * 20;
+      ctx.fillRect(w[0] + 8, w[1] + 10 + ly * 14, lw, 8);
+    }
+  });
+
+  if (splitLabel) {
+    ctx.fillStyle = '#00d4ff';
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(splitLabel, cx, cy - 90);
+  }
+
+  // Active window highlight
+  const activeIdx = Math.floor(phase * 6) % currentWins.length;
+  const aw = currentWins[activeIdx];
+  ctx.strokeStyle = '#00d4ff';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#00d4ff';
+  ctx.shadowBlur = 12;
+  ctx.strokeRect(aw[0], aw[1], aw[2], aw[3]);
+  ctx.shadowBlur = 0;
+
+  // Ctrl-w navigation indicator
+  const dirs = ['h','j','k','l'];
+  const curDir = dirs[Math.floor(phase * 8) % 4];
+  ctx.fillStyle = '#00d4ff';
+  ctx.font = 'bold 12px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('Ctrl-w ' + curDir, cx, cy + 100);
+
+  // --- Planes approaching from edges ---
+  const planeFiles = ['main.rs','lib.rs','config.toml','utils.rs','app.js','index.html'];
+  for (let pi = 0; pi < 5; pi++) {
+    const pp = (phase + pi * 0.2) % 1;
+    const angle = (pi * 1.25) + phase * 0.5;
+    const dist = (1 - pp) * Math.min(W, H) * 0.48 + 30;
+    const px = cx + Math.cos(angle) * dist;
+    const py = cy + Math.sin(angle) * dist;
+
+    // plane icon (triangle)
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(angle + Math.PI);
+    ctx.fillStyle = pp > 0.7 ? '#00ff88' : (pp > 0.5 ? '#ffdd44' : '#ff4466');
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(-6, 6);
+    ctx.lineTo(6, 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // file label near plane
+    ctx.fillStyle = '#8899aa';
+    ctx.font = '10px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(planeFiles[pi % planeFiles.length], px, py + 16);
+
+    // glow green when "landed"
+    if (pp > 0.85) {
+      ctx.save();
+      ctx.globalAlpha = (pp - 0.85) * 6;
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = '#00ff88';
+      ctx.beginPath();
+      ctx.arc(px, py, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Queue warning if "too many"
+  const queueCount = 3 + Math.floor(phase * 4);
+  if (phase > 0.7) {
+    const blink = Math.sin(t / 120) > 0;
+    if (blink) {
+      ctx.fillStyle = '#ff4466';
+      ctx.font = 'bold 13px Courier New';
+      ctx.textAlign = 'left';
+      ctx.fillText('\u26a0 QUEUE FULL \u2014 OPEN MORE WINDOWS!', 20, 30);
+    }
+  }
+
+  // Queue display
+  ctx.fillStyle = '#8899aa';
+  ctx.font = '11px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText('Queue: ' + queueCount + ' files', 20, H - 20);
+
+  // :e filename indicator
+  const eFile = planeFiles[Math.floor(phase * 6) % planeFiles.length];
+  ctx.fillStyle = '#00d4ff';
+  ctx.font = '13px Courier New';
+  ctx.textAlign = 'right';
+  ctx.fillText(':e ' + eFile, W - 20, H - 20);
+}
+
+// ============================================================
+//  OPTION B  —  Mission Control
+// ============================================================
+function drawOptionB(t) {
+  const phase = (t % CYCLE) / CYCLE;
+
+  // Background
+  ctx.fillStyle = '#0a0a18';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  for (let i = 0; i < 40; i++) {
+    const sx = ((i * 137 + 50) % W);
+    const sy = ((i * 89 + 30) % (H - 80));
+    const bri = 0.2 + 0.3 * Math.sin(t / 800 + i);
+    ctx.fillStyle = `rgba(200,210,255,${bri})`;
+    ctx.fillRect(sx, sy, 1.5, 1.5);
+  }
+
+  // --- Vim tabs at top ---
+  const tabNames = ['systems.log', 'comms.dat', 'nav.cfg'];
+  const activeVimTab = Math.floor(phase * 3) % 3;
+  const tabW = 140, tabH = 28, tabY = 12;
+  const tabStartX = (W - tabNames.length * (tabW + 6)) / 2;
+
+  tabNames.forEach((tn, i) => {
+    const tx = tabStartX + i * (tabW + 6);
+    const isActive = i === activeVimTab;
+    ctx.fillStyle = isActive ? '#1a2a4a' : '#0d1422';
+    ctx.strokeStyle = isActive ? '#00d4ff' : '#334466';
+    ctx.lineWidth = isActive ? 2 : 1;
+    roundRect(ctx, tx, tabY, tabW, tabH, 4);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = isActive ? '#00d4ff' : '#667788';
+    ctx.font = (isActive ? 'bold ' : '') + '11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(tn, tx + tabW / 2, tabY + 18);
+  });
+
+  // gt / gT label
+  if (phase > 0.3 && phase < 0.4) {
+    ctx.fillStyle = '#ffdd44';
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('gt \u2192', W / 2, tabY + tabH + 18);
+  }
+  if (phase > 0.65 && phase < 0.75) {
+    ctx.fillStyle = '#ffdd44';
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u2190 gT', W / 2, tabY + tabH + 18);
+  }
+
+  // --- Monitor grid (2x2) ---
+  const monPad = 20;
+  const monAreaY = 56;
+  const monAreaH = H - monAreaY - 50;
+  const monW = (W - monPad * 3) / 2;
+  const monH = (monAreaH - monPad) / 2;
+
+  const monitors = [
+    { x: monPad, y: monAreaY, label: 'LIFE SUPPORT', file: 'life_support.rs' },
+    { x: monPad * 2 + monW, y: monAreaY, label: 'NAVIGATION', file: 'nav_ctrl.rs' },
+    { x: monPad, y: monAreaY + monH + monPad, label: 'COMMS ARRAY', file: 'comms.rs' },
+    { x: monPad * 2 + monW, y: monAreaY + monH + monPad, label: 'POWER GRID', file: 'power.rs' },
+  ];
+
+  // Alarm on a monitor
+  const alarmIdx = Math.floor(phase * 5) % 4;
+  const alarmBlink = Math.sin(t / 100) > 0;
+
+  // Active (cursor) monitor
+  const cursorIdx = Math.floor(phase * 8) % 4;
+
+  monitors.forEach((m, i) => {
+    const isAlarm = i === alarmIdx;
+    const isCursor = i === cursorIdx;
+
+    // Monitor frame
+    ctx.fillStyle = '#0d1b2a';
+    ctx.strokeStyle = isAlarm && alarmBlink ? '#ff4466' : (isCursor ? '#00d4ff' : '#223344');
+    ctx.lineWidth = isCursor ? 3 : (isAlarm ? 2 : 1);
+    if (isCursor) {
+      ctx.shadowColor = '#00d4ff';
+      ctx.shadowBlur = 14;
+    }
+    roundRect(ctx, m.x, m.y, monW, monH, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Alarm indicator light
+    if (isAlarm) {
+      ctx.fillStyle = alarmBlink ? '#ff4466' : '#661122';
+      ctx.beginPath();
+      ctx.arc(m.x + monW - 14, m.y + 14, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Label
+    ctx.fillStyle = '#667788';
+    ctx.font = 'bold 10px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText(m.label, m.x + 10, m.y + 18);
+
+    // File content (fake code lines)
+    ctx.fillStyle = '#334455';
+    const lines = 6;
+    for (let ln = 0; ln < lines; ln++) {
+      const lw = 40 + ((i * 7 + ln * 13) % 60);
+      ctx.fillRect(m.x + 10, m.y + 30 + ln * 14, lw, 7);
+    }
+
+    // If alarm + cursor => show "fix" animation
+    if (isAlarm && isCursor) {
+      const fixProg = (phase * 10) % 1;
+      ctx.fillStyle = '#00ff88';
+      ctx.font = '11px Courier New';
+      ctx.fillText('\u2713 fixing...', m.x + 10, m.y + monH - 16);
+      // green bar
+      ctx.fillStyle = '#00ff8844';
+      ctx.fillRect(m.x + 10, m.y + monH - 10, (monW - 20) * fixProg, 4);
+    }
+  });
+
+  // Navigation indicator
+  const dirLabels = ['Ctrl-w l','Ctrl-w j','Ctrl-w h','Ctrl-w k'];
+  const dirIdx = Math.floor(phase * 8) % 4;
+  ctx.fillStyle = '#00d4ff';
+  ctx.font = 'bold 13px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(dirLabels[dirIdx], W / 2, H - 18);
+
+  // :tabnew indicator
+  if (phase > 0.48 && phase < 0.55) {
+    ctx.fillStyle = '#ffdd44';
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(':tabnew', W / 2, H - 38);
+  }
+}
+
+// ============================================================
+//  OPTION C  —  Kitchen Rush
+// ============================================================
+function drawOptionC(t) {
+  const phase = (t % CYCLE) / CYCLE;
+
+  // Background — warm dark kitchen
+  ctx.fillStyle = '#1a1008';
+  ctx.fillRect(0, 0, W, H);
+
+  // Tile pattern floor
+  ctx.fillStyle = '#221810';
+  for (let tx = 0; tx < W; tx += 40) {
+    for (let ty = H - 80; ty < H; ty += 20) {
+      ctx.fillRect(tx + 1, ty + 1, 38, 18);
+    }
+  }
+
+  // --- Cooking stations (windows) ---
+  // Start with 2, then :split adds a third
+  const hasSplit = phase > 0.35;
+  const stations = [];
+
+  if (!hasSplit) {
+    // Two stations side by side
+    const sw = (W - 60) / 2;
+    const sh = H - 140;
+    stations.push({ x: 20, y: 60, w: sw, h: sh, recipe: 'pasta.txt' });
+    stations.push({ x: 40 + sw, y: 60, w: sw, h: sh, recipe: 'sauce.txt' });
+  } else {
+    // Three stations — top two + bottom one
+    const sw = (W - 60) / 2;
+    const sh1 = (H - 160) * 0.55;
+    const sh2 = (H - 160) * 0.45;
+    stations.push({ x: 20, y: 60, w: sw, h: sh1, recipe: 'pasta.txt' });
+    stations.push({ x: 40 + sw, y: 60, w: sw, h: sh1, recipe: 'sauce.txt' });
+    stations.push({ x: 20, y: 70 + sh1, w: W - 40, h: sh2, recipe: 'dessert.txt' });
+  }
+
+  // :split label
+  if (phase > 0.32 && phase < 0.42) {
+    ctx.fillStyle = '#ffdd44';
+    ctx.font = 'bold 16px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(':split', W / 2, 48);
+  }
+
+  // Active station (chef cursor)
+  const activeStation = Math.floor(phase * 7) % stations.length;
+
+  // Timer danger for unattended stations
+  const dangerStation = (activeStation + 1) % stations.length;
+  const dangerLevel = clamp((phase * 5) % 1, 0, 1);
+
+  stations.forEach((s, i) => {
+    const isActive = i === activeStation;
+    const isDanger = i === dangerStation && dangerLevel > 0.6;
+    const isBurning = i === dangerStation && dangerLevel > 0.85;
+
+    // Station background
+    ctx.fillStyle = isBurning ? '#3a1008' : '#1a1510';
+    ctx.strokeStyle = isActive ? '#ffaa00' : (isDanger ? '#ff4444' : '#443322');
+    ctx.lineWidth = isActive ? 3 : (isDanger ? 2 : 1);
+
+    if (isActive) {
+      ctx.shadowColor = '#ffaa00';
+      ctx.shadowBlur = 12;
+    }
+    roundRect(ctx, s.x, s.y, s.w, s.h, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Burner flame
+    const flameX = s.x + s.w / 2;
+    const flameY = s.y + s.h - 30;
+    const flicker = Math.sin(t / 60 + i * 2) * 3;
+    ctx.fillStyle = isBurning ? '#ff2200' : '#ff8800';
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.ellipse(flameX, flameY, 20, 8 + flicker, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Inner flame
+    ctx.fillStyle = isBurning ? '#ff6600' : '#ffdd00';
+    ctx.beginPath();
+    ctx.ellipse(flameX, flameY - 2, 12, 5 + flicker * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Recipe title
+    ctx.fillStyle = isActive ? '#ffaa00' : '#887755';
+    ctx.font = 'bold 12px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.recipe, s.x + s.w / 2, s.y + 20);
+
+    // Recipe lines (fake text)
+    ctx.fillStyle = '#554433';
+    for (let ln = 0; ln < 4; ln++) {
+      const lw = 30 + ((i * 11 + ln * 7) % 40);
+      ctx.fillRect(s.x + 12, s.y + 30 + ln * 13, lw, 6);
+    }
+
+    // Timer bar
+    const timerY = s.y + s.h - 50;
+    const timerW = s.w - 24;
+    let timerFill;
+    if (isActive) {
+      timerFill = 1; // full = safe
+    } else {
+      timerFill = 1 - dangerLevel;
+    }
+    // Background bar
+    ctx.fillStyle = '#332211';
+    roundRect(ctx, s.x + 12, timerY, timerW, 10, 3);
+    ctx.fill();
+    // Fill
+    const barColor = timerFill > 0.4 ? '#44cc44' : (timerFill > 0.2 ? '#ffaa00' : '#ff3333');
+    ctx.fillStyle = barColor;
+    roundRect(ctx, s.x + 12, timerY, timerW * clamp(timerFill, 0, 1), 10, 3);
+    ctx.fill();
+
+    // BURNING warning
+    if (isBurning) {
+      const blink = Math.sin(t / 80) > 0;
+      if (blink) {
+        ctx.fillStyle = '#ff4444';
+        ctx.font = 'bold 14px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('\ud83d\udd25 BURNING!', s.x + s.w / 2, s.y + s.h / 2);
+      }
+    }
+
+    // Chef hat icon on active station
+    if (isActive) {
+      const chefX = s.x + s.w / 2;
+      const chefY = s.y + s.h / 2 - 10;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(chefX, chefY - 8, 10, Math.PI, 0);
+      ctx.fillRect(chefX - 10, chefY - 8, 20, 10);
+      ctx.fill();
+      ctx.fillStyle = '#ffaa00';
+      ctx.font = 'bold 10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText('\u2605', chefX, chefY + 14);
+    }
+  });
+
+  // Buffer cycling indicator
+  const buffers = ['flour','eggs','tomato','basil','cream','sugar'];
+  const bufIdx = Math.floor(phase * 8) % buffers.length;
+  const bufDir = Math.floor(phase * 16) % 2 === 0 ? ':bn' : ':bp';
+  ctx.fillStyle = '#ffaa00';
+  ctx.font = 'bold 13px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(bufDir + ' \u2192 [' + buffers[bufIdx] + ']', W / 2, H - 16);
+
+  // Ctrl-w navigation
+  const navDirs = ['Ctrl-w h','Ctrl-w l','Ctrl-w j','Ctrl-w k'];
+  const navIdx = Math.floor(phase * 7) % navDirs.length;
+  ctx.fillStyle = '#cc8844';
+  ctx.font = '12px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText(navDirs[navIdx], 20, H - 16);
+}
+
+// ============================================================
+//  UTILITIES
+// ============================================================
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ============================================================
+//  ANIMATION LOOP
+// ============================================================
+function animate(now) {
+  if (!startTime) startTime = now;
+  const elapsed = now - startTime;
+
+  ctx.clearRect(0, 0, W, H);
+
+  switch (activeTab) {
+    case 0: drawOptionA(elapsed); break;
+    case 1: drawOptionB(elapsed); break;
+    case 2: drawOptionC(elapsed); break;
+  }
+
+  // Update caption
+  const capList = captions[activeTab];
+  const capIdx = Math.floor(elapsed / CAPTION_CYCLE) % capList.length;
+  captionEl.innerHTML = capList[capIdx];
+
+  animId = requestAnimationFrame(animate);
+}
+
+animId = requestAnimationFrame(animate);
+</script>
+</body>
+</html>

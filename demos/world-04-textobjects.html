@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World 4: Text Objects - Vim Heroes</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#1a1a2e;color:#e0e0e0;font-family:'Courier New',monospace;min-height:100vh;overflow-x:hidden}
+  a{color:#0ff;text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .back-link{display:inline-block;padding:12px 20px;font-size:14px}
+  .back-link::before{content:'\2190 '}
+
+  h1{text-align:center;font-size:28px;padding:10px 0 4px;color:#fff;text-shadow:0 0 12px #0ff,0 0 24px #0ff}
+  .subtitle{text-align:center;font-size:13px;color:#888;margin-bottom:10px;letter-spacing:2px}
+
+  /* Tabs */
+  .tabs{display:flex;justify-content:center;gap:4px;padding:0 20px;margin-bottom:0}
+  .tab{padding:10px 22px;cursor:pointer;border:1px solid #333;border-bottom:none;border-radius:6px 6px 0 0;background:#12122a;color:#888;font-family:inherit;font-size:13px;transition:all .25s}
+  .tab:hover{color:#ccc;background:#1e1e3a}
+  .tab.active{background:#1a1a2e;color:#0ff;border-color:#0ff;text-shadow:0 0 6px #0ff}
+
+  .panel-wrap{border:1px solid #333;border-radius:0 0 8px 8px;margin:0 20px 20px;min-height:520px;position:relative;overflow:hidden;background:#12122a}
+  .panel{display:none;flex-direction:column;align-items:center;padding:24px;width:100%;min-height:520px}
+  .panel.active{display:flex}
+
+  /* Shared canvas area */
+  .stage{position:relative;width:700px;max-width:100%;height:340px;border:1px solid #2a2a4a;border-radius:6px;background:#0d0d1a;overflow:hidden;margin-bottom:16px}
+
+  /* Caption bar */
+  .caption-bar{width:700px;max-width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;padding:10px 16px;border:1px solid #2a2a4a;border-radius:6px;background:#0d0d1a;text-align:center;font-size:14px;color:#ccc;line-height:1.5;transition:opacity .4s}
+
+  /* ===== OPTION A: SURGEON ===== */
+  #stageA .code-view{position:absolute;top:16px;left:24px;right:24px;font-size:13px;line-height:1.7;white-space:pre;color:#aaa}
+  #stageA .code-view .highlight{position:relative;transition:background .3s,color .3s}
+  #stageA .code-view .highlight.active{background:rgba(0,255,180,.18);color:#0f9;border-radius:2px}
+  #stageA .code-view .highlight.removed{background:rgba(255,60,60,.2);color:#f66;text-decoration:line-through;border-radius:2px}
+
+  #stageA .cursor-indicator{position:absolute;width:2px;height:18px;background:#0f0;box-shadow:0 0 6px #0f0,0 0 12px #0f0;transition:left .6s ease,top .6s ease;z-index:5}
+  #stageA .scalpel-line{position:absolute;height:2px;background:linear-gradient(90deg,transparent,#0f9,transparent);box-shadow:0 0 8px #0f9;opacity:0;transition:opacity .3s;z-index:4;pointer-events:none}
+  #stageA .cmd-display{position:absolute;bottom:50px;right:24px;font-size:22px;color:#0ff;text-shadow:0 0 10px #0ff;opacity:0;transition:opacity .4s}
+  #stageA .precision-meter{position:absolute;bottom:16px;right:24px;display:flex;align-items:center;gap:8px;font-size:12px;color:#888}
+  #stageA .precision-meter .bar{width:120px;height:8px;border:1px solid #333;border-radius:4px;overflow:hidden;background:#111}
+  #stageA .precision-meter .fill{height:100%;background:linear-gradient(90deg,#0f9,#0ff);width:0%;transition:width .6s;border-radius:4px}
+  #stageA .precision-meter .label{color:#0f9}
+
+  /* ===== OPTION B: MATRYOSHKA ===== */
+  #stageB .code-area{position:absolute;top:12px;left:16px;right:16px;bottom:12px;font-size:12px;line-height:1.65;white-space:pre;color:#aaa}
+  #stageB .nest-box{position:absolute;border:2px solid transparent;border-radius:6px;transition:all .6s ease;opacity:0.5}
+  #stageB .nest-box.active{opacity:1;box-shadow:0 0 12px currentColor}
+  #stageB .nest-label{position:absolute;font-size:11px;padding:1px 6px;border-radius:3px;opacity:0;transition:opacity .4s;white-space:nowrap}
+  #stageB .nest-label.visible{opacity:1}
+  #stageB .doll-icon{position:absolute;font-size:28px;transition:all .5s;opacity:0}
+  #stageB .doll-icon.visible{opacity:1}
+
+  /* ===== OPTION C: BOMB DEFUSAL ===== */
+  #stageC .code-area{position:absolute;top:12px;left:16px;right:200px;bottom:12px;font-size:12px;line-height:1.65;white-space:pre;color:#aaa}
+  #stageC .timer-display{position:absolute;top:16px;right:20px;font-size:42px;font-weight:bold;color:#f44;text-shadow:0 0 14px #f44;font-variant-numeric:tabular-nums}
+  #stageC .bomb-icon{position:absolute;top:70px;right:40px;font-size:48px;animation:pulse-bomb 1s ease-in-out infinite alternate}
+  #stageC .wire{position:absolute;height:3px;border-radius:2px;opacity:.6;transition:all .4s}
+  #stageC .wire.cut{opacity:0.2}
+  #stageC .wire.correct{box-shadow:0 0 10px #0f0;opacity:1}
+  #stageC .wire.wrong{box-shadow:0 0 10px #f44;opacity:1}
+  #stageC .wire-label{position:absolute;font-size:11px;color:#ccc;transition:color .3s}
+  #stageC .cmd-display{position:absolute;bottom:50px;right:20px;font-size:20px;color:#0ff;text-shadow:0 0 10px #0ff;opacity:0;transition:opacity .4s}
+  #stageC .result-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:0;transition:opacity .5s;pointer-events:none;z-index:10}
+  #stageC .result-overlay.success{background:rgba(0,255,100,.08);color:#0f9;text-shadow:0 0 20px #0f9}
+  #stageC .result-overlay.fail{background:rgba(255,60,60,.12);color:#f44;text-shadow:0 0 20px #f44}
+  #stageC .highlight{transition:background .3s,color .3s}
+  #stageC .highlight.targeted{background:rgba(255,60,60,.15);color:#f66;border-radius:2px}
+  #stageC .highlight.defused{background:rgba(0,255,100,.15);color:#0f9;border-radius:2px}
+
+  @keyframes pulse-bomb{0%{transform:scale(1);filter:brightness(1)}100%{transform:scale(1.12);filter:brightness(1.4)}}
+  @keyframes shake{0%,100%{transform:translate(0)}10%{transform:translate(-6px,3px)}20%{transform:translate(5px,-3px)}30%{transform:translate(-4px,2px)}40%{transform:translate(4px,-1px)}50%{transform:translate(-2px,3px)}60%{transform:translate(3px,-2px)}70%{transform:translate(-3px,1px)}80%{transform:translate(2px,-1px)}90%{transform:translate(-1px,2px)}}
+  .shaking{animation:shake .5s ease}
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">Back to Overview</a>
+<h1>World 4: Text Objects</h1>
+<div class="subtitle">iw aw i" a" i( a( ib ab iB aB it at i] a]</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="A">A: Surgeon</div>
+  <div class="tab" data-tab="B">B: Matryoshka</div>
+  <div class="tab" data-tab="C">C: Bomb Defusal</div>
+</div>
+
+<div class="panel-wrap">
+  <!-- ====== PANEL A ====== -->
+  <div class="panel active" id="panelA">
+    <div class="stage" id="stageA">
+      <div class="code-view" id="codeA"></div>
+      <div class="cursor-indicator" id="cursorA" style="left:0;top:0"></div>
+      <div class="scalpel-line" id="scalpelA" style="left:0;top:0;width:0"></div>
+      <div class="cmd-display" id="cmdA"></div>
+      <div class="precision-meter"><span>Precision:</span><div class="bar"><div class="fill" id="precFill"></div></div><span class="label" id="precLabel">0%</span></div>
+    </div>
+    <div class="caption-bar" id="captionA"></div>
+  </div>
+
+  <!-- ====== PANEL B ====== -->
+  <div class="panel" id="panelB">
+    <div class="stage" id="stageB">
+      <div class="code-area" id="codeB"></div>
+    </div>
+    <div class="caption-bar" id="captionB"></div>
+  </div>
+
+  <!-- ====== PANEL C ====== -->
+  <div class="panel" id="panelC">
+    <div class="stage" id="stageC">
+      <div class="code-area" id="codeC"></div>
+      <div class="timer-display" id="timerC">07</div>
+      <div class="bomb-icon" id="bombC">&#x1F4A3;</div>
+      <div class="cmd-display" id="cmdC"></div>
+      <div class="result-overlay" id="resultC"></div>
+    </div>
+    <div class="caption-bar" id="captionC"></div>
+  </div>
+</div>
+
+<script>
+// ---- Tab switching ----
+const tabs = document.querySelectorAll('.tab');
+const panels = document.querySelectorAll('.panel');
+let activeTab = 'A';
+const animTimers = {A:null, B:null, C:null};
+
+tabs.forEach(t => t.addEventListener('click', () => {
+  tabs.forEach(x => x.classList.remove('active'));
+  panels.forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  const id = t.dataset.tab;
+  document.getElementById('panel'+id).classList.add('active');
+  activeTab = id;
+  restartAnim(id);
+}));
+
+function restartAnim(id){
+  Object.keys(animTimers).forEach(k => {if(animTimers[k]){clearTimeout(animTimers[k]);animTimers[k]=null}});
+  if(id==='A') startA();
+  if(id==='B') startB();
+  if(id==='C') startC();
+}
+
+// ---- Helpers ----
+function delay(ms){return new Promise(r=>{const t=setTimeout(r,ms);animTimers[activeTab]=t})}
+function setCaption(el,text){el.style.opacity='0';setTimeout(()=>{el.textContent=text;el.style.opacity='1'},300)}
+
+// ==============================
+// OPTION A: SURGEON
+// ==============================
+const codeASrc = [
+  'fn process_data(items: &[Item]) {',
+  '    if items.len() > 0 {',
+  '        let msg = "critical error found";',
+  '        let arr = vec![alpha, beta, gamma];',
+  '        send(msg, calculate(arr));',
+  '    }',
+  '}'
+];
+
+const opsA = [
+  {line:2, colStart:19, colEnd:39, cmd:'di"', label:'inside quotes', precAdd:30},
+  {line:3, colStart:19, colEnd:38, cmd:'di[', label:'inside brackets', precAdd:35},
+  {line:4, colStart:18, colEnd:31, cmd:'ci(', label:'inside parens', precAdd:35},
+];
+
+const captionsA = [
+  "Nested code structures require surgical precision",
+  'di" deletes inside quotes, ci( changes inside parentheses',
+  "Wrong scope = collateral damage \u2014 text objects target exactly what you need"
+];
+
+async function startA(){
+  const codeEl = document.getElementById('codeA');
+  const cursor = document.getElementById('cursorA');
+  const scalpel = document.getElementById('scalpelA');
+  const cmdEl = document.getElementById('cmdA');
+  const precFill = document.getElementById('precFill');
+  const precLabel = document.getElementById('precLabel');
+  const captionEl = document.getElementById('captionA');
+  let prec = 0;
+
+  async function runCycle(){
+    // Reset
+    prec = 0;
+    precFill.style.width='0%';precLabel.textContent='0%';
+    cmdEl.style.opacity='0';
+    scalpel.style.opacity='0';
+    cursor.style.left='24px';cursor.style.top='16px';
+
+    // Render code
+    let html = '';
+    codeASrc.forEach((line,i)=>{
+      if(i === 2){
+        html += '        let msg = "<span class="highlight" id="hlA0">critical error found</span>";\n';
+      } else if(i === 3){
+        html += '        let arr = vec![<span class="highlight" id="hlA1">alpha, beta, gamma</span>];\n';
+      } else if(i === 4){
+        html += '        send(msg, <span class="highlight" id="hlA2">calculate(arr)</span>);\n';
+      } else {
+        html += line + '\n';
+      }
+    });
+    codeEl.innerHTML = html;
+
+    setCaption(captionEl, captionsA[0]);
+    await delay(3500);
+
+    for(let i = 0; i < opsA.length; i++){
+      if(activeTab !== 'A') return;
+      const op = opsA[i];
+      const hl = document.getElementById('hlA'+i);
+      if(!hl) continue;
+
+      // Move cursor to target
+      const rect = hl.getBoundingClientRect();
+      const stageRect = document.getElementById('stageA').getBoundingClientRect();
+      const cx = rect.left - stageRect.left;
+      const cy = rect.top - stageRect.top + 2;
+      cursor.style.left = cx + 'px';
+      cursor.style.top = cy + 'px';
+      await delay(700);
+
+      // Show command
+      cmdEl.textContent = op.cmd;
+      cmdEl.style.opacity = '1';
+      setCaption(captionEl, captionsA[i]);
+      await delay(600);
+
+      // Highlight target
+      hl.classList.add('active');
+      await delay(500);
+
+      // Scalpel effect
+      scalpel.style.left = cx + 'px';
+      scalpel.style.top = (cy + 9) + 'px';
+      scalpel.style.width = (rect.width) + 'px';
+      scalpel.style.opacity = '1';
+      await delay(400);
+
+      // Remove (surgical precision)
+      hl.classList.remove('active');
+      hl.classList.add('removed');
+      scalpel.style.opacity = '0';
+      prec += op.precAdd;
+      precFill.style.width = prec + '%';
+      precLabel.textContent = prec + '%';
+      await delay(1200);
+
+      cmdEl.style.opacity = '0';
+      await delay(300);
+    }
+
+    // Final caption
+    setCaption(captionEl, captionsA[2]);
+    precFill.style.width = '100%';
+    precLabel.textContent = '100%';
+    await delay(3500);
+
+    // Loop
+    if(activeTab === 'A') runCycle();
+  }
+  runCycle();
+}
+
+// ==============================
+// OPTION B: MATRYOSHKA
+// ==============================
+const codeBSrc =
+`fn validate(input: &str) -> bool {
+    if input.len() > 0 {
+        let s = "hello world";
+        let word = hello;
+        check(s)
+    }
+}`;
+
+const nestLayers = [
+  {id:'n0', label:'iB  (function body)', color:'#e040fb', top:4, left:2, right:2, bottom:4,   key:'iB'},
+  {id:'n1', label:'ib  (if-block)',       color:'#448aff', top:28, left:18, right:6, bottom:28, key:'ib'},
+  {id:'n2', label:'i"  (inside quotes)',  color:'#00e676', top:52, left:100, right:200, bottom:145, key:'i"'},
+  {id:'n3', label:'iw  (inner word)',     color:'#ffab00', top:75, left:116, right:316, bottom:168, key:'iw'},
+];
+
+const captionsB = [
+  "Code is nested like Russian dolls \u2014 each layer is a text object",
+  'iB = inside braces (function), ib = inside block, i" = inside quotes',
+  "Master text objects to operate on any nesting level instantly"
+];
+
+async function startB(){
+  const stageEl = document.getElementById('stageB');
+  const codeEl = document.getElementById('codeB');
+  const captionEl = document.getElementById('captionB');
+
+  async function runCycle(){
+    // Clear old boxes
+    stageEl.querySelectorAll('.nest-box,.nest-label,.doll-icon').forEach(e=>e.remove());
+
+    // Render code
+    codeEl.textContent = codeBSrc;
+
+    // Create nest boxes
+    const boxes = [];
+    const labels = [];
+    const layerColors = ['#e040fb','#448aff','#00e676','#ffab00'];
+    // Manually positioned boxes (percentages)
+    const layerRects = [
+      {top:'6%',  left:'1%',  width:'98%', height:'88%'},
+      {top:'15%', left:'5%',  width:'90%', height:'68%'},
+      {top:'28%', left:'10%', width:'60%', height:'22%'},
+      {top:'38%', left:'16%', width:'22%', height:'12%'},
+    ];
+    const layerLabels = [
+      'iB  (function body)',
+      'ib  (if-block)',
+      'i"  (inside quotes)',
+      'iw  (inner word)',
+    ];
+    const dollEmojis = ['\u{1F3CE}','\u{1F30D}','\u{1F4AC}','\u{1FA86}'];
+
+    nestLayers.forEach((nl,i) => {
+      const box = document.createElement('div');
+      box.className = 'nest-box';
+      box.style.cssText = `border-color:${layerColors[i]};color:${layerColors[i]};`+
+        `top:${layerRects[i].top};left:${layerRects[i].left};width:${layerRects[i].width};height:${layerRects[i].height};z-index:${i+1}`;
+      stageEl.appendChild(box);
+      boxes.push(box);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'nest-label';
+      lbl.textContent = layerLabels[i];
+      lbl.style.cssText = `top:calc(${layerRects[i].top} - 2px);left:calc(${layerRects[i].left} + 4px);`+
+        `background:${layerColors[i]}22;color:${layerColors[i]};border:1px solid ${layerColors[i]}44;z-index:${i+10}`;
+      stageEl.appendChild(lbl);
+      labels.push(lbl);
+    });
+
+    setCaption(captionEl, captionsB[0]);
+    await delay(1000);
+
+    // Animate layers opening one by one (outermost first)
+    for(let i = 0; i < boxes.length; i++){
+      if(activeTab !== 'B') return;
+      boxes[i].style.opacity = '1';
+      boxes[i].classList.add('active');
+      labels[i].classList.add('visible');
+      if(i < 2) setCaption(captionEl, captionsB[0]);
+      else if(i < 3) setCaption(captionEl, captionsB[1]);
+      else setCaption(captionEl, captionsB[1]);
+      await delay(1800);
+      // Remove active glow from previous
+      if(i > 0) boxes[i-1].classList.remove('active');
+    }
+
+    setCaption(captionEl, captionsB[2]);
+    await delay(2000);
+
+    // Collapse animation (innermost first)
+    for(let i = boxes.length - 1; i >= 0; i--){
+      if(activeTab !== 'B') return;
+      boxes[i].classList.add('active');
+      await delay(600);
+      boxes[i].style.opacity = '0.25';
+      boxes[i].classList.remove('active');
+      labels[i].classList.remove('visible');
+      await delay(400);
+    }
+
+    await delay(1200);
+    if(activeTab === 'B') runCycle();
+  }
+  runCycle();
+}
+
+// ==============================
+// OPTION C: BOMB DEFUSAL
+// ==============================
+const codeCSrc =
+`fn defuse(system: &mut System) {
+    match system.core {
+        Core::Active(ref data) => {
+            let payload = decode(data.get("trigger"));
+            if payload.armed {
+                detonate(payload);
+            }
+        }
+        _ => {}
+    }
+}`;
+
+const captionsC = [
+  "A bug is hidden deep in nested code \u2014 defuse it before time runs out",
+  "Choose the right text object scope: da( removes everything inside and including parens",
+  "Wrong scope cuts the wrong wire \u2014 precision is critical"
+];
+
+const wiresC = [
+  {label:'di"', color:'#ff9800', correct:false, top:130, left:380, width:100},
+  {label:'da(', color:'#4caf50', correct:true,  top:155, left:380, width:100},
+  {label:'diB', color:'#e91e63', correct:false, top:180, left:380, width:100},
+];
+
+async function startC(){
+  const stageEl = document.getElementById('stageC');
+  const codeEl = document.getElementById('codeC');
+  const timerEl = document.getElementById('timerC');
+  const bombEl = document.getElementById('bombC');
+  const cmdEl = document.getElementById('cmdC');
+  const resultEl = document.getElementById('resultC');
+  const captionEl = document.getElementById('captionC');
+
+  async function runCycle(){
+    // Reset
+    codeEl.innerHTML = codeCSrc.replace('detonate(payload)', '<span class="highlight" id="bugTarget">detonate(payload)</span>');
+    timerEl.style.color = '#f44';
+    timerEl.style.textShadow = '0 0 14px #f44';
+    bombEl.style.display = 'block';
+    bombEl.style.animation = 'pulse-bomb 1s ease-in-out infinite alternate';
+    cmdEl.style.opacity = '0';
+    resultEl.style.opacity = '0';
+    resultEl.className = 'result-overlay';
+    stageEl.classList.remove('shaking');
+
+    // Remove old wires
+    stageEl.querySelectorAll('.wire,.wire-label').forEach(e=>e.remove());
+
+    // Draw wires
+    const wireEls = [];
+    wiresC.forEach((w,i)=>{
+      const wire = document.createElement('div');
+      wire.className = 'wire';
+      wire.style.cssText = `background:${w.color};top:${w.top}px;left:${w.left}px;width:${w.width}px`;
+      stageEl.appendChild(wire);
+      wireEls.push(wire);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'wire-label';
+      lbl.textContent = w.label;
+      lbl.style.cssText = `top:${w.top - 14}px;left:${w.left + 10}px`;
+      stageEl.appendChild(lbl);
+    });
+
+    setCaption(captionEl, captionsC[0]);
+
+    // Timer countdown
+    let time = 7;
+    timerEl.textContent = '0' + time;
+
+    for(let t = 7; t > 3; t--){
+      if(activeTab !== 'C') return;
+      await delay(500);
+      time = t - 1;
+      timerEl.textContent = time < 10 ? '0'+time : ''+time;
+    }
+
+    setCaption(captionEl, captionsC[1]);
+
+    // Wrong wire attempt (first wire)
+    if(activeTab !== 'C') return;
+    cmdEl.textContent = 'di"';
+    cmdEl.style.opacity = '1';
+    await delay(800);
+
+    wireEls[0].classList.add('wrong','cut');
+    stageEl.classList.add('shaking');
+    timerEl.textContent = '02';
+    await delay(600);
+    stageEl.classList.remove('shaking');
+    cmdEl.style.opacity = '0';
+
+    setCaption(captionEl, captionsC[2]);
+    await delay(1200);
+
+    // Correct wire
+    if(activeTab !== 'C') return;
+    cmdEl.textContent = 'da(';
+    cmdEl.style.opacity = '1';
+    await delay(600);
+
+    wireEls[1].classList.add('correct','cut');
+    const bugTarget = document.getElementById('bugTarget');
+    if(bugTarget) bugTarget.classList.add('defused');
+
+    // Defused!
+    timerEl.textContent = '01';
+    timerEl.style.color = '#0f9';
+    timerEl.style.textShadow = '0 0 14px #0f9';
+    bombEl.style.animation = 'none';
+    bombEl.textContent = '\u2705';
+
+    resultEl.textContent = 'DEFUSED';
+    resultEl.className = 'result-overlay success';
+    resultEl.style.opacity = '1';
+    cmdEl.style.opacity = '0';
+
+    await delay(3500);
+
+    resultEl.style.opacity = '0';
+    bombEl.textContent = '\u{1F4A3}';
+
+    await delay(1000);
+    if(activeTab === 'C') runCycle();
+  }
+  runCycle();
+}
+
+// ---- Start ----
+startA();
+</script>
+</body>
+</html>

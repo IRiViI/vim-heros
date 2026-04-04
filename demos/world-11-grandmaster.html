@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World 11: The Grandmaster — Vim Heroes</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:#1a1a2e;
+    color:#e0e0e0;
+    font-family:'Courier New',Consolas,monospace;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  a{color:#ffd700;text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .back-link{
+    position:absolute;top:12px;left:16px;
+    font-size:13px;opacity:.7;z-index:10;
+  }
+  .back-link:hover{opacity:1}
+
+  header{
+    text-align:center;padding:32px 16px 12px;
+    position:relative;
+  }
+  header h1{
+    font-size:26px;
+    background:linear-gradient(90deg,#ffd700,#ffaa00,#ff6600,#ffaa00,#ffd700);
+    background-size:200% 100%;
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;
+    letter-spacing:3px;
+    animation:goldShimmer 3s linear infinite;
+  }
+  @keyframes goldShimmer{
+    0%{background-position:0% 50%}
+    100%{background-position:200% 50%}
+  }
+  header .subtitle{
+    font-size:13px;color:#b8860b;margin-top:4px;
+    letter-spacing:1px;
+  }
+  header .keys{
+    margin-top:8px;font-size:12px;color:#666;
+  }
+  header .keys kbd{
+    display:inline-block;background:#2a2a1a;color:#ffd700;
+    border:1px solid #665500;border-radius:3px;
+    padding:1px 5px;margin:0 2px;font-size:11px;
+  }
+
+  /* Crown icon */
+  .crown{
+    font-size:32px;margin-bottom:4px;
+    display:block;
+    animation:crownFloat 2s ease-in-out infinite;
+  }
+  @keyframes crownFloat{
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(-5px)}
+  }
+
+  /* Tabs */
+  .tabs{
+    display:flex;justify-content:center;gap:4px;
+    margin:16px auto 0;max-width:780px;
+  }
+  .tab-btn{
+    flex:1;max-width:240px;
+    background:#1a1a10;border:1px solid #554400;
+    color:#aaa;padding:10px 8px;cursor:pointer;
+    font-family:inherit;font-size:13px;
+    border-radius:6px 6px 0 0;transition:.2s;
+    text-align:center;
+  }
+  .tab-btn:hover{background:#2a2a1a;color:#ffd700}
+  .tab-btn.active{
+    background:#2a2200;border-bottom-color:#2a2200;
+    color:#ffd700;font-weight:bold;
+    box-shadow:0 -2px 12px rgba(255,215,0,.15);
+  }
+
+  /* Panel */
+  .panel{
+    display:none;
+    max-width:780px;margin:0 auto;
+    background:#0f0f18;
+    border:1px solid #554400;border-top:none;
+    border-radius:0 0 8px 8px;
+    overflow:hidden;
+  }
+  .panel.active{display:block}
+
+  .canvas-wrap{
+    position:relative;
+    width:100%;height:460px;
+    overflow:hidden;
+    background:#0a0a14;
+  }
+  canvas{display:block;width:100%;height:100%}
+
+  .caption-bar{
+    background:#1a1a10;border-top:1px solid #554400;
+    padding:14px 20px;min-height:56px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .caption-icon{
+    font-size:18px;color:#ffd700;flex-shrink:0;
+    width:24px;text-align:center;
+  }
+  .caption-text{
+    font-size:13px;line-height:1.5;color:#ccc;
+    transition:opacity .3s;
+  }
+
+  @media(max-width:600px){
+    header h1{font-size:18px}
+    .tabs{flex-direction:column;align-items:center}
+    .tab-btn{max-width:90%;border-radius:6px}
+    .canvas-wrap{height:380px}
+  }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">&larr; Back to Overview</a>
+
+<header>
+  <span class="crown">&#9813;</span>
+  <h1>WORLD 11: THE GRANDMASTER</h1>
+  <div class="subtitle">All Skills Combined &mdash; The Final Challenge</div>
+  <div class="keys">
+    Keys: <kbd>/</kbd><kbd>ci(</kbd><kbd>@a</kbd><kbd>'a</kbd>
+    <kbd>dd</kbd><kbd>dw</kbd><kbd>ci"</kbd>
+    <kbd>:sp</kbd><kbd>"ay</kbd><kbd>qa</kbd>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="a">A: Algorithm Fixer</button>
+  <button class="tab-btn" data-tab="b">B: Code Review</button>
+  <button class="tab-btn" data-tab="c">C: Hackathon</button>
+</div>
+
+<div class="panel active" id="panel-a">
+  <div class="canvas-wrap"><canvas id="cv-a"></canvas></div>
+  <div class="caption-bar">
+    <div class="caption-icon">&#9813;</div>
+    <div class="caption-text" id="cap-a"></div>
+  </div>
+</div>
+
+<div class="panel" id="panel-b">
+  <div class="canvas-wrap"><canvas id="cv-b"></canvas></div>
+  <div class="caption-bar">
+    <div class="caption-icon">&#9813;</div>
+    <div class="caption-text" id="cap-b"></div>
+  </div>
+</div>
+
+<div class="panel" id="panel-c">
+  <div class="canvas-wrap"><canvas id="cv-c"></canvas></div>
+  <div class="caption-bar">
+    <div class="caption-icon">&#9813;</div>
+    <div class="caption-text" id="cap-c"></div>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────
+// Tab switching
+// ──────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ──────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────
+function initCanvas(id){
+  const c=document.getElementById(id);
+  const dpr=window.devicePixelRatio||1;
+  const rect=c.parentElement.getBoundingClientRect();
+  let cw=rect.width, ch=rect.height;
+  if(!cw||!ch){
+    const activeWrap=document.querySelector('.panel.active .canvas-wrap');
+    if(activeWrap){
+      const ar=activeWrap.getBoundingClientRect();
+      cw=ar.width; ch=ar.height;
+    } else { cw=720; ch=420; }
+  }
+  c.width=cw*dpr;
+  c.height=ch*dpr;
+  const ctx=c.getContext('2d');
+  ctx.scale(dpr,dpr);
+  return {c,ctx,w:cw,h:ch};
+}
+
+function captionCycle(elId,msgs,interval){
+  const el=document.getElementById(elId);
+  let i=0;
+  el.textContent=msgs[0];
+  setInterval(()=>{
+    i=(i+1)%msgs.length;
+    el.style.opacity=0;
+    setTimeout(()=>{el.textContent=msgs[i];el.style.opacity=1;},300);
+  },interval||3500);
+}
+
+// Gold color palette
+const GOLD='#ffd700';
+const AMBER='#ffaa00';
+const DARK_GOLD='#997700';
+const DIM_GOLD='#665500';
+const RED='#ff4444';
+const GREEN='#44ff88';
+const BG='#0a0a14';
+const LINE_BG='#0f0f1c';
+const GUTTER='#1a1a28';
+
+// ──────────────────────────────────────────────
+// OPTION A: Algorithm Fixer (Boss Rush)
+// ──────────────────────────────────────────────
+(function(){
+  const {c,ctx,w,h}=initCanvas('cv-a');
+
+  const code=[
+    'fn bubble_sort(arr: &mut Vec<i32>) {',
+    '    let n = arr.len();',
+    '    for i in 0..n {',
+    '        for j in 0..n {  // BUG: should be n-i-1',
+    '            if arr[j] < arr[j+1] {  // BUG: should be >',
+    '                let tmp = arr[j];',
+    '                arr[j] = arr[j+1];',
+    '                arr[i] = tmp;  // BUG: should be arr[j+1]',
+    '            }',
+    '        }',
+    '    }',
+    '}',
+    '',
+    'fn binary_search(arr: &[i32], target: i32) -> i32 {',
+    '    let mut lo = 0;',
+    '    let mut hi = arr.len();  // BUG: should be len()-1',
+    '    while lo < hi {',
+    '        let mid = (lo + hi) * 2;  // BUG: should be / 2',
+    '        if arr[mid] == target {',
+    '            return mid as i32;',
+    '        } else if arr[mid] < target {',
+    '            lo = mid;  // BUG: should be mid+1',
+    '        } else {',
+    '            hi = mid - 1;',
+    '        }',
+    '    }',
+    '    return -1;',
+    '}',
+  ];
+
+  // Bug locations: {line, col, fixCmd, fixDesc}
+  const bugs=[
+    {line:3, col:19, cmd:'/n\\n ci( n-i-1', desc:'Search & fix range'},
+    {line:4, col:18, cmd:'/ <\\n r>', desc:'Search & replace operator'},
+    {line:7, col:12, cmd:"'a ci[ j+1", desc:'Mark jump & fix index'},
+    {line:15,col:24, cmd:'@a (macro) len()-1', desc:'Macro: fix bound'},
+    {line:17,col:28, cmd:'ci( (lo+hi)/2', desc:'Text object: fix formula'},
+    {line:21,col:17, cmd:'ea +1', desc:'Append fix: mid+1'},
+  ];
+
+  const fontSize=13;
+  const lineH=17;
+  const leftPad=50;
+  const codeTop=50;
+
+  let bossHP=1;
+  let currentBug=0;
+  let cursorLine=0;
+  let cursorCol=0;
+  let phase='search'; // search, fix, celebrate
+  let phaseTimer=0;
+  let t=0;
+  let victory=false;
+  let victoryTime=0;
+  let particles=[];
+  let cmdDisplay='';
+  let cmdOpacity=0;
+  const loopLen=15000; // 15s loop
+
+  function reset(){
+    bossHP=1;currentBug=0;cursorLine=0;cursorCol=0;
+    phase='search';phaseTimer=0;victory=false;victoryTime=0;
+    particles=[];cmdDisplay='';cmdOpacity=0;
+  }
+
+  function spawnFireworks(cx,cy){
+    for(let i=0;i<30;i++){
+      const angle=Math.random()*Math.PI*2;
+      const speed=1+Math.random()*4;
+      particles.push({
+        x:cx,y:cy,
+        vx:Math.cos(angle)*speed,
+        vy:Math.sin(angle)*speed,
+        life:1,
+        color:['#ffd700','#ff6600','#ffaa00','#ff4444','#ffffff'][Math.floor(Math.random()*5)]
+      });
+    }
+  }
+
+  function draw(){
+    const now=performance.now();
+    const loopT=(now%loopLen)/loopLen;
+    t=now;
+
+    // Reset at loop start
+    if(loopT<0.01 && (victory||currentBug>=bugs.length)){
+      reset();
+    }
+
+    ctx.fillStyle=BG;
+    ctx.fillRect(0,0,w,h);
+
+    // Boss HP bar
+    const hpBarW=w-100;
+    const hpBarH=20;
+    const hpBarX=50;
+    const hpBarY=10;
+
+    ctx.fillStyle='#1a1a28';
+    ctx.fillRect(hpBarX,hpBarY,hpBarW,hpBarH);
+    ctx.strokeStyle=DIM_GOLD;
+    ctx.lineWidth=1;
+    ctx.strokeRect(hpBarX,hpBarY,hpBarW,hpBarH);
+
+    const targetHP=1-currentBug/bugs.length;
+    bossHP+=(targetHP-bossHP)*0.05;
+
+    if(bossHP>0.01){
+      const grad=ctx.createLinearGradient(hpBarX,0,hpBarX+hpBarW*bossHP,0);
+      grad.addColorStop(0,'#ff2222');
+      grad.addColorStop(0.5,'#ff6600');
+      grad.addColorStop(1,'#ff0000');
+      ctx.fillStyle=grad;
+      ctx.fillRect(hpBarX+1,hpBarY+1,Math.max(0,(hpBarW-2)*bossHP),hpBarH-2);
+    }
+
+    ctx.fillStyle=GOLD;
+    ctx.font='bold 12px monospace';
+    ctx.textAlign='center';
+    ctx.fillText('BOSS HP',w/2,hpBarY+14);
+    ctx.textAlign='left';
+
+    ctx.font='11px monospace';
+    ctx.fillStyle='#888';
+    ctx.fillText('ALGORITHM FIXER',hpBarX,hpBarY+hpBarH+14);
+    const bugsTxt='Bugs: '+currentBug+'/'+bugs.length;
+    ctx.fillStyle=AMBER;
+    ctx.textAlign='right';
+    ctx.fillText(bugsTxt,hpBarX+hpBarW,hpBarY+hpBarH+14);
+    ctx.textAlign='left';
+
+    // Draw code
+    const scrollOffset=Math.max(0,cursorLine-10)*lineH;
+
+    for(let i=0;i<code.length;i++){
+      const y=codeTop+i*lineH-scrollOffset;
+      if(y<codeTop-lineH||y>h+lineH) continue;
+
+      // Line background
+      if(i===cursorLine){
+        ctx.fillStyle='rgba(255,215,0,0.08)';
+        ctx.fillRect(0,y-lineH+4,w,lineH);
+      }
+
+      // Bug indicator
+      const bugIdx=bugs.findIndex(b=>b.line===i && bugs.indexOf(b)>=currentBug);
+      if(bugIdx>=0 && bugs.indexOf(bugs[bugIdx])>=currentBug){
+        const pulse=0.4+0.3*Math.sin(now/300+bugIdx);
+        ctx.fillStyle=`rgba(255,68,68,${pulse*0.15})`;
+        ctx.fillRect(0,y-lineH+4,w,lineH);
+        // Bug marker
+        ctx.fillStyle=`rgba(255,68,68,${pulse})`;
+        ctx.font='bold 11px monospace';
+        ctx.fillText('!',8,y);
+      }
+
+      // Gutter
+      ctx.fillStyle='#555';
+      ctx.font='11px monospace';
+      const lineNum=String(i+1).padStart(3,' ');
+      ctx.fillText(lineNum,10,y);
+
+      // Code text with syntax highlighting
+      const line=code[i];
+      let x=leftPad;
+      ctx.font=fontSize+'px monospace';
+      const charW=ctx.measureText('M').width;
+
+      for(let ci=0;ci<line.length;ci++){
+        const ch=line[ci];
+        // Simple syntax coloring
+        if(line.includes('// BUG') && ci>=line.indexOf('//')){
+          ctx.fillStyle=RED;
+        } else if('{}()[]<>'.includes(ch)){
+          ctx.fillStyle='#888';
+        } else if(line.trimStart().startsWith('fn ')||line.trimStart().startsWith('let ')||
+                  line.trimStart().startsWith('for ')||line.trimStart().startsWith('if ')||
+                  line.trimStart().startsWith('while ')||line.trimStart().startsWith('return ')||
+                  line.trimStart().startsWith('else')){
+          const kw=line.trimStart().split(/[\s(]/)[0];
+          const kwStart=line.indexOf(kw);
+          if(ci>=kwStart&&ci<kwStart+kw.length) ctx.fillStyle='#cc77ff';
+          else ctx.fillStyle='#ccc';
+        } else {
+          ctx.fillStyle='#ccc';
+        }
+        ctx.fillText(ch,x+ci*charW,y);
+      }
+    }
+
+    // Cursor
+    if(!victory){
+      const cY=codeTop+cursorLine*lineH-scrollOffset;
+      const charW=ctx.measureText('M').width;
+      const cX=leftPad+cursorCol*charW;
+      const blink=Math.sin(now/200)>0;
+      if(blink){
+        ctx.fillStyle='rgba(255,215,0,0.8)';
+        ctx.fillRect(cX,cY-lineH+5,charW,lineH-2);
+        // Draw char under cursor in dark
+        if(code[cursorLine]&&code[cursorLine][cursorCol]){
+          ctx.fillStyle='#0a0a14';
+          ctx.font=fontSize+'px monospace';
+          ctx.fillText(code[cursorLine][cursorCol],cX,cY);
+        }
+      }
+    }
+
+    // Command display
+    if(cmdOpacity>0){
+      ctx.fillStyle=`rgba(255,215,0,${cmdOpacity})`;
+      ctx.font='bold 14px monospace';
+      ctx.textAlign='center';
+      ctx.fillText(cmdDisplay,w/2,h-30);
+      ctx.textAlign='left';
+      cmdOpacity-=0.005;
+    }
+
+    // Phase logic
+    if(!victory && currentBug<bugs.length){
+      phaseTimer+=16;
+      const bug=bugs[currentBug];
+      if(phase==='search'){
+        // Animate cursor moving to bug line
+        const speed=0.08;
+        cursorLine+=(bug.line-cursorLine)*speed;
+        cursorCol+=(bug.col-cursorCol)*speed;
+        if(Math.abs(cursorLine-bug.line)<0.5 && Math.abs(cursorCol-bug.col)<0.5){
+          cursorLine=bug.line;cursorCol=bug.col;
+          if(phaseTimer>600){
+            phase='fix';phaseTimer=0;
+            cmdDisplay=bug.cmd;cmdOpacity=1;
+          }
+        }
+      } else if(phase==='fix'){
+        if(phaseTimer>800){
+          // Flash fix
+          currentBug++;
+          phase='search';phaseTimer=0;
+          if(currentBug>=bugs.length){
+            victory=true;victoryTime=now;
+            spawnFireworks(w/2,h/2);
+            spawnFireworks(w/3,h/3);
+            spawnFireworks(2*w/3,h/3);
+          }
+        }
+      }
+    }
+
+    // Victory
+    if(victory){
+      const vt=(now-victoryTime)/1000;
+      // Fireworks particles
+      if(vt<3 && Math.random()<0.15){
+        spawnFireworks(Math.random()*w,Math.random()*h*0.6+50);
+      }
+
+      // Draw particles
+      for(let i=particles.length-1;i>=0;i--){
+        const p=particles[i];
+        p.x+=p.vx;p.y+=p.vy;p.vy+=0.05;p.life-=0.015;
+        if(p.life<=0){particles.splice(i,1);continue;}
+        ctx.globalAlpha=p.life;
+        ctx.fillStyle=p.color;
+        ctx.fillRect(p.x-2,p.y-2,4,4);
+      }
+      ctx.globalAlpha=1;
+
+      // VICTORY text
+      const scale=Math.min(1,vt*2);
+      ctx.save();
+      ctx.translate(w/2,h/2);
+      ctx.scale(scale,scale);
+      ctx.font='bold 48px monospace';
+      ctx.textAlign='center';
+      ctx.fillStyle=GOLD;
+      ctx.shadowColor=GOLD;ctx.shadowBlur=20;
+      ctx.fillText('VICTORY',0,0);
+      ctx.font='16px monospace';
+      ctx.fillStyle=AMBER;
+      ctx.shadowBlur=0;
+      ctx.fillText('All bugs defeated!',0,30);
+      ctx.restore();
+      ctx.textAlign='left';
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+  captionCycle('cap-a',[
+    'The final challenge: fix broken algorithms using ALL your Vim skills',
+    'Search, text objects, macros, marks \u2014 everything you\'ve learned comes together',
+    'Defeat the boss by finding and fixing every bug \u2014 efficiency determines your score',
+  ],3500);
+})();
+
+// ──────────────────────────────────────────────
+// OPTION B: Code Review (PR Review Sim)
+// ──────────────────────────────────────────────
+(function(){
+  const {c,ctx,w,h}=initCanvas('cv-b');
+
+  const diffLines=[
+    {type:'header',text:'diff --git a/server.rs b/server.rs'},
+    {type:'info',  text:'@@ -12,18 +12,22 @@ impl Server {'},
+    {type:'ctx',   text:'    fn handle_request(&mut self, req: Request) {'},
+    {type:'del',   text:'-        let unused_var = 42;',
+     comment:'This variable is unused', fix:'dd'},
+    {type:'ctx',   text:'        let response = self.process(req);'},
+    {type:'ctx',   text:'        match response {'},
+    {type:'add',   text:'+            Ok(data) => self.send(data),'},
+    {type:'del',   text:'-            Err(e) => println!("error"),',
+     comment:'Missing null check on error', fix:'ci"'},
+    {type:'add',   text:'+            Err(e) => {'},
+    {type:'add',   text:'+                if let Some(msg) = e.message() {'},
+    {type:'add',   text:'+                    log::error!("{}", msg);'},
+    {type:'add',   text:'+                }'},
+    {type:'add',   text:'+            }'},
+    {type:'ctx',   text:'        }'},
+    {type:'ctx',   text:'    }'},
+    {type:'ctx',   text:''},
+    {type:'ctx',   text:'    fn validate(&self, input: &str) -> bool {'},
+    {type:'del',   text:'-        if input.len() > 0 && input.len() > 0 {',
+     comment:'Redundant condition (duplicated check)', fix:'dw'},
+    {type:'add',   text:'+        if input.len() > 0 {'},
+    {type:'ctx',   text:'            return true;'},
+    {type:'ctx',   text:'        }'},
+    {type:'del',   text:'-        let debug_val = dbg!(input);',
+     comment:'Remove debug statement before merge', fix:'dd'},
+    {type:'ctx',   text:'        false'},
+    {type:'ctx',   text:'    }'},
+    {type:'ctx',   text:'}'},
+  ];
+
+  const comments=[
+    {lineIdx:3, text:'This variable is unused', fix:'dd', fixDesc:'Delete line'},
+    {lineIdx:7, text:'Missing null check on error', fix:'ci"', fixDesc:'Change inner "'},
+    {lineIdx:17,text:'Redundant condition', fix:'dw', fixDesc:'Delete word'},
+    {lineIdx:21,text:'Remove debug statement', fix:'dd', fixDesc:'Delete line'},
+  ];
+
+  const fontSize=12;
+  const lineH=18;
+  const codeTop=60;
+  const leftPad=40;
+
+  let currentComment=0;
+  let cursorLine=0;
+  let phase='navigate';
+  let phaseTimer=0;
+  let progress=0;
+  let approved=false;
+  let approvedTime=0;
+  let cmdDisplay='';
+  let cmdOpacity=0;
+  const loopLen=14000;
+
+  function reset(){
+    currentComment=0;cursorLine=0;phase='navigate';
+    phaseTimer=0;progress=0;approved=false;approvedTime=0;
+    cmdDisplay='';cmdOpacity=0;
+  }
+
+  function draw(){
+    const now=performance.now();
+    const loopT=(now%loopLen)/loopLen;
+
+    if(loopT<0.01 && (approved||currentComment>=comments.length)){
+      reset();
+    }
+
+    ctx.fillStyle=BG;
+    ctx.fillRect(0,0,w,h);
+
+    // PR header
+    ctx.fillStyle='#1a1a28';
+    ctx.fillRect(0,0,w,44);
+    ctx.strokeStyle=DIM_GOLD;
+    ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,44);ctx.lineTo(w,44);ctx.stroke();
+
+    ctx.font='bold 14px monospace';
+    ctx.fillStyle=GOLD;
+    ctx.fillText('PR #847: Refactor server error handling',14,20);
+    ctx.font='11px monospace';
+    ctx.fillStyle='#888';
+    ctx.fillText('4 files changed  +22  -8   |   4 comments to resolve',14,36);
+
+    // Progress bar
+    const pBarW=160;const pBarH=12;
+    const pBarX=w-pBarW-20;const pBarY=16;
+    ctx.fillStyle='#1a1a10';
+    ctx.fillRect(pBarX,pBarY,pBarW,pBarH);
+    ctx.strokeStyle=DIM_GOLD;
+    ctx.strokeRect(pBarX,pBarY,pBarW,pBarH);
+
+    const targetProg=currentComment/comments.length;
+    progress+=(targetProg-progress)*0.06;
+
+    const pGrad=ctx.createLinearGradient(pBarX,0,pBarX+pBarW,0);
+    pGrad.addColorStop(0,GREEN);
+    pGrad.addColorStop(1,'#22cc66');
+    ctx.fillStyle=pGrad;
+    ctx.fillRect(pBarX+1,pBarY+1,(pBarW-2)*Math.min(1,progress),pBarH-2);
+
+    ctx.font='9px monospace';
+    ctx.fillStyle='#ccc';
+    ctx.textAlign='center';
+    ctx.fillText('REVIEW PROGRESS',pBarX+pBarW/2,pBarY+10);
+    ctx.textAlign='left';
+
+    // Draw diff lines
+    const scrollOffset=Math.max(0,cursorLine-8)*lineH;
+
+    for(let i=0;i<diffLines.length;i++){
+      const y=codeTop+i*lineH-scrollOffset;
+      if(y<codeTop-lineH||y>h+lineH) continue;
+
+      const dl=diffLines[i];
+
+      // Background by type
+      if(dl.type==='del') ctx.fillStyle='rgba(255,50,50,0.08)';
+      else if(dl.type==='add') ctx.fillStyle='rgba(50,255,100,0.08)';
+      else if(dl.type==='header') ctx.fillStyle='rgba(255,215,0,0.05)';
+      else if(dl.type==='info') ctx.fillStyle='rgba(100,100,255,0.05)';
+      else ctx.fillStyle='transparent';
+
+      if(dl.type!=='ctx') ctx.fillRect(0,y-lineH+4,w,lineH);
+
+      // Cursor highlight
+      if(Math.round(cursorLine)===i){
+        ctx.fillStyle='rgba(255,215,0,0.1)';
+        ctx.fillRect(0,y-lineH+4,w,lineH);
+      }
+
+      // Marker
+      ctx.font='12px monospace';
+      if(dl.type==='del'){ctx.fillStyle=RED;ctx.fillText('-',10,y);}
+      else if(dl.type==='add'){ctx.fillStyle=GREEN;ctx.fillText('+',10,y);}
+      else if(dl.type==='header'){ctx.fillStyle=DARK_GOLD;ctx.fillText('~',10,y);}
+      else{ctx.fillStyle='#555';ctx.fillText(' ',10,y);}
+
+      // Text
+      ctx.font=fontSize+'px monospace';
+      if(dl.type==='del') ctx.fillStyle='#ff8888';
+      else if(dl.type==='add') ctx.fillStyle='#88ff88';
+      else if(dl.type==='header'||dl.type==='info') ctx.fillStyle=DARK_GOLD;
+      else ctx.fillStyle='#aaa';
+      ctx.fillText(dl.text.substring(0,80),leftPad,y);
+
+      // Comment bubble
+      const cmtIdx=comments.findIndex(c=>c.lineIdx===i);
+      if(cmtIdx>=0 && cmtIdx>=currentComment){
+        const pulse=0.6+0.3*Math.sin(now/400+cmtIdx);
+        const bubbleX=w-240;
+        const bubbleY=y-lineH+2;
+        ctx.fillStyle=`rgba(255,165,0,${pulse*0.2})`;
+        ctx.strokeStyle=`rgba(255,165,0,${pulse*0.6})`;
+        ctx.lineWidth=1;
+        // Bubble
+        ctx.beginPath();
+        ctx.roundRect(bubbleX,bubbleY,220,lineH,4);
+        ctx.fill();ctx.stroke();
+        ctx.fillStyle=`rgba(255,200,100,${pulse})`;
+        ctx.font='10px monospace';
+        ctx.fillText(comments[cmtIdx].text,bubbleX+6,bubbleY+12);
+      }
+    }
+
+    // Command display
+    if(cmdOpacity>0){
+      ctx.fillStyle=`rgba(255,215,0,${cmdOpacity})`;
+      ctx.font='bold 14px monospace';
+      ctx.textAlign='center';
+      ctx.fillText(cmdDisplay,w/2,h-30);
+      ctx.textAlign='left';
+      cmdOpacity-=0.006;
+    }
+
+    // Phase logic
+    if(!approved && currentComment<comments.length){
+      phaseTimer+=16;
+      const cmt=comments[currentComment];
+      if(phase==='navigate'){
+        cursorLine+=(cmt.lineIdx-cursorLine)*0.07;
+        if(Math.abs(cursorLine-cmt.lineIdx)<0.5){
+          cursorLine=cmt.lineIdx;
+          if(phaseTimer>500){
+            phase='fix';phaseTimer=0;
+            cmdDisplay=':'+cmt.fix+' \u2014 '+cmt.fixDesc;
+            cmdOpacity=1;
+          }
+        }
+      } else if(phase==='fix'){
+        if(phaseTimer>700){
+          currentComment++;
+          phase='navigate';phaseTimer=0;
+          if(currentComment>=comments.length){
+            approved=true;approvedTime=now;
+          }
+        }
+      }
+    }
+
+    // Approved stamp
+    if(approved){
+      const at=(now-approvedTime)/1000;
+      const scale=Math.min(1,at*3);
+      ctx.save();
+      ctx.translate(w/2,h/2);
+      ctx.rotate(-0.15);
+      ctx.scale(scale,scale);
+      ctx.strokeStyle=GREEN;
+      ctx.lineWidth=4;
+      ctx.beginPath();
+      ctx.roundRect(-100,-35,200,70,12);
+      ctx.stroke();
+      ctx.font='bold 36px monospace';
+      ctx.fillStyle=GREEN;
+      ctx.textAlign='center';
+      ctx.fillText('APPROVED',0,12);
+      ctx.restore();
+      ctx.textAlign='left';
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+  captionCycle('cap-b',[
+    'Review pull requests like a pro \u2014 navigate between issues efficiently',
+    'Each fix requires different Vim skills \u2014 choose the right tool for the job',
+    'Clear all review comments to get the PR approved',
+  ],3500);
+})();
+
+// ──────────────────────────────────────────────
+// OPTION C: Hackathon (Timed Challenge)
+// ──────────────────────────────────────────────
+(function(){
+  const {c,ctx,w,h}=initCanvas('cv-c');
+
+  const files={
+    'main.rs':[
+      'use std::net::TcpListener;',
+      'use std::io::prelude::*;',
+      '',
+      'mod routes;',
+      'mod handlers;',
+      '',
+      'fn main() {',
+      '    let listener = TcpListener::bind("127.0.0.1:8080")',
+      '        .expect("Failed to bind");',
+      '    println!("Server running on :8080");',
+      '',
+      '    for stream in listener.incoming() {',
+      '        let stream = stream.unwrap();',
+      '        handlers::handle(stream);',
+      '    }',
+      '}',
+    ],
+    'routes.rs':[
+      'pub enum Route {',
+      '    Home,',
+      '    Api(String),',
+      '    Static(String),',
+      '    NotFound,',
+      '}',
+      '',
+      'pub fn parse(path: &str) -> Route {',
+      '    match path {',
+      '        "/" => Route::Home,',
+      '        p if p.starts_with("/api/") => {',
+      '            Route::Api(p[5..].to_string())',
+      '        }',
+      '        p if p.starts_with("/static/") => {',
+      '            Route::Static(p[8..].to_string())',
+      '        }',
+      '        _ => Route::NotFound,',
+      '    }',
+      '}',
+    ],
+    'handlers.rs':[
+      'use std::net::TcpStream;',
+      'use std::io::prelude::*;',
+      'use crate::routes::{self, Route};',
+      '',
+      'pub fn handle(mut stream: TcpStream) {',
+      '    let mut buf = [0; 1024];',
+      '    stream.read(&mut buf).unwrap();',
+      '',
+      '    let request = String::from_utf8_lossy(&buf);',
+      '    let path = request.split_whitespace()',
+      '        .nth(1).unwrap_or("/");',
+      '',
+      '    let response = match routes::parse(path) {',
+      '        Route::Home => "HTTP/1.1 200 OK\\r\\n\\r\\nHello!",',
+      '        Route::Api(e) => // TODO: JSON response',
+      '            &format!("HTTP/1.1 200\\r\\n\\r\\n{{}}", e),',
+      '        Route::NotFound => "HTTP/1.1 404\\r\\n\\r\\nNot Found",',
+      '        _ => "HTTP/1.1 500\\r\\n\\r\\nError",',
+      '    };',
+      '',
+      '    stream.write(response.as_bytes()).unwrap();',
+      '    stream.flush().unwrap();',
+      '}',
+    ]
+  };
+
+  const fileNames=Object.keys(files);
+  const fontSize=11;
+  const lineH=15;
+  const tabH=26;
+  const headerH=36;
+  const splitX=Math.floor(w*0.55);
+
+  // Typing sequence: [{file, line, col, text, cmd}]
+  const actions=[
+    {file:0,line:7,col:0, cmd:':e main.rs', desc:'Open main file'},
+    {file:0,line:9,col:4, cmd:'/TODO', desc:'Search TODOs'},
+    {file:1,line:0,col:0, cmd:':sp routes.rs', desc:'Open split'},
+    {file:1,line:7,col:4, cmd:'qa ...recording... q', desc:'Record macro'},
+    {file:2,line:0,col:0, cmd:':e handlers.rs', desc:'Switch file'},
+    {file:2,line:14,col:4,cmd:'"ay$ \u2014 yank to register', desc:'Yank to register a'},
+    {file:2,line:15,col:8,cmd:'@a \u2014 replay macro', desc:'Apply macro'},
+    {file:0,line:10,col:4,cmd:'\'a \u2014 jump to mark', desc:'Jump via mark'},
+  ];
+
+  let timer=300; // 5:00 in seconds
+  let currentAction=0;
+  let activeFile=0;
+  let splitFile=-1; // -1 = no split
+  let cursorLine=0;
+  let cursorCol=0;
+  let phase='navigate';
+  let phaseTimer=0;
+  let features=0;
+  let totalFeatures=4;
+  let keystrokes=0;
+  let efficiency=98;
+  let cmdDisplay='';
+  let cmdOpacity=0;
+  const loopLen=15000;
+  let lastLoop=-1;
+
+  function reset(){
+    timer=300;currentAction=0;activeFile=0;splitFile=-1;
+    cursorLine=0;cursorCol=0;phase='navigate';phaseTimer=0;
+    features=0;keystrokes=0;efficiency=98;
+    cmdDisplay='';cmdOpacity=0;
+  }
+
+  function formatTime(s){
+    const m=Math.floor(s/60);
+    const sec=Math.floor(s%60);
+    return m+':'+String(sec).padStart(2,'0');
+  }
+
+  function draw(){
+    const now=performance.now();
+    const loopNum=Math.floor(now/loopLen);
+    if(loopNum!==lastLoop){
+      lastLoop=loopNum;
+      reset();
+    }
+    const loopT=(now%loopLen)/loopLen;
+
+    ctx.fillStyle=BG;
+    ctx.fillRect(0,0,w,h);
+
+    // Timer decreases over loop
+    timer=300-loopT*180;
+
+    // Advance actions
+    const actionInterval=loopLen/actions.length;
+    const newAction=Math.min(actions.length-1,Math.floor(loopT*actions.length));
+    if(newAction!==currentAction){
+      currentAction=newAction;
+      phaseTimer=0;phase='navigate';
+      const act=actions[currentAction];
+      activeFile=act.file;
+      if(act.cmd.includes(':sp')) splitFile=act.file;
+      cmdDisplay=act.cmd;
+      cmdOpacity=1;
+      keystrokes+=Math.floor(5+Math.random()*8);
+      efficiency=95+Math.floor(Math.random()*5);
+      if(currentAction%2===1) features=Math.min(totalFeatures,features+1);
+    }
+
+    // Animate cursor
+    const act=actions[currentAction];
+    cursorLine+=(act.line-cursorLine)*0.1;
+    cursorCol+=(act.col-cursorCol)*0.1;
+
+    // === HEADER BAR ===
+    ctx.fillStyle='#111120';
+    ctx.fillRect(0,0,w,headerH);
+    ctx.strokeStyle=DIM_GOLD;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,headerH);ctx.lineTo(w,headerH);ctx.stroke();
+
+    // Timer
+    const timerColor=timer>120?GOLD:timer>60?AMBER:RED;
+    ctx.font='bold 18px monospace';
+    ctx.fillStyle=timerColor;
+    ctx.fillText(formatTime(timer),12,24);
+
+    // Features progress
+    ctx.font='11px monospace';
+    ctx.fillStyle='#888';
+    ctx.fillText('Features:',120,16);
+    const fpBarX=190;const fpBarW=100;const fpBarH=10;
+    ctx.fillStyle='#1a1a10';
+    ctx.fillRect(fpBarX,8,fpBarW,fpBarH);
+    ctx.strokeStyle=DIM_GOLD;
+    ctx.strokeRect(fpBarX,8,fpBarW,fpBarH);
+    ctx.fillStyle=GREEN;
+    ctx.fillRect(fpBarX+1,9,(fpBarW-2)*(features/totalFeatures),fpBarH-2);
+    ctx.fillStyle='#aaa';
+    ctx.fillText(features+'/'+totalFeatures,fpBarX+fpBarW+6,16);
+
+    // Metrics
+    ctx.fillStyle=AMBER;
+    ctx.textAlign='right';
+    ctx.fillText('Keystrokes: '+(keystrokes+Math.floor(loopT*40)),w-140,16);
+    ctx.fillStyle=efficiency>96?GREEN:AMBER;
+    ctx.fillText('Efficiency: '+efficiency+'%',w-140,30);
+    ctx.fillStyle='#888';
+    ctx.fillText('WPM: '+Math.floor(40+loopT*30),w-14,16);
+    ctx.textAlign='left';
+
+    // Hackathon label
+    ctx.font='bold 10px monospace';
+    ctx.fillStyle=DARK_GOLD;
+    ctx.fillText('HACKATHON MODE',120,30);
+
+    // === FILE TABS ===
+    const tabY=headerH;
+    const tabW=Math.floor((splitFile>=0?splitX:w)/fileNames.length);
+    for(let i=0;i<fileNames.length;i++){
+      const tx=i*tabW;
+      ctx.fillStyle=i===activeFile?'#1a1a28':'#0f0f18';
+      ctx.fillRect(tx,tabY,tabW-1,tabH);
+      if(i===activeFile){
+        ctx.fillStyle=GOLD;
+        ctx.fillRect(tx,tabY,tabW-1,2);
+      }
+      ctx.font='11px monospace';
+      ctx.fillStyle=i===activeFile?GOLD:'#666';
+      ctx.fillText(fileNames[i],tx+8,tabY+16);
+    }
+
+    // === MAIN EDITOR ===
+    const editorTop=tabY+tabH;
+    const editorW=splitFile>=0?splitX:w;
+    const fileContent=files[fileNames[activeFile]];
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0,editorTop,editorW,h-editorTop);
+    ctx.clip();
+
+    for(let i=0;i<fileContent.length;i++){
+      const y=editorTop+12+i*lineH;
+      if(y>h+lineH) break;
+
+      // Cursor line highlight
+      if(i===Math.round(cursorLine) && splitFile<0){
+        ctx.fillStyle='rgba(255,215,0,0.06)';
+        ctx.fillRect(0,y-lineH+4,editorW,lineH);
+      }
+
+      // Line number
+      ctx.fillStyle='#444';
+      ctx.font='10px monospace';
+      ctx.fillText(String(i+1).padStart(3,' '),4,y);
+
+      // Code
+      ctx.font=fontSize+'px monospace';
+      const line=fileContent[i];
+      // Simple highlighting
+      for(let ci=0;ci<Math.min(line.length,100);ci++){
+        const ch=line[ci];
+        if(line.includes('TODO')){
+          ctx.fillStyle=line.indexOf('TODO')<=ci&&ci<line.indexOf('TODO')+4?AMBER:'#aaa';
+        } else if(line.includes('use ')||line.includes('mod ')||line.includes('pub ')||
+                  line.trimStart().startsWith('fn ')||line.trimStart().startsWith('let ')||
+                  line.trimStart().startsWith('for ')||line.trimStart().startsWith('match ')){
+          const words=['use','mod','pub','fn','let','for','match','mut','if','else'];
+          let isKw=false;
+          for(const kw of words){
+            const idx=line.indexOf(kw);
+            if(idx>=0&&ci>=idx&&ci<idx+kw.length){isKw=true;break;}
+          }
+          ctx.fillStyle=isKw?'#cc77ff':'#bbb';
+        } else if(ch==='"'||ch==="'"){
+          ctx.fillStyle='#88cc44';
+        } else if('{}()[]'.includes(ch)){
+          ctx.fillStyle='#777';
+        } else {
+          ctx.fillStyle='#bbb';
+        }
+        const charW=ctx.measureText('M').width;
+        ctx.fillText(ch,30+ci*charW,y);
+      }
+    }
+
+    // Cursor in main editor
+    if(activeFile===actions[currentAction].file){
+      const cY=editorTop+12+Math.round(cursorLine)*lineH;
+      const charW=ctx.measureText('M').width;
+      const cX=30+Math.round(cursorCol)*charW;
+      const blink=Math.sin(now/200)>0;
+      if(blink){
+        ctx.fillStyle='rgba(255,215,0,0.8)';
+        ctx.fillRect(cX,cY-lineH+5,charW,lineH-2);
+      }
+    }
+
+    ctx.restore();
+
+    // === SPLIT PANE ===
+    if(splitFile>=0){
+      // Divider
+      ctx.fillStyle=DIM_GOLD;
+      ctx.fillRect(splitX-1,editorTop,2,h-editorTop);
+
+      // Split label
+      ctx.fillStyle='#111120';
+      ctx.fillRect(splitX,tabY,w-splitX,tabH);
+      ctx.fillStyle=GOLD;
+      ctx.fillRect(splitX,tabY,w-splitX,2);
+      ctx.font='11px monospace';
+      ctx.fillStyle=AMBER;
+      ctx.fillText('[split] '+fileNames[splitFile],splitX+8,tabY+16);
+
+      const splitContent=files[fileNames[splitFile]];
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(splitX+2,editorTop,w-splitX-2,h-editorTop);
+      ctx.clip();
+
+      for(let i=0;i<splitContent.length;i++){
+        const y=editorTop+12+i*lineH;
+        if(y>h+lineH) break;
+        ctx.fillStyle='#444';
+        ctx.font='10px monospace';
+        ctx.fillText(String(i+1).padStart(3,' '),splitX+4,y);
+        ctx.font=fontSize+'px monospace';
+        ctx.fillStyle='#999';
+        ctx.fillText(splitContent[i].substring(0,50),splitX+30,y);
+      }
+
+      ctx.restore();
+    }
+
+    // Command line at bottom
+    ctx.fillStyle='#111120';
+    ctx.fillRect(0,h-24,w,24);
+    ctx.strokeStyle='#333';
+    ctx.beginPath();ctx.moveTo(0,h-24);ctx.lineTo(w,h-24);ctx.stroke();
+
+    if(cmdOpacity>0){
+      ctx.fillStyle=`rgba(255,215,0,${Math.min(1,cmdOpacity)})`;
+      ctx.font='12px monospace';
+      ctx.fillText(':'+cmdDisplay,8,h-8);
+      cmdOpacity-=0.004;
+    } else {
+      ctx.fillStyle='#555';
+      ctx.font='12px monospace';
+      ctx.fillText('-- NORMAL --',8,h-8);
+      ctx.fillStyle='#444';
+      ctx.textAlign='right';
+      ctx.fillText(fileNames[activeFile]+'  '+(Math.round(cursorLine)+1)+':'+(Math.round(cursorCol)+1),w-8,h-8);
+      ctx.textAlign='left';
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+  captionCycle('cap-c',[
+    'The Hackathon: build a project from scratch using every Vim skill',
+    'Multi-file editing, macros, registers, search \u2014 all under time pressure',
+    'Keystroke efficiency matters \u2014 the Vim master writes more code with fewer keys',
+  ],3500);
+})();
+</script>
+</body>
+</html>

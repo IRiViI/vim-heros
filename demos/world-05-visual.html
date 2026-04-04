@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World 5: Visual Mode - Vim Heroes</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Courier New', Consolas, monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a { color: #00d4ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.back-link {
+  display: inline-block;
+  padding: 16px 24px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+.back-link:hover { opacity: 1; }
+
+header {
+  text-align: center;
+  padding: 10px 20px 0;
+}
+
+header h1 {
+  font-size: 28px;
+  color: #ff6ec7;
+  text-shadow: 0 0 12px #ff6ec780, 0 0 30px #ff6ec740;
+  margin-bottom: 4px;
+}
+
+header .subtitle {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 16px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 20px;
+  margin-bottom: 20px;
+}
+
+.tab-btn {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  color: #aaa;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  transition: all 0.25s;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  background: #1a2a50;
+  color: #ddd;
+}
+
+.tab-btn.active {
+  background: #0f3460;
+  color: #00d4ff;
+  border-color: #00d4ff;
+  border-bottom-color: #0f3460;
+  text-shadow: 0 0 8px #00d4ff60;
+}
+
+/* Tab content */
+.tab-panel {
+  display: none;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 20px 30px;
+}
+
+.tab-panel.active { display: block; }
+
+.option-title {
+  font-size: 20px;
+  color: #e94560;
+  text-align: center;
+  margin-bottom: 4px;
+  text-shadow: 0 0 8px #e9456060;
+}
+
+.option-desc {
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 14px;
+}
+
+/* Canvas container */
+.canvas-wrap {
+  position: relative;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 400px;
+}
+
+/* Mode indicator */
+.mode-indicator {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: #1a1a2e;
+  border: 1px solid #444;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: #ff6ec7;
+  border-radius: 4px;
+  font-weight: bold;
+  text-shadow: 0 0 6px #ff6ec760;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.mode-indicator.visible { opacity: 1; }
+
+/* Caption bar */
+.caption-bar {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  padding: 14px 20px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.5;
+  transition: opacity 0.4s;
+}
+
+.caption-bar .key {
+  display: inline-block;
+  background: #e94560;
+  color: #fff;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+  margin: 0 2px;
+  text-shadow: none;
+}
+
+@media (max-width: 600px) {
+  header h1 { font-size: 22px; }
+  .tab-btn { font-size: 12px; padding: 8px 12px; }
+  canvas { height: 300px; }
+}
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">&larr; Back to Overview</a>
+
+<header>
+  <h1>World 5: Visual Mode</h1>
+  <div class="subtitle">v &middot; V &middot; Ctrl-v + motions + operators</div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="a">A: Lasso</button>
+  <button class="tab-btn" data-tab="b">B: Painter</button>
+  <button class="tab-btn" data-tab="c">C: Tetris Selector</button>
+</div>
+
+<!-- Option A -->
+<div class="tab-panel active" id="panel-a">
+  <div class="option-title">Lasso</div>
+  <div class="option-desc">Selection Rodeo</div>
+  <div class="canvas-wrap">
+    <canvas id="canvas-a"></canvas>
+    <div class="mode-indicator" id="mode-a"></div>
+  </div>
+  <div class="caption-bar" id="caption-a"></div>
+</div>
+
+<!-- Option B -->
+<div class="tab-panel" id="panel-b">
+  <div class="option-title">Painter</div>
+  <div class="option-desc">Art / Painting</div>
+  <div class="canvas-wrap">
+    <canvas id="canvas-b"></canvas>
+    <div class="mode-indicator" id="mode-b"></div>
+  </div>
+  <div class="caption-bar" id="caption-b"></div>
+</div>
+
+<!-- Option C -->
+<div class="tab-panel" id="panel-c">
+  <div class="option-title">Tetris Selector</div>
+  <div class="option-desc">Tetris Variant</div>
+  <div class="canvas-wrap">
+    <canvas id="canvas-c"></canvas>
+    <div class="mode-indicator" id="mode-c"></div>
+  </div>
+  <div class="caption-bar" id="caption-c"></div>
+</div>
+
+<script>
+// ── Shared utilities ──────────────────────────────────────
+
+const CODE_LINES = [
+  'fn main() {',
+  '    let mut scores = vec![10, 20, 30];',
+  '    let names = vec!["Alice", "Bob"];',
+  '    for (i, name) in names.iter().enumerate() {',
+  '        println!("{}: {}", name, scores[i]);',
+  '    }',
+  '    scores.push(40);',
+  '    let total: i32 = scores.iter().sum();',
+  '    println!("Total: {}", total);',
+  '    if total > 50 {',
+  '        println!("High score!");',
+  '    }',
+  '}',
+];
+
+function setupCanvas(id) {
+  const c = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  let cw = rect.width, ch = rect.height;
+  if(!cw || !ch) {
+    const active = document.querySelector('.panel.active canvas');
+    if(active) { const ar = active.getBoundingClientRect(); cw = ar.width; ch = ar.height; }
+    else { cw = 700; ch = 420; }
+  }
+  c.width = cw * dpr;
+  c.height = ch * dpr;
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { c, ctx, w: cw, h: ch };
+}
+
+function drawCodeLines(ctx, w, h, lines, charW, lineH, padX, padY) {
+  ctx.font = '13px Courier New, monospace';
+  ctx.fillStyle = '#8b949e';
+  ctx.textBaseline = 'top';
+  for (let i = 0; i < lines.length; i++) {
+    // line numbers
+    ctx.fillStyle = '#484f58';
+    ctx.fillText(String(i + 1).padStart(2, ' '), padX - 28, padY + i * lineH + 2);
+    // code
+    ctx.fillStyle = '#c9d1d9';
+    ctx.fillText(lines[i], padX, padY + i * lineH + 2);
+  }
+}
+
+// ── Tab switching ─────────────────────────────────────────
+
+const tabBtns = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.tab-panel');
+let activeTab = 'a';
+let animFrames = { a: null, b: null, c: null };
+
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    if (tab === activeTab) return;
+    tabBtns.forEach(b => b.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+    activeTab = tab;
+    // restart the newly active animation
+    if (tab === 'a') initA();
+    if (tab === 'b') initB();
+    if (tab === 'c') initC();
+  });
+});
+
+// ── Caption system ────────────────────────────────────────
+
+function runCaptions(elId, captions, intervalMs) {
+  const el = document.getElementById(elId);
+  let idx = 0;
+  function show() {
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.innerHTML = captions[idx % captions.length];
+      el.style.opacity = '1';
+      idx++;
+    }, 300);
+  }
+  show();
+  return setInterval(show, intervalMs);
+}
+
+// ── OPTION A: Lasso ───────────────────────────────────────
+
+const captionsA = [
+  'Lasso code regions with Visual mode &mdash; <span class="key">v</span> for characters, <span class="key">V</span> for lines',
+  '<span class="key">Ctrl-v</span> selects rectangular blocks &mdash; perfect for column editing',
+  'After selecting, apply any operator: <span class="key">d</span> to delete, <span class="key">&gt;</span> to indent, <span class="key">y</span> to yank',
+];
+
+let captionTimerA = null;
+
+function initA() {
+  if (animFrames.a) cancelAnimationFrame(animFrames.a);
+  if (captionTimerA) clearInterval(captionTimerA);
+  captionTimerA = runCaptions('caption-a', captionsA, 3500);
+
+  const { ctx, w, h } = setupCanvas('canvas-a');
+  const modeEl = document.getElementById('mode-a');
+  const charW = 7.8, lineH = 22, padX = 40, padY = 20;
+  const CYCLE = 10000; // 10s loop
+
+  // Lasso rope points for animation
+  function ropePoints(cx, cy, radius, t, nPoints) {
+    const pts = [];
+    for (let i = 0; i < nPoints; i++) {
+      const angle = (i / nPoints) * Math.PI * 2 + t * 2;
+      const wobble = Math.sin(angle * 3 + t * 5) * 3;
+      pts.push({
+        x: cx + (radius + wobble) * Math.cos(angle),
+        y: cy + (radius + wobble) * Math.sin(angle),
+      });
+    }
+    return pts;
+  }
+
+  function drawRope(ctx, pts, color) {
+    if (pts.length < 2) return;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      const cp1x = (pts[i - 1].x + pts[i].x) / 2;
+      const cp1y = (pts[i - 1].y + pts[i].y) / 2;
+      ctx.quadraticCurveTo(pts[i - 1].x, pts[i - 1].y, cp1x, cp1y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  function frame(ts) {
+    const t = (ts % CYCLE) / CYCLE; // 0..1
+    ctx.clearRect(0, 0, w, h);
+
+    // draw code
+    drawCodeLines(ctx, w, h, CODE_LINES, charW, lineH, padX, padY);
+
+    // Phase 1: character-wise v (0..0.3)
+    // Phase 2: line-wise V (0.33..0.63)
+    // Phase 3: block-wise Ctrl-v (0.66..0.96)
+
+    if (t < 0.30) {
+      // Character-wise: select word on line 1 "scores"
+      const phase = t / 0.30;
+      modeEl.textContent = '-- VISUAL --';
+      modeEl.classList.add('visible');
+      const wordStart = 12; // "scores" at col 12
+      const wordLen = 6;
+      const selLen = Math.floor(phase * wordLen);
+      if (selLen > 0) {
+        const sx = padX + wordStart * charW;
+        const sy = padY + 1 * lineH;
+        ctx.fillStyle = 'rgba(0, 212, 255, 0.25)';
+        ctx.fillRect(sx, sy, selLen * charW, lineH);
+        // rope around selection
+        const cx = sx + (selLen * charW) / 2;
+        const cy = sy + lineH / 2;
+        const rx = (selLen * charW) / 2 + 8;
+        const ry = lineH / 2 + 6;
+        const pts = [];
+        for (let i = 0; i <= 24; i++) {
+          const a = (i / 24) * Math.PI * 2;
+          pts.push({
+            x: cx + rx * Math.cos(a) + Math.sin(a * 3 + ts / 200) * 2,
+            y: cy + ry * Math.sin(a) + Math.cos(a * 2 + ts / 300) * 2,
+          });
+        }
+        drawRope(ctx, pts, '#00d4ff');
+      }
+      // cursor
+      const curX = padX + (wordStart + selLen) * charW;
+      const curY = padY + 1 * lineH;
+      ctx.fillStyle = '#00d4ff';
+      ctx.fillRect(curX, curY, 2, lineH);
+
+      // Operator applied at end
+      if (phase > 0.85) {
+        ctx.fillStyle = '#e94560';
+        ctx.font = 'bold 14px Courier New';
+        ctx.fillText('d  (delete)', padX + (wordStart + wordLen + 2) * charW, padY + 1 * lineH + 4);
+        ctx.font = '13px Courier New, monospace';
+      }
+
+    } else if (t < 0.33) {
+      modeEl.classList.remove('visible');
+
+    } else if (t < 0.63) {
+      // Line-wise V: select lines 3-5
+      const phase = (t - 0.33) / 0.30;
+      modeEl.textContent = '-- VISUAL LINE --';
+      modeEl.classList.add('visible');
+      const startLine = 3;
+      const endLine = startLine + Math.floor(phase * 3);
+      for (let ln = startLine; ln <= endLine && ln < CODE_LINES.length; ln++) {
+        const sy = padY + ln * lineH;
+        ctx.fillStyle = 'rgba(233, 69, 96, 0.2)';
+        ctx.fillRect(padX - 4, sy, w - padX * 2 + 8, lineH);
+      }
+      // Rope around line block
+      const ry1 = padY + startLine * lineH - 4;
+      const ry2 = padY + (endLine + 1) * lineH + 4;
+      const rx1 = padX - 10;
+      const rx2 = w - padX + 10;
+      const pts = [
+        { x: rx1, y: ry1 }, { x: rx2, y: ry1 },
+        { x: rx2, y: ry2 }, { x: rx1, y: ry2 },
+      ];
+      // add wobble
+      const wobblePts = [];
+      for (let edge = 0; edge < 4; edge++) {
+        const p1 = pts[edge], p2 = pts[(edge + 1) % 4];
+        for (let s = 0; s < 8; s++) {
+          const frac = s / 8;
+          wobblePts.push({
+            x: p1.x + (p2.x - p1.x) * frac + Math.sin(frac * 6 + ts / 200) * 3,
+            y: p1.y + (p2.y - p1.y) * frac + Math.cos(frac * 4 + ts / 250) * 3,
+          });
+        }
+      }
+      drawRope(ctx, wobblePts, '#e94560');
+
+      if (phase > 0.85) {
+        ctx.fillStyle = '#00d4ff';
+        ctx.font = 'bold 14px Courier New';
+        ctx.fillText('>  (indent)', w - 160, padY + startLine * lineH + 4);
+        ctx.font = '13px Courier New, monospace';
+      }
+
+    } else if (t < 0.66) {
+      modeEl.classList.remove('visible');
+
+    } else if (t < 0.96) {
+      // Block-wise Ctrl-v: select col 4-7 on lines 1-6
+      const phase = (t - 0.66) / 0.30;
+      modeEl.textContent = '-- VISUAL BLOCK --';
+      modeEl.classList.add('visible');
+      const col1 = 4, col2 = 8;
+      const row1 = 1, row2 = row1 + Math.floor(phase * 6);
+      const sx = padX + col1 * charW;
+      const ex = padX + col2 * charW;
+      for (let ln = row1; ln <= row2 && ln < CODE_LINES.length; ln++) {
+        ctx.fillStyle = 'rgba(255, 110, 199, 0.25)';
+        ctx.fillRect(sx, padY + ln * lineH, ex - sx, lineH);
+      }
+      // rectangular rope
+      const rpts = [];
+      const bx1 = sx - 4, bx2 = ex + 4;
+      const by1 = padY + row1 * lineH - 3;
+      const by2 = padY + (Math.min(row2, CODE_LINES.length - 1) + 1) * lineH + 3;
+      const corners = [
+        { x: bx1, y: by1 }, { x: bx2, y: by1 },
+        { x: bx2, y: by2 }, { x: bx1, y: by2 },
+      ];
+      const wpts = [];
+      for (let edge = 0; edge < 4; edge++) {
+        const p1 = corners[edge], p2 = corners[(edge + 1) % 4];
+        for (let s = 0; s < 6; s++) {
+          const frac = s / 6;
+          wpts.push({
+            x: p1.x + (p2.x - p1.x) * frac + Math.sin(frac * 5 + ts / 180) * 2,
+            y: p1.y + (p2.y - p1.y) * frac + Math.cos(frac * 3 + ts / 220) * 2,
+          });
+        }
+      }
+      drawRope(ctx, wpts, '#ff6ec7');
+
+      if (phase > 0.85) {
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 14px Courier New';
+        ctx.fillText('y  (yank)', ex + 14, padY + row1 * lineH + 4);
+        ctx.font = '13px Courier New, monospace';
+      }
+
+    } else {
+      modeEl.classList.remove('visible');
+    }
+
+    animFrames.a = requestAnimationFrame(frame);
+  }
+
+  animFrames.a = requestAnimationFrame(frame);
+}
+
+// ── OPTION B: Painter ─────────────────────────────────────
+
+const captionsB = [
+  'Paint selections across your code &mdash; fine brush <span class="key">v</span>, roller <span class="key">V</span>, or stamp <span class="key">Ctrl-v</span>',
+  'Visual Block mode lets you paint columns &mdash; edit tabular data or aligned code',
+  'Apply transformations to painted regions: <span class="key">&gt;</span> indent, <span class="key">d</span> delete, <span class="key">y</span> yank',
+];
+
+let captionTimerB = null;
+
+function initB() {
+  if (animFrames.b) cancelAnimationFrame(animFrames.b);
+  if (captionTimerB) clearInterval(captionTimerB);
+  captionTimerB = runCaptions('caption-b', captionsB, 3500);
+
+  const { ctx, w, h } = setupCanvas('canvas-b');
+  const modeEl = document.getElementById('mode-b');
+  const charW = 7.8, lineH = 22, padX = 40, padY = 20;
+  const CYCLE = 11000;
+
+  // Brush particles
+  let particles = [];
+
+  function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 3,
+        vy: (Math.random() - 0.5) * 3,
+        life: 1,
+        color,
+        size: Math.random() * 3 + 1,
+      });
+    }
+  }
+
+  function updateParticles(ctx) {
+    particles = particles.filter(p => p.life > 0);
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 0.025;
+      ctx.globalAlpha = p.life * 0.6;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawBrush(ctx, x, y, type) {
+    // type: 'fine', 'roller', 'stamp'
+    ctx.save();
+    if (type === 'fine') {
+      // small pointed brush
+      ctx.strokeStyle = '#00d4ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - 8, y - 18);
+      ctx.lineTo(x - 4, y - 20);
+      ctx.lineTo(x + 2, y - 4);
+      ctx.closePath();
+      ctx.fillStyle = '#00d4ff';
+      ctx.fill();
+      ctx.stroke();
+      // handle
+      ctx.strokeStyle = '#8b5e3c';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x - 6, y - 19);
+      ctx.lineTo(x - 14, y - 38);
+      ctx.stroke();
+    } else if (type === 'roller') {
+      // paint roller
+      ctx.fillStyle = '#e94560';
+      ctx.fillRect(x - 20, y - 6, 40, 12);
+      ctx.strokeStyle = '#888';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + 20, y);
+      ctx.lineTo(x + 30, y - 20);
+      ctx.stroke();
+      ctx.strokeStyle = '#8b5e3c';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + 30, y - 20);
+      ctx.lineTo(x + 34, y - 38);
+      ctx.stroke();
+    } else {
+      // stamp
+      ctx.strokeStyle = '#ff6ec7';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x - 14, y - 14, 28, 28);
+      ctx.fillStyle = 'rgba(255, 110, 199, 0.3)';
+      ctx.fillRect(x - 14, y - 14, 28, 28);
+      // handle
+      ctx.strokeStyle = '#8b5e3c';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 14);
+      ctx.lineTo(x, y - 36);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function frame(ts) {
+    const t = (ts % CYCLE) / CYCLE;
+    ctx.clearRect(0, 0, w, h);
+    drawCodeLines(ctx, w, h, CODE_LINES, charW, lineH, padX, padY);
+
+    // Phase 1: Fine brush (v) paints chars on line 7 (0..0.28)
+    if (t < 0.28) {
+      const phase = t / 0.28;
+      modeEl.textContent = '-- VISUAL --';
+      modeEl.classList.add('visible');
+
+      const line = 7;
+      const startCol = 4;
+      const endCol = startCol + Math.floor(phase * 30);
+      const sy = padY + line * lineH;
+
+      // paint stroke
+      for (let c = startCol; c < endCol && c < 42; c++) {
+        const cx = padX + c * charW;
+        const alpha = 0.15 + 0.15 * Math.sin(c * 0.5 + ts / 200);
+        ctx.fillStyle = `rgba(0, 212, 255, ${alpha})`;
+        ctx.fillRect(cx, sy, charW, lineH);
+      }
+
+      // brush cursor
+      const bx = padX + Math.min(endCol, 42) * charW;
+      const by = sy + lineH / 2;
+      drawBrush(ctx, bx, by, 'fine');
+      if (phase > 0.3 && Math.random() > 0.6) spawnParticles(bx, by, '#00d4ff', 1);
+
+      // operator at end
+      if (phase > 0.9) {
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 14px Courier New';
+        ctx.fillText('y (yank) - "copied!"', padX + 42 * charW + 10, sy + 4);
+        ctx.font = '13px Courier New, monospace';
+        // badge
+        ctx.fillStyle = '#ffd700';
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(padX + 42 * charW + 6, sy - 2, 140, 20);
+      }
+
+    } else if (t < 0.33) {
+      modeEl.classList.remove('visible');
+      particles = [];
+
+    } else if (t < 0.61) {
+      // Roller (V) - paint full lines 3-5
+      const phase = (t - 0.33) / 0.28;
+      modeEl.textContent = '-- VISUAL LINE --';
+      modeEl.classList.add('visible');
+
+      const startLine = 3;
+      const numLines = Math.floor(phase * 3) + 1;
+      for (let i = 0; i < numLines && startLine + i < CODE_LINES.length; i++) {
+        const ln = startLine + i;
+        const sy = padY + ln * lineH;
+        const paintW = (i < numLines - 1) ? (w - padX * 2 + 8) : (w - padX * 2 + 8) * Math.min(1, (phase * 3 - i));
+        ctx.fillStyle = 'rgba(233, 69, 96, 0.22)';
+        ctx.fillRect(padX - 4, sy, Math.max(0, paintW), lineH);
+      }
+
+      // roller at end of current line
+      const curLine = startLine + Math.min(numLines - 1, 2);
+      const ry = padY + curLine * lineH + lineH / 2;
+      const progress = (phase * 3) - Math.floor(phase * 3);
+      const rx = padX - 4 + (w - padX * 2 + 8) * Math.min(1, progress + 0.1);
+      drawBrush(ctx, rx, ry, 'roller');
+      if (Math.random() > 0.7) spawnParticles(rx, ry, '#e94560', 1);
+
+      // Operator: indent
+      if (phase > 0.88) {
+        for (let i = 0; i < 3; i++) {
+          const ln = startLine + i;
+          const sy = padY + ln * lineH;
+          ctx.fillStyle = '#00d4ff';
+          ctx.font = 'bold 13px Courier New';
+          const shifted = '    ' + CODE_LINES[ln];
+          // show arrow
+          ctx.fillStyle = '#00d4ff';
+          ctx.fillText('>>>', padX + (CODE_LINES[ln].length + 1) * charW, sy + 4);
+        }
+        ctx.font = '13px Courier New, monospace';
+      }
+
+    } else if (t < 0.66) {
+      modeEl.classList.remove('visible');
+      particles = [];
+
+    } else if (t < 0.94) {
+      // Stamp (Ctrl-v) - block select cols 4-11 on lines 1-5
+      const phase = (t - 0.66) / 0.28;
+      modeEl.textContent = '-- VISUAL BLOCK --';
+      modeEl.classList.add('visible');
+
+      const col1 = 4, col2 = 12;
+      const row1 = 1;
+      const numRows = Math.floor(phase * 5) + 1;
+      for (let i = 0; i < numRows && row1 + i < CODE_LINES.length; i++) {
+        const ln = row1 + i;
+        const sx = padX + col1 * charW;
+        const sy = padY + ln * lineH;
+        ctx.fillStyle = 'rgba(255, 110, 199, 0.22)';
+        ctx.fillRect(sx, sy, (col2 - col1) * charW, lineH);
+      }
+
+      // stamp cursor at bottom-right of block
+      const curRow = row1 + Math.min(numRows - 1, 4);
+      const stampX = padX + ((col1 + col2) / 2) * charW;
+      const stampY = padY + curRow * lineH + lineH / 2;
+      drawBrush(ctx, stampX, stampY, 'stamp');
+      if (Math.random() > 0.7) spawnParticles(stampX, stampY, '#ff6ec7', 1);
+
+      // Operator: delete with dissolve
+      if (phase > 0.88) {
+        ctx.fillStyle = '#e94560';
+        ctx.font = 'bold 14px Courier New';
+        ctx.fillText('d (delete)', padX + (col2 + 1) * charW, padY + row1 * lineH + 4);
+        ctx.font = '13px Courier New, monospace';
+        // dissolve effect over block
+        const dissolve = (phase - 0.88) / 0.12;
+        ctx.globalAlpha = dissolve * 0.5;
+        ctx.fillStyle = '#1a1a2e';
+        for (let i = 0; i < numRows && row1 + i < CODE_LINES.length; i++) {
+          const ln = row1 + i;
+          const sx = padX + col1 * charW;
+          const sy = padY + ln * lineH;
+          // random dissolve pixels
+          for (let px = 0; px < (col2 - col1) * charW; px += 3) {
+            if (Math.random() < dissolve) {
+              ctx.fillRect(sx + px, sy, 3, lineH);
+            }
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
+    } else {
+      modeEl.classList.remove('visible');
+      particles = [];
+    }
+
+    updateParticles(ctx);
+    animFrames.b = requestAnimationFrame(frame);
+  }
+
+  animFrames.b = requestAnimationFrame(frame);
+}
+
+// ── OPTION C: Tetris Selector ─────────────────────────────
+
+const captionsC = [
+  'Code blocks fall &mdash; match the selection mode to clear them',
+  'Full-width pieces need <span class="key">V</span> (line mode), rectangles need <span class="key">Ctrl-v</span> (block mode)',
+  'Character mode <span class="key">v</span> handles irregular shapes &mdash; master all three to clear the board',
+];
+
+let captionTimerC = null;
+
+function initC() {
+  if (animFrames.c) cancelAnimationFrame(animFrames.c);
+  if (captionTimerC) clearInterval(captionTimerC);
+  captionTimerC = runCaptions('caption-c', captionsC, 3500);
+
+  const { ctx, w, h } = setupCanvas('canvas-c');
+  const modeEl = document.getElementById('mode-c');
+  const CYCLE = 12000;
+
+  const GRID_COLS = 12;
+  const GRID_ROWS = 16;
+  const cellW = Math.floor((w - 40) / GRID_COLS);
+  const cellH = Math.floor((h - 30) / GRID_ROWS);
+  const gridX = (w - GRID_COLS * cellW) / 2;
+  const gridY = 14;
+
+  // Code snippets for cells
+  const codeSnippets = [
+    'let', 'fn', 'mut', 'vec', 'for', 'if', 'pub', 'use',
+    'mod', 'str', 'i32', 'u8', '->',  '{}', '()', '[]',
+  ];
+
+  // Piece definitions: { type, cells (relative), color, mode label, snippets }
+  function makePieces() {
+    return [
+      // Full-width bar = V (line mode)
+      {
+        type: 'V',
+        cells: Array.from({ length: GRID_COLS }, (_, i) => ({ r: 0, c: i })),
+        color: '#e94560',
+        mode: '-- VISUAL LINE --',
+      },
+      // Rectangle block = Ctrl-v
+      {
+        type: 'Ctrl-v',
+        cells: [
+          { r: 0, c: 0 }, { r: 0, c: 1 }, { r: 0, c: 2 }, { r: 0, c: 3 },
+          { r: 1, c: 0 }, { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 1, c: 3 },
+          { r: 2, c: 0 }, { r: 2, c: 1 }, { r: 2, c: 2 }, { r: 2, c: 3 },
+        ],
+        color: '#ff6ec7',
+        mode: '-- VISUAL BLOCK --',
+      },
+      // Irregular shape = v (character mode)
+      {
+        type: 'v',
+        cells: [
+          { r: 0, c: 0 }, { r: 0, c: 1 },
+          { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 1, c: 3 },
+          { r: 2, c: 2 },
+        ],
+        color: '#00d4ff',
+        mode: '-- VISUAL --',
+      },
+    ];
+  }
+
+  // State for the Tetris animation
+  let pieces;
+  let currentPieceIdx;
+  let fallingY;
+  let settled; // settled cells on the grid
+  let clearingPiece; // piece being cleared
+  let clearTimer;
+
+  function resetState() {
+    pieces = makePieces();
+    currentPieceIdx = 0;
+    fallingY = -3;
+    settled = [];
+    clearingPiece = null;
+    clearTimer = 0;
+  }
+  resetState();
+
+  function drawGrid(ctx) {
+    ctx.strokeStyle = '#1e2d4a';
+    ctx.lineWidth = 0.5;
+    for (let r = 0; r <= GRID_ROWS; r++) {
+      ctx.beginPath();
+      ctx.moveTo(gridX, gridY + r * cellH);
+      ctx.lineTo(gridX + GRID_COLS * cellW, gridY + r * cellH);
+      ctx.stroke();
+    }
+    for (let c = 0; c <= GRID_COLS; c++) {
+      ctx.beginPath();
+      ctx.moveTo(gridX + c * cellW, gridY);
+      ctx.lineTo(gridX + c * cellW, gridY + GRID_ROWS * cellH);
+      ctx.stroke();
+    }
+  }
+
+  function drawCell(ctx, r, c, color, alpha, text) {
+    const x = gridX + c * cellW;
+    const y = gridY + r * cellH;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+    // inner glow
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 6;
+    ctx.strokeRect(x + 1, y + 1, cellW - 2, cellH - 2);
+    ctx.shadowBlur = 0;
+    // text
+    if (text) {
+      ctx.fillStyle = '#fff';
+      ctx.font = '9px Courier New';
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      ctx.fillText(text, x + cellW / 2, y + cellH / 2);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw mode badge next to piece
+  function drawModeBadge(ctx, text, x, y, color) {
+    ctx.font = 'bold 11px Courier New';
+    const tw = ctx.measureText(text).width;
+    ctx.fillStyle = 'rgba(13,17,23,0.85)';
+    ctx.fillRect(x - 4, y - 8, tw + 8, 18);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x - 4, y - 8, tw + 8, 18);
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y + 5);
+    ctx.font = '13px Courier New, monospace';
+  }
+
+  function frame(ts) {
+    const t = (ts % CYCLE) / CYCLE;
+    ctx.clearRect(0, 0, w, h);
+
+    drawGrid(ctx);
+
+    // Draw settled cells
+    for (const sc of settled) {
+      drawCell(ctx, sc.r, sc.c, sc.color, sc.alpha || 0.5, sc.text);
+    }
+
+    // Sequence: 3 pieces, each gets ~3.3s (1/3 of cycle)
+    // Each piece: fall -> land -> show mode -> clear
+    const pieceDur = 1 / 3;
+    const pieceIdx = Math.min(2, Math.floor(t / pieceDur));
+    const pt = (t - pieceIdx * pieceDur) / pieceDur; // 0..1 within this piece
+
+    const piece = pieces[pieceIdx];
+    if (!piece) {
+      animFrames.c = requestAnimationFrame(frame);
+      return;
+    }
+
+    // Calculate piece column offset (center it or place appropriately)
+    let colOffset;
+    if (piece.type === 'V') {
+      colOffset = 0;
+    } else if (piece.type === 'Ctrl-v') {
+      colOffset = 4;
+    } else {
+      colOffset = 3;
+    }
+
+    // Target row where piece lands
+    const landRow = GRID_ROWS - 4 - pieceIdx * 4;
+
+    if (pt < 0.5) {
+      // Falling phase
+      const fallPhase = pt / 0.5;
+      const currentRow = -3 + (landRow + 3) * easeOut(fallPhase);
+
+      modeEl.classList.remove('visible');
+
+      for (const cell of piece.cells) {
+        const r = currentRow + cell.r;
+        const c = colOffset + cell.c;
+        if (r >= 0) {
+          const snippet = codeSnippets[(cell.r * 7 + cell.c * 3 + pieceIdx * 5) % codeSnippets.length];
+          drawCell(ctx, r, c, piece.color, 0.7, snippet);
+        }
+      }
+
+      // Draw the type label above the piece
+      const labelX = gridX + colOffset * cellW;
+      const labelY = gridY + Math.max(0, currentRow) * cellH - 14;
+      drawModeBadge(ctx, piece.type, labelX, labelY, piece.color);
+
+    } else if (pt < 0.7) {
+      // Landed, show mode indicator
+      modeEl.textContent = piece.mode;
+      modeEl.classList.add('visible');
+
+      for (const cell of piece.cells) {
+        const r = landRow + cell.r;
+        const c = colOffset + cell.c;
+        const snippet = codeSnippets[(cell.r * 7 + cell.c * 3 + pieceIdx * 5) % codeSnippets.length];
+        // pulse effect
+        const pulse = 0.5 + 0.3 * Math.sin(ts / 100);
+        drawCell(ctx, r, c, piece.color, pulse, snippet);
+      }
+
+      // Show "Match: V" badge
+      const matchX = gridX + GRID_COLS * cellW + 10;
+      const matchY = gridY + landRow * cellH + 10;
+      if (matchX < w - 80) {
+        ctx.fillStyle = piece.color;
+        ctx.font = 'bold 12px Courier New';
+        ctx.fillText('Match: ' + piece.type, matchX, matchY);
+        ctx.font = '13px Courier New, monospace';
+      }
+
+    } else {
+      // Clearing phase - dissolve
+      const clearPhase = (pt - 0.7) / 0.3;
+      modeEl.textContent = piece.mode;
+      modeEl.classList.add('visible');
+
+      for (const cell of piece.cells) {
+        const r = landRow + cell.r;
+        const c = colOffset + cell.c;
+        const snippet = codeSnippets[(cell.r * 7 + cell.c * 3 + pieceIdx * 5) % codeSnippets.length];
+
+        // dissolve: cells randomly disappear
+        if (Math.random() > clearPhase * 0.8) {
+          const alpha = 0.7 * (1 - clearPhase);
+          drawCell(ctx, r, c, piece.color, alpha, snippet);
+        }
+
+        // sparkle particles
+        if (clearPhase < 0.5 && Math.random() > 0.85) {
+          const px = gridX + c * cellW + cellW / 2;
+          const py = gridY + r * cellH + cellH / 2;
+          drawSparkle(ctx, px, py, piece.color, ts);
+        }
+      }
+
+      // "CLEARED!" text
+      if (clearPhase > 0.3) {
+        const cx = gridX + colOffset * cellW + (piece.type === 'V' ? GRID_COLS * cellW / 2 : 2 * cellW);
+        const cy = gridY + landRow * cellH + cellH;
+        ctx.globalAlpha = 1 - clearPhase;
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 16px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('CLEARED!', cx, cy - (clearPhase - 0.3) * 30);
+        ctx.textAlign = 'left';
+        ctx.globalAlpha = 1;
+        ctx.font = '13px Courier New, monospace';
+      }
+    }
+
+    // Draw already-settled previous pieces (ghost)
+    for (let pi = 0; pi < pieceIdx; pi++) {
+      const prevPiece = pieces[pi];
+      const prevLand = GRID_ROWS - 4 - pi * 4;
+      let prevCol;
+      if (prevPiece.type === 'V') prevCol = 0;
+      else if (prevPiece.type === 'Ctrl-v') prevCol = 4;
+      else prevCol = 3;
+
+      // Show as faded ghost since cleared
+      for (const cell of prevPiece.cells) {
+        const r = prevLand + cell.r;
+        const c = prevCol + cell.c;
+        ctx.fillStyle = prevPiece.color;
+        ctx.globalAlpha = 0.08;
+        ctx.fillRect(gridX + c * cellW + 1, gridY + r * cellH + 1, cellW - 2, cellH - 2);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Score display
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 13px Courier New';
+    const score = pieceIdx * 100 + (pt > 0.7 ? Math.floor((pt - 0.7) / 0.3 * 100) : 0);
+    ctx.fillText('Score: ' + Math.min(300, score), w - 110, h - 14);
+    ctx.font = '13px Courier New, monospace';
+
+    animFrames.c = requestAnimationFrame(frame);
+  }
+
+  function easeOut(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function drawSparkle(ctx, x, y, color, ts) {
+    const size = 3 + Math.sin(ts / 50) * 2;
+    ctx.save();
+    ctx.translate(x + (Math.random() - 0.5) * 10, y + (Math.random() - 0.5) * 10);
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    // 4-pointed star
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI * 2 - Math.PI / 4;
+      const outerX = Math.cos(angle) * size;
+      const outerY = Math.sin(angle) * size;
+      const innerAngle = angle + Math.PI / 4;
+      const innerX = Math.cos(innerAngle) * size * 0.3;
+      const innerY = Math.sin(innerAngle) * size * 0.3;
+      if (i === 0) ctx.moveTo(outerX, outerY);
+      else ctx.lineTo(outerX, outerY);
+      ctx.lineTo(innerX, innerY);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
+  animFrames.c = requestAnimationFrame(frame);
+}
+
+// ── Initialize ────────────────────────────────────────────
+
+window.addEventListener('resize', () => {
+  if (activeTab === 'a') initA();
+  else if (activeTab === 'b') initB();
+  else if (activeTab === 'c') initC();
+});
+
+initA();
+</script>
+</body>
+</html>

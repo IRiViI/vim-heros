@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World 10: Advanced Motions & Commands</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:'Courier New',monospace;min-height:100vh;overflow-x:hidden}
+a{color:#ff4444;text-decoration:none}
+a:hover{color:#ff6666;text-decoration:underline}
+.back-link{display:inline-block;padding:12px 20px;font-size:14px;letter-spacing:1px}
+.header{text-align:center;padding:20px 20px 0}
+.header h1{font-size:28px;color:#ff4444;text-shadow:0 0 20px rgba(255,68,68,.5);letter-spacing:3px;margin-bottom:4px}
+.header h2{font-size:14px;color:#ff8844;letter-spacing:2px;font-weight:normal}
+.keys-bar{text-align:center;padding:10px;font-size:12px;color:#666;letter-spacing:1px;margin-bottom:5px}
+.keys-bar kbd{background:#2a2a4e;color:#ff8844;padding:2px 6px;border-radius:3px;border:1px solid #ff444433;margin:0 2px;font-family:inherit}
+
+/* Tabs */
+.tabs{display:flex;justify-content:center;gap:0;margin:0 auto;max-width:900px}
+.tab-btn{flex:1;max-width:280px;padding:12px 16px;background:#0f0f23;border:1px solid #333;border-bottom:none;cursor:pointer;color:#888;font-family:inherit;font-size:13px;letter-spacing:1px;transition:all .3s;text-transform:uppercase;position:relative}
+.tab-btn:first-child{border-radius:8px 0 0 0}
+.tab-btn:last-child{border-radius:0 8px 0 0}
+.tab-btn.active{background:#1a1a2e;color:#ff4444;border-color:#ff444466}
+.tab-btn.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:#1a1a2e}
+.tab-btn:hover:not(.active){color:#ff8844}
+.tab-label{display:block;font-size:10px;color:#666;margin-top:3px;text-transform:none;letter-spacing:0}
+.tab-btn.active .tab-label{color:#ff884488}
+
+/* Stage */
+.stage-container{max-width:900px;margin:0 auto;border:1px solid #ff444433;border-radius:0 0 12px 12px;background:#0d0d1a;overflow:hidden;position:relative}
+.stage{width:100%;height:420px;position:relative;overflow:hidden;display:none}
+.stage.active{display:block}
+
+/* Caption bar */
+.caption-bar{height:60px;display:flex;align-items:center;justify-content:center;background:#0a0a18;border-top:1px solid #ff444422;padding:0 20px}
+.caption-text{font-size:14px;color:#ff8844;text-align:center;letter-spacing:.5px;transition:opacity .4s;line-height:1.4}
+.caption-text .key{color:#ff4444;font-weight:bold}
+
+/* ===================== OPTION A: SNIPER ===================== */
+#stageA canvas{width:100%;height:100%;display:block}
+
+/* ===================== OPTION B: PARKOUR ===================== */
+#stageB canvas{width:100%;height:100%;display:block}
+
+/* ===================== OPTION C: RADAR ===================== */
+#stageC canvas{width:100%;height:100%;display:block}
+</style>
+</head>
+<body>
+<div class="back-link"><a href="index.html">&larr; Back to Overview</a></div>
+<div class="header">
+  <h1>WORLD 10</h1>
+  <h2>Advanced Motions &amp; Commands</h2>
+</div>
+<div class="keys-bar">
+  <kbd>f</kbd> <kbd>F</kbd> <kbd>t</kbd> <kbd>T</kbd> <kbd>;</kbd> <kbd>,</kbd> <kbd>%</kbd>
+  <kbd>zt</kbd> <kbd>zz</kbd> <kbd>zb</kbd>
+  <kbd>Ctrl-d</kbd> <kbd>Ctrl-u</kbd> <kbd>Ctrl-f</kbd> <kbd>Ctrl-b</kbd>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab(0)">A: Sniper<span class="tab-label">Precision shooter</span></button>
+  <button class="tab-btn" onclick="switchTab(1)">B: Parkour<span class="tab-label">Platformer</span></button>
+  <button class="tab-btn" onclick="switchTab(2)">C: Radar<span class="tab-label">Sonar / tracking</span></button>
+</div>
+
+<div class="stage-container">
+  <div class="stage active" id="stageA"><canvas id="canvasA"></canvas></div>
+  <div class="stage" id="stageB"><canvas id="canvasB"></canvas></div>
+  <div class="stage" id="stageC"><canvas id="canvasC"></canvas></div>
+  <div class="caption-bar"><div class="caption-text" id="captionText"></div></div>
+</div>
+
+<script>
+// ---- Shared ----
+const CAPTIONS = [
+  [
+    'f{char} locks onto a specific character \u2014 <span class="key">precision targeting</span>',
+    '; repeats the last find \u2014 <span class="key">rapidly scan through matches</span>',
+    '% bounces between matching brackets \u2014 <span class="key">never lose your target</span>'
+  ],
+  [
+    'Ctrl-d and Ctrl-u are big jumps \u2014 <span class="key">half a page at a time</span>',
+    'f and t are precision landings \u2014 <span class="key">land on or just before any character</span>',
+    '% wall-jumps between matching brackets \u2014 <span class="key">zt/zz/zb reposition the camera</span>'
+  ],
+  [
+    'f/F ping forward/backward \u2014 <span class="key">detect specific characters on the radar</span>',
+    'zt/zz/zb reposition your radar center \u2014 <span class="key">control your viewport</span>',
+    'Ctrl-d/Ctrl-u shift range \u2014 <span class="key">% tracks matching bracket pairs</span>'
+  ]
+];
+
+let activeTab = 0;
+let captionIdx = 0;
+let captionTimer = null;
+const captionEl = document.getElementById('captionText');
+
+function switchTab(idx) {
+  activeTab = idx;
+  captionIdx = 0;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  document.querySelectorAll('.stage').forEach((s,i) => s.classList.toggle('active', i===idx));
+  showCaption();
+}
+
+function showCaption() {
+  captionEl.style.opacity = 0;
+  setTimeout(() => {
+    captionEl.innerHTML = CAPTIONS[activeTab][captionIdx % CAPTIONS[activeTab].length];
+    captionEl.style.opacity = 1;
+  }, 300);
+}
+
+function cycleCaption() {
+  captionIdx++;
+  showCaption();
+}
+
+showCaption();
+captionTimer = setInterval(cycleCaption, 3500);
+
+// ---- Utility ----
+function lerp(a,b,t){return a+(b-a)*t}
+function easeInOut(t){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
+function easeOut(t){return 1-Math.pow(1-t,3)}
+
+// ---- CODE LINES used across demos ----
+const CODE_LINES = [
+  'fn process_input(event: &KeyEvent) {',
+  '    let key = event.key_code;',
+  '    if key == KeyCode::Escape {',
+  '        return self.exit_mode();',
+  '    }',
+  '    match self.mode {',
+  '        Mode::Normal => {',
+  '            self.handle_normal(key);',
+  '        }',
+  '        Mode::Insert => {',
+  '            self.buffer.insert(key);',
+  '        }',
+  '        Mode::Visual => {',
+  '            self.selection.extend(key);',
+  '        }',
+  '    }',
+  '    self.update_status_bar();',
+  '    self.render();',
+  '}'
+];
+
+// =============================================================
+//  OPTION A: SNIPER
+// =============================================================
+(function(){
+  const canvas = document.getElementById('canvasA');
+  const ctx = canvas.getContext('2d');
+  let W, H, dpr;
+  function resize(){
+    const r = canvas.parentElement.getBoundingClientRect();
+    dpr = window.devicePixelRatio||1;
+    W = r.width; H = r.height;
+    if(!W||!H){ const a=document.querySelector('.stage.active'); if(a){const ar=a.getBoundingClientRect();W=ar.width;H=ar.height;}else{W=700;H=420;} }
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const FONT = 13;
+  const LINE_H = 20;
+  const PAD_X = 30;
+  const PAD_Y = 30;
+
+  // Animation phases (total ~10s loop)
+  // 0-3s: f{char} lock on
+  // 3-6s: ; repeat find
+  // 6-10s: % bracket bounce
+  const LOOP = 10;
+
+  // Targets for f: line 1, char 'k' (key), line 7, char 'h' (handle)
+  // Targets for ;: line 1 char 'k', then line 7 char 'k' (key again on another line)
+  // Targets for %: line 2 '{' <-> line 4 '}'
+
+  function charPos(line, col) {
+    return { x: PAD_X + col * (FONT * 0.6), y: PAD_Y + line * LINE_H + LINE_H/2 };
+  }
+
+  let hits = 0;
+  let lastLoopCount = -1;
+
+  function draw(time) {
+    if (activeTab !== 0) { requestAnimationFrame(draw); return; }
+    const t = (time/1000) % LOOP;
+    const loopCount = Math.floor(time/1000/LOOP);
+    if (loopCount !== lastLoopCount) { hits = 0; lastLoopCount = loopCount; }
+
+    ctx.clearRect(0,0,W,H);
+
+    // Draw code
+    ctx.font = FONT+'px Courier New';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < CODE_LINES.length && i < 18; i++) {
+      ctx.fillStyle = '#556677';
+      ctx.textAlign = 'right';
+      ctx.fillText((i+1)+'', PAD_X - 10, PAD_Y + i*LINE_H + LINE_H/2);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#8899aa';
+      ctx.fillText(CODE_LINES[i], PAD_X, PAD_Y + i*LINE_H + LINE_H/2);
+    }
+
+    // Scope position & target
+    let scopeX, scopeY, scopeR, locked = false, targetChar = '';
+    let highlightPositions = [];
+    let bracketLine1 = -1, bracketCol1 = -1, bracketLine2 = -1, bracketCol2 = -1;
+    let showBracketTracer = false;
+
+    if (t < 3.0) {
+      // Phase 1: f{char} - zoom to line 1, lock on 'k' in "key"
+      const p = Math.min(t / 1.5, 1);
+      const ep = easeInOut(p);
+      const target = charPos(1, 14); // 'k' in 'key' on line 2 (idx 1)
+      const startX = W/2, startY = H/2;
+      scopeX = lerp(startX, target.x, ep);
+      scopeY = lerp(startY, target.y, ep);
+      scopeR = lerp(80, 35, ep);
+      if (p >= 1.0) {
+        locked = true;
+        targetChar = 'k';
+        if (t > 2.0) hits = Math.max(hits, 1);
+        highlightPositions.push({line:1, col:14});
+      }
+    } else if (t < 6.0) {
+      // Phase 2: ; repeat - jump to next 'k' occurrences
+      const pt = t - 3.0;
+      const targets = [
+        charPos(1, 14),   // first k
+        charPos(7, 25),   // 'k' in handle_normal(key)
+        charPos(10, 30),  // 'k' in insert(key)
+      ];
+      const segDur = 1.0;
+      const seg = Math.min(Math.floor(pt / segDur), 2);
+      const sp = Math.min((pt - seg*segDur) / 0.6, 1);
+      const ep = easeOut(sp);
+
+      const from = seg > 0 ? targets[seg-1] : targets[0];
+      const to = targets[seg];
+      scopeX = lerp(from.x, to.x, ep);
+      scopeY = lerp(from.y, to.y, ep);
+      scopeR = 35;
+      if (sp >= 1) {
+        locked = true;
+        targetChar = 'k';
+        hits = Math.max(hits, seg + 1);
+        highlightPositions.push({line: [1,7,10][seg], col: [14,25,30][seg]});
+      }
+      // Keep previous highlights
+      for (let i = 0; i < seg; i++) {
+        highlightPositions.push({line: [1,7,10][i], col: [14,25,30][i]});
+      }
+    } else {
+      // Phase 3: % bracket bounce
+      const pt = t - 6.0;
+      // Bounce between { on line 2 col 26 and } on line 4 col 4
+      const posA = charPos(2, 27);
+      const posB = charPos(4, 4);
+      const bounceDur = 1.2;
+      const bounceT = (pt % (bounceDur*2)) / bounceDur;
+      let bp;
+      if (bounceT < 1) {
+        bp = easeInOut(bounceT);
+        scopeX = lerp(posA.x, posB.x, bp);
+        scopeY = lerp(posA.y, posB.y, bp);
+      } else {
+        bp = easeInOut(bounceT - 1);
+        scopeX = lerp(posB.x, posA.x, bp);
+        scopeY = lerp(posB.y, posA.y, bp);
+      }
+      scopeR = 35;
+      showBracketTracer = true;
+      bracketLine1 = 2; bracketCol1 = 27;
+      bracketLine2 = 4; bracketCol2 = 4;
+      locked = true;
+      targetChar = bounceT < 1 ? '}' : '{';
+      hits = Math.max(hits, 4);
+      highlightPositions.push({line:2,col:27},{line:4,col:4});
+    }
+
+    // Draw bracket tracer line
+    if (showBracketTracer) {
+      const a = charPos(bracketLine1, bracketCol1);
+      const b = charPos(bracketLine2, bracketCol2);
+      ctx.save();
+      ctx.strokeStyle = '#ff444466';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4,4]);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    // Highlight target characters
+    for (const hp of highlightPositions) {
+      const p = charPos(hp.line, hp.col);
+      ctx.fillStyle = 'rgba(255,68,68,0.25)';
+      ctx.fillRect(p.x - 2, p.y - LINE_H/2, FONT*0.6 + 4, LINE_H);
+      const ch = CODE_LINES[hp.line] ? CODE_LINES[hp.line][hp.col] : '?';
+      ctx.fillStyle = '#ff4444';
+      ctx.textAlign = 'left';
+      ctx.fillText(ch, p.x, p.y);
+    }
+
+    // Draw sniper scope
+    ctx.save();
+    ctx.strokeStyle = locked ? '#ff4444' : '#ff884488';
+    ctx.lineWidth = locked ? 2 : 1.5;
+    ctx.beginPath();
+    ctx.arc(scopeX, scopeY, scopeR, 0, Math.PI*2);
+    ctx.stroke();
+
+    // Crosshair lines
+    const cLen = scopeR + 8;
+    ctx.beginPath();
+    ctx.moveTo(scopeX - cLen, scopeY); ctx.lineTo(scopeX - scopeR*0.3, scopeY);
+    ctx.moveTo(scopeX + scopeR*0.3, scopeY); ctx.lineTo(scopeX + cLen, scopeY);
+    ctx.moveTo(scopeX, scopeY - cLen); ctx.lineTo(scopeX, scopeY - scopeR*0.3);
+    ctx.moveTo(scopeX, scopeY + scopeR*0.3); ctx.lineTo(scopeX, scopeY + cLen);
+    ctx.stroke();
+
+    // Corner ticks
+    const angles = [0, Math.PI/2, Math.PI, Math.PI*1.5];
+    for (const a of angles) {
+      const tx = scopeX + Math.cos(a)*scopeR*0.7;
+      const ty = scopeY + Math.sin(a)*scopeR*0.7;
+      ctx.beginPath();
+      ctx.moveTo(tx - 3*Math.cos(a+Math.PI/2), ty - 3*Math.sin(a+Math.PI/2));
+      ctx.lineTo(tx + 3*Math.cos(a+Math.PI/2), ty + 3*Math.sin(a+Math.PI/2));
+      ctx.stroke();
+    }
+
+    // Scope glow
+    if (locked) {
+      ctx.shadowColor = '#ff4444';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(scopeX, scopeY, scopeR, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+
+    // LOCKED ON text
+    if (locked) {
+      ctx.save();
+      ctx.font = 'bold 11px Courier New';
+      ctx.fillStyle = '#ff4444';
+      ctx.textAlign = 'center';
+      const blink = Math.sin(time/100) > 0;
+      if (blink) ctx.fillText('LOCKED ON: ' + targetChar, scopeX, scopeY - scopeR - 10);
+      ctx.restore();
+    }
+
+    // HUD
+    ctx.save();
+    ctx.fillStyle = '#0a0a18cc';
+    ctx.fillRect(W - 140, 10, 130, 50);
+    ctx.strokeStyle = '#ff444466';
+    ctx.strokeRect(W - 140, 10, 130, 50);
+    ctx.font = '10px Courier New';
+    ctx.fillStyle = '#ff8844';
+    ctx.textAlign = 'left';
+    ctx.fillText('TARGETS HIT', W - 130, 28);
+    ctx.font = 'bold 20px Courier New';
+    ctx.fillStyle = '#ff4444';
+    ctx.fillText(hits + '', W - 130, 50);
+
+    // Command display
+    let cmdText = '';
+    if (t < 3) cmdText = 'fk';
+    else if (t < 6) cmdText = ';';
+    else cmdText = '%';
+    ctx.fillStyle = '#0a0a18cc';
+    ctx.fillRect(W - 140, 70, 130, 30);
+    ctx.strokeStyle = '#ff444466';
+    ctx.strokeRect(W - 140, 70, 130, 30);
+    ctx.font = 'bold 14px Courier New';
+    ctx.fillStyle = '#ff8844';
+    ctx.textAlign = 'center';
+    ctx.fillText(cmdText, W - 75, 90);
+    ctx.restore();
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// =============================================================
+//  OPTION B: PARKOUR
+// =============================================================
+(function(){
+  const canvas = document.getElementById('canvasB');
+  const ctx = canvas.getContext('2d');
+  let W, H, dpr;
+  function resize(){
+    const r = canvas.parentElement.getBoundingClientRect();
+    dpr = window.devicePixelRatio||1;
+    W = r.width; H = r.height;
+    if(!W||!H){ const a=document.querySelector('.stage.active'); if(a){const ar=a.getBoundingClientRect();W=ar.width;H=ar.height;}else{W=700;H=420;} }
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const LOOP = 12;
+  const PLAT_H = 16;
+  const CHAR_SIZE = 14;
+
+  // Platforms based on code lines, arranged as side-scroller levels
+  const platforms = [];
+  for (let i = 0; i < CODE_LINES.length; i++) {
+    const indent = CODE_LINES[i].search(/\S/);
+    platforms.push({
+      x: 40 + indent * 6,
+      y: 50 + i * 45,
+      w: Math.min(CODE_LINES[i].trim().length * 7.5, 350),
+      text: CODE_LINES[i].trim(),
+      line: i
+    });
+  }
+
+  // Character state
+  let charX = 0, charY = 0, charVY = 0, charAngle = 0;
+  let cameraY = 0;
+  let flipCount = 0;
+
+  function drawCharacter(x, y, angle, flipping) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    // Body
+    ctx.fillStyle = '#ff4444';
+    ctx.fillRect(-5, -12, 10, 14);
+    // Head
+    ctx.beginPath();
+    ctx.arc(0, -16, 5, 0, Math.PI*2);
+    ctx.fillStyle = '#ff8844';
+    ctx.fill();
+    // Legs
+    ctx.strokeStyle = '#ff4444';
+    ctx.lineWidth = 2;
+    if (flipping) {
+      ctx.beginPath();
+      ctx.moveTo(-3, 2); ctx.lineTo(-6, 8);
+      ctx.moveTo(3, 2); ctx.lineTo(6, 8);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(-3, 2); ctx.lineTo(-5, 10);
+      ctx.moveTo(3, 2); ctx.lineTo(5, 10);
+      ctx.stroke();
+    }
+    // Arms
+    if (flipping) {
+      ctx.beginPath();
+      ctx.moveTo(-5, -8); ctx.lineTo(-12, -14);
+      ctx.moveTo(5, -8); ctx.lineTo(12, -14);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function draw(time) {
+    if (activeTab !== 1) { requestAnimationFrame(draw); return; }
+    const t = (time/1000) % LOOP;
+    ctx.clearRect(0,0,W,H);
+
+    // Animation phases:
+    // 0-3: Ctrl-d big jump down (platforms 0->4)
+    // 3-5: f{char} precision land on specific char on platform 5
+    // 5-7: t{char} land just before char on platform 7
+    // 7-9.5: % wall-jump between bracket platforms
+    // 9.5-12: Ctrl-u big jump up + zt/zz/zb camera shift
+
+    let targetPlatIdx = 0;
+    let flipping = false;
+    let cmdText = '';
+    let camTarget = 0;
+
+    if (t < 3.0) {
+      // Ctrl-d: jump from platform 0 down to platform 8
+      const p = Math.min(t / 2.5, 1);
+      const ep = easeInOut(p);
+      const fromP = platforms[0];
+      const toP = platforms[8];
+      charX = lerp(fromP.x + 60, toP.x + 60, ep);
+      charY = lerp(fromP.y - 15, toP.y - 15, ep);
+      // Arc
+      charY -= Math.sin(p * Math.PI) * 80;
+      charAngle = p < 0.8 ? Math.sin(p * Math.PI * 4) * 0.5 : 0;
+      flipping = p > 0.2 && p < 0.8;
+      camTarget = lerp(0, toP.y - H/2, ep);
+      cmdText = 'Ctrl-d';
+    } else if (t < 5.0) {
+      // f{char}: precision landing on char 'h' on platform 7
+      const pt = t - 3.0;
+      const p = Math.min(pt / 1.5, 1);
+      const ep = easeOut(p);
+      const fromP = platforms[8];
+      const toP = platforms[7];
+      const targetCol = 17; // 'h' in handle_normal
+      charX = lerp(fromP.x + 60, toP.x + targetCol * 7.5, ep);
+      charY = lerp(fromP.y - 15, toP.y - 15, ep);
+      charY -= Math.sin(p * Math.PI) * 40;
+      charAngle = 0;
+      flipping = false;
+      camTarget = toP.y - H/2;
+      cmdText = 'fh';
+    } else if (t < 7.0) {
+      // t{char}: land just before char on platform 10
+      const pt = t - 5.0;
+      const p = Math.min(pt / 1.5, 1);
+      const ep = easeOut(p);
+      const fromP = platforms[7];
+      const toP = platforms[10];
+      const targetCol = 22; // just before 'i' in insert
+      charX = lerp(fromP.x + 17*7.5, toP.x + (targetCol-1)*7.5, ep);
+      charY = lerp(fromP.y - 15, toP.y - 15, ep);
+      charY -= Math.sin(p * Math.PI) * 50;
+      charAngle = p > 0.3 && p < 0.7 ? (p-0.3)*5 : 0;
+      flipping = p > 0.3 && p < 0.7;
+      camTarget = toP.y - H/2;
+      cmdText = 'ti';
+    } else if (t < 9.5) {
+      // % wall-jump between brackets
+      const pt = t - 7.0;
+      const bounceDur = 0.8;
+      const bounceT = (pt % (bounceDur*2)) / bounceDur;
+      const pA = platforms[2]; // line with {
+      const pB = platforms[4]; // line with }
+      let bp;
+      if (bounceT < 1) {
+        bp = easeInOut(bounceT);
+        charX = lerp(pA.x + pA.w - 10, pB.x + 10, bp);
+        charY = lerp(pA.y - 15, pB.y - 15, bp);
+      } else {
+        bp = easeInOut(bounceT - 1);
+        charX = lerp(pB.x + 10, pA.x + pA.w - 10, bp);
+        charY = lerp(pB.y - 15, pA.y - 15, bp);
+      }
+      charY -= Math.sin((bounceT % 1) * Math.PI) * 30;
+      charAngle = Math.sin(pt * 8) * 1.0;
+      flipping = true;
+      camTarget = (pA.y + pB.y)/2 - H/2;
+      cmdText = '%';
+    } else {
+      // Ctrl-u + zt/zz/zb camera
+      const pt = t - 9.5;
+      const p = Math.min(pt / 2.0, 1);
+      const ep = easeInOut(p);
+      const fromP = platforms[4];
+      const toP = platforms[0];
+      charX = lerp(fromP.x + 10, toP.x + 60, ep);
+      charY = lerp(fromP.y - 15, toP.y - 15, ep);
+      charY -= Math.sin(p * Math.PI) * 100;
+      charAngle = p > 0.2 && p < 0.8 ? Math.sin(p * Math.PI * 6) * 0.8 : 0;
+      flipping = p > 0.2 && p < 0.8;
+
+      // Camera repositioning demo
+      if (pt < 0.7) {
+        camTarget = toP.y; // zt - top
+        cmdText = 'Ctrl-u + zt';
+      } else if (pt < 1.4) {
+        camTarget = toP.y - H/2; // zz - center
+        cmdText = 'zz';
+      } else {
+        camTarget = toP.y - H + 80; // zb - bottom
+        cmdText = 'zb';
+      }
+    }
+
+    // Smooth camera
+    cameraY = lerp(cameraY, Math.max(0, camTarget), 0.08);
+
+    ctx.save();
+    ctx.translate(0, -cameraY);
+
+    // Draw platforms
+    for (let i = 0; i < platforms.length && i < 14; i++) {
+      const p = platforms[i];
+      // Platform surface
+      ctx.fillStyle = '#1a2a3a';
+      ctx.fillRect(p.x, p.y, p.w, PLAT_H);
+      ctx.strokeStyle = '#334455';
+      ctx.strokeRect(p.x, p.y, p.w, PLAT_H);
+      // Code text on platform
+      ctx.font = '10px Courier New';
+      ctx.fillStyle = '#556677';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(p.text, p.x + 4, p.y + PLAT_H/2);
+
+      // Line number
+      ctx.fillStyle = '#334455';
+      ctx.textAlign = 'right';
+      ctx.fillText((i+1)+'', p.x - 5, p.y + PLAT_H/2);
+    }
+
+    // Draw character
+    drawCharacter(charX, charY, charAngle, flipping);
+
+    // Motion trail
+    if (flipping) {
+      ctx.save();
+      ctx.globalAlpha = 0.15;
+      for (let i = 1; i <= 3; i++) {
+        drawCharacter(charX - i*8*(charX > W/2?1:-1), charY + i*3, charAngle * 0.5, true);
+      }
+      ctx.restore();
+    }
+
+    ctx.restore();
+
+    // HUD
+    ctx.save();
+    ctx.fillStyle = '#0a0a18cc';
+    ctx.fillRect(W - 160, 10, 150, 35);
+    ctx.strokeStyle = '#ff444466';
+    ctx.strokeRect(W - 160, 10, 150, 35);
+    ctx.font = 'bold 14px Courier New';
+    ctx.fillStyle = '#ff8844';
+    ctx.textAlign = 'center';
+    ctx.fillText(cmdText, W - 85, 33);
+    ctx.restore();
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// =============================================================
+//  OPTION C: RADAR
+// =============================================================
+(function(){
+  const canvas = document.getElementById('canvasC');
+  const ctx = canvas.getContext('2d');
+  let W, H, dpr;
+  function resize(){
+    const r = canvas.parentElement.getBoundingClientRect();
+    dpr = window.devicePixelRatio||1;
+    W = r.width; H = r.height;
+    if(!W||!H){ const a=document.querySelector('.stage.active'); if(a){const ar=a.getBoundingClientRect();W=ar.width;H=ar.height;}else{W=700;H=420;} }
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const LOOP = 10;
+
+  // Blips: detected characters
+  const blips = [];
+  // Pre-generate blip positions in radar space for code characters
+  function genBlips() {
+    const chars = [
+      {ch:'f', angle: 0.3, dist: 0.4, line: 0},
+      {ch:'k', angle: 0.8, dist: 0.55, line: 1},
+      {ch:'e', angle: 1.5, dist: 0.3, line: 2},
+      {ch:'s', angle: 2.1, dist: 0.65, line: 3},
+      {ch:'m', angle: 2.8, dist: 0.5, line: 5},
+      {ch:'N', angle: 3.5, dist: 0.7, line: 6},
+      {ch:'h', angle: 4.2, dist: 0.45, line: 7},
+      {ch:'I', angle: 4.8, dist: 0.6, line: 9},
+      {ch:'b', angle: 5.3, dist: 0.35, line: 10},
+      {ch:'V', angle: 5.9, dist: 0.75, line: 12},
+    ];
+    return chars;
+  }
+  const radarBlips = genBlips();
+
+  // Bracket pairs for % tracking
+  const bracketPairs = [
+    {a: {angle: 1.5, dist: 0.3}, b: {angle: 2.5, dist: 0.45}},
+    {a: {angle: 3.5, dist: 0.55}, b: {angle: 4.5, dist: 0.6}},
+  ];
+
+  let sweepAngle = 0;
+  let detectedBlips = new Set();
+
+  function draw(time) {
+    if (activeTab !== 2) { requestAnimationFrame(draw); return; }
+    const t = (time/1000) % LOOP;
+    ctx.clearRect(0,0,W,H);
+
+    const cx = W * 0.45;
+    const cy = H * 0.5;
+    const maxR = Math.min(W*0.38, H*0.42);
+
+    // Phases:
+    // 0-3.5: f/F ping - sweep detects chars
+    // 3.5-6.5: zt/zz/zb - radar center shifts
+    // 6.5-10: Ctrl-d/u + % bracket tracking
+
+    let cmdText = '';
+    let centerOffsetX = 0, centerOffsetY = 0;
+    let showBracketTracking = false;
+    let pingAngle = -1;
+    let pingProgress = 0;
+
+    sweepAngle = (time / 1500) % (Math.PI * 2);
+
+    if (t < 3.5) {
+      // f/F ping
+      const pt = t;
+      if (pt < 1.5) {
+        cmdText = 'fe';
+        pingAngle = 1.5; // angle where 'e' is
+        pingProgress = Math.min(pt / 1.0, 1);
+      } else {
+        cmdText = 'Fk';
+        pingAngle = 0.8 + Math.PI; // backward
+        pingProgress = Math.min((pt - 1.5) / 1.0, 1);
+      }
+    } else if (t < 6.5) {
+      // zt/zz/zb
+      const pt = t - 3.5;
+      if (pt < 1.0) {
+        cmdText = 'zt';
+        centerOffsetY = -40 * easeInOut(Math.min(pt/0.7, 1));
+      } else if (pt < 2.0) {
+        cmdText = 'zz';
+        centerOffsetY = lerp(-40, 0, easeInOut(Math.min((pt-1.0)/0.7, 1)));
+      } else {
+        cmdText = 'zb';
+        centerOffsetY = 40 * easeInOut(Math.min((pt-2.0)/0.7, 1));
+      }
+    } else {
+      // Ctrl-d/u + %
+      const pt = t - 6.5;
+      if (pt < 1.5) {
+        cmdText = 'Ctrl-d';
+        centerOffsetY = 30 * easeInOut(Math.min(pt/1.0, 1));
+      } else if (pt < 2.0) {
+        cmdText = 'Ctrl-u';
+        centerOffsetY = lerp(30, -20, easeInOut(Math.min((pt-1.5)/0.5, 1)));
+      } else {
+        cmdText = '%';
+        centerOffsetY = -20;
+        showBracketTracking = true;
+      }
+    }
+
+    const drawCx = cx + centerOffsetX;
+    const drawCy = cy + centerOffsetY;
+
+    // Background glow
+    const grad = ctx.createRadialGradient(drawCx, drawCy, 0, drawCx, drawCy, maxR);
+    grad.addColorStop(0, 'rgba(0,40,0,0.15)');
+    grad.addColorStop(1, 'rgba(0,20,0,0.02)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(drawCx, drawCy, maxR, 0, Math.PI*2);
+    ctx.fill();
+
+    // Range rings
+    for (let i = 1; i <= 4; i++) {
+      ctx.beginPath();
+      ctx.arc(drawCx, drawCy, maxR * i/4, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(0,${80+i*20},0,${0.15+i*0.05})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Cross lines
+    ctx.strokeStyle = 'rgba(0,100,0,0.2)';
+    ctx.beginPath();
+    ctx.moveTo(drawCx - maxR, drawCy); ctx.lineTo(drawCx + maxR, drawCy);
+    ctx.moveTo(drawCx, drawCy - maxR); ctx.lineTo(drawCx, drawCy + maxR);
+    ctx.stroke();
+
+    // Diagonal lines
+    ctx.strokeStyle = 'rgba(0,80,0,0.1)';
+    ctx.beginPath();
+    const d = maxR * 0.707;
+    ctx.moveTo(drawCx - d, drawCy - d); ctx.lineTo(drawCx + d, drawCy + d);
+    ctx.moveTo(drawCx + d, drawCy - d); ctx.lineTo(drawCx - d, drawCy + d);
+    ctx.stroke();
+
+    // Sweep line
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,255,0,0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(drawCx, drawCy);
+    ctx.lineTo(drawCx + Math.cos(sweepAngle)*maxR, drawCy + Math.sin(sweepAngle)*maxR);
+    ctx.stroke();
+
+    // Sweep fade trail
+    const sweepGrad = ctx.createConicalGradient ? null : null; // fallback
+    ctx.beginPath();
+    ctx.moveTo(drawCx, drawCy);
+    ctx.arc(drawCx, drawCy, maxR, sweepAngle - 0.5, sweepAngle);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,180,0,0.08)';
+    ctx.fill();
+    ctx.restore();
+
+    // Ping wave
+    if (pingAngle >= 0) {
+      ctx.save();
+      ctx.strokeStyle = `rgba(0,255,100,${0.6*(1-pingProgress)})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const pr = maxR * pingProgress;
+      ctx.arc(drawCx, drawCy, pr, pingAngle - 0.3, pingAngle + 0.3);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Code text around radar (faint green, arranged in arcs)
+    ctx.save();
+    ctx.font = '9px Courier New';
+    ctx.fillStyle = 'rgba(0,150,0,0.15)';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < CODE_LINES.length && i < 15; i++) {
+      const a = (i / 15) * Math.PI * 2 - Math.PI/2;
+      const r = maxR * 0.85;
+      const tx = drawCx + Math.cos(a) * r;
+      const ty = drawCy + Math.sin(a) * r;
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.rotate(a + Math.PI/2);
+      ctx.fillText(CODE_LINES[i].trim().substring(0, 20), 0, 0);
+      ctx.restore();
+    }
+    ctx.restore();
+
+    // Blips
+    ctx.save();
+    for (const blip of radarBlips) {
+      const bx = drawCx + Math.cos(blip.angle) * blip.dist * maxR;
+      const by = drawCy + Math.sin(blip.angle) * blip.dist * maxR;
+
+      // Check if sweep has passed this blip recently
+      let angleDiff = (sweepAngle - blip.angle) % (Math.PI*2);
+      if (angleDiff < 0) angleDiff += Math.PI*2;
+      const intensity = angleDiff < 0.8 ? 1 - angleDiff/0.8 : 0;
+      const baseAlpha = 0.3;
+      const alpha = baseAlpha + intensity * 0.7;
+
+      // Blip dot
+      ctx.beginPath();
+      ctx.arc(bx, by, 3 + intensity*2, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(0,255,80,${alpha})`;
+      ctx.fill();
+
+      // Blip glow
+      if (intensity > 0.3) {
+        ctx.beginPath();
+        ctx.arc(bx, by, 8, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(0,255,80,${intensity*0.2})`;
+        ctx.fill();
+      }
+
+      // Character label
+      ctx.font = '10px Courier New';
+      ctx.fillStyle = `rgba(0,255,80,${alpha * 0.8})`;
+      ctx.textAlign = 'center';
+      ctx.fillText(blip.ch, bx, by - 8);
+    }
+    ctx.restore();
+
+    // Bracket tracking lines for %
+    if (showBracketTracking) {
+      const pulseT = (time/500) % 1;
+      for (const pair of bracketPairs) {
+        const ax = drawCx + Math.cos(pair.a.angle) * pair.a.dist * maxR;
+        const ay = drawCy + Math.sin(pair.a.angle) * pair.a.dist * maxR;
+        const bx = drawCx + Math.cos(pair.b.angle) * pair.b.dist * maxR;
+        const by = drawCy + Math.sin(pair.b.angle) * pair.b.dist * maxR;
+
+        // Tracking line
+        ctx.save();
+        ctx.strokeStyle = `rgba(255,100,0,${0.4 + pulseT*0.4})`;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4,4]);
+        ctx.lineDashOffset = -time/50;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Bracket markers
+        ctx.beginPath();
+        ctx.arc(ax, ay, 5, 0, Math.PI*2);
+        ctx.strokeStyle = '#ff6600';
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(bx, by, 5, 0, Math.PI*2);
+        ctx.stroke();
+
+        // Labels
+        ctx.font = 'bold 11px Courier New';
+        ctx.fillStyle = '#ff6600';
+        ctx.textAlign = 'center';
+        ctx.fillText('{', ax, ay - 10);
+        ctx.fillText('}', bx, by - 10);
+        ctx.restore();
+      }
+    }
+
+    // Outer ring
+    ctx.beginPath();
+    ctx.arc(drawCx, drawCy, maxR, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(0,200,0,0.4)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Center dot
+    ctx.beginPath();
+    ctx.arc(drawCx, drawCy, 3, 0, Math.PI*2);
+    ctx.fillStyle = '#00ff44';
+    ctx.fill();
+
+    // Angle markings
+    ctx.save();
+    ctx.font = '8px Courier New';
+    ctx.fillStyle = 'rgba(0,180,0,0.4)';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < 12; i++) {
+      const a = (i/12) * Math.PI*2 - Math.PI/2;
+      const tx = drawCx + Math.cos(a) * (maxR + 12);
+      const ty = drawCy + Math.sin(a) * (maxR + 12);
+      ctx.fillText((i*30)+'', tx, ty + 3);
+    }
+    ctx.restore();
+
+    // HUD - right panel
+    ctx.save();
+    // Status panel
+    ctx.fillStyle = '#0a0a18ee';
+    ctx.fillRect(W - 170, 10, 160, 120);
+    ctx.strokeStyle = 'rgba(0,200,0,0.3)';
+    ctx.strokeRect(W - 170, 10, 160, 120);
+
+    ctx.font = '9px Courier New';
+    ctx.fillStyle = '#00aa44';
+    ctx.textAlign = 'left';
+    ctx.fillText('RADAR STATUS', W - 160, 28);
+
+    ctx.fillStyle = '#00ff44';
+    ctx.fillText('TARGETS: ' + radarBlips.length, W - 160, 48);
+    ctx.fillText('SWEEP: ' + Math.round(sweepAngle * 180/Math.PI) + '\u00b0', W - 160, 63);
+    ctx.fillText('RANGE: NOMINAL', W - 160, 78);
+
+    ctx.font = 'bold 14px Courier New';
+    ctx.fillStyle = '#00ff44';
+    ctx.fillText('CMD: ' + cmdText, W - 160, 105);
+
+    // Viewport indicator
+    if (centerOffsetY !== 0) {
+      ctx.font = '9px Courier New';
+      ctx.fillStyle = '#ff8844';
+      ctx.fillText('VIEWPORT SHIFT', W - 160, 125);
+    }
+
+    ctx.restore();
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

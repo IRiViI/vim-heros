@@ -32,46 +32,82 @@ pub fn render(frame: &mut ratatui::Frame, app: &App) {
     if app.engine.state == GameState::Countdown {
         render_countdown(frame, app, chunks[2]);
     }
+
+    if app.engine.state == GameState::WaitingForInput {
+        render_waiting_for_input(frame, app, chunks[2]);
+    }
 }
 
 /// Render the HUD bar: stars, level, score, combo.
 fn render_hud(frame: &mut ratatui::Frame, app: &App, area: Rect) {
-    let stars = app.scoring.star_display();
-    let score = format!("  Score: {}  ", app.scoring.score);
-    let combo = app.scoring.combo_display();
-
     let tasks_done = app.tasks.iter().filter(|t| t.state == TaskState::Completed).count();
     let tasks_total = app.tasks.len();
 
-    let mut spans = vec![
-        Span::styled(
-            format!(" {} ", stars),
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            format!(" Level {} ", app.level.display_id()),
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            format!("\"{}\" ", app.level.name),
-            Style::default().fg(Color::DarkGray),
-        ),
-        Span::styled(score, Style::default().fg(Color::Green)),
-        Span::styled(
-            format!("Tasks: {}/{} ", tasks_done, tasks_total),
-            Style::default().fg(Color::Magenta),
-        ),
-        if combo.is_empty() {
-            Span::raw("")
-        } else {
+    let mut spans = if app.level.is_world1() {
+        // World 1: simplified HUD - no scoring/stars, just level + tasks + task description
+        let next_task_desc = app.tasks.iter()
+            .find(|t| matches!(t.state, TaskState::Active | TaskState::Pending))
+            .map(|t| t.description.clone())
+            .unwrap_or_default();
+
+        vec![
             Span::styled(
-                format!(" {} ", combo),
-                Style::default()
-                    .fg(Color::Red)
-                    .add_modifier(Modifier::BOLD),
-            )
-        },
-    ];
+                format!(" Level {} ", app.level.display_id()),
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!("\"{}\" ", app.level.name),
+                Style::default().fg(Color::DarkGray),
+            ),
+            Span::styled(
+                format!("  Targets: {}/{} ", tasks_done, tasks_total),
+                Style::default().fg(Color::Magenta),
+            ),
+            if next_task_desc.is_empty() {
+                Span::raw("")
+            } else {
+                Span::styled(
+                    format!("  >> {} ", next_task_desc),
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                )
+            },
+        ]
+    } else {
+        // Classic mode: full HUD with scoring
+        let stars = app.scoring.star_display();
+        let score = format!("  Score: {}  ", app.scoring.score);
+        let combo = app.scoring.combo_display();
+
+        vec![
+            Span::styled(
+                format!(" {} ", stars),
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(" Level {} ", app.level.display_id()),
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!("\"{}\" ", app.level.name),
+                Style::default().fg(Color::DarkGray),
+            ),
+            Span::styled(score, Style::default().fg(Color::Green)),
+            Span::styled(
+                format!("Tasks: {}/{} ", tasks_done, tasks_total),
+                Style::default().fg(Color::Magenta),
+            ),
+            if combo.is_empty() {
+                Span::raw("")
+            } else {
+                Span::styled(
+                    format!(" {} ", combo),
+                    Style::default()
+                        .fg(Color::Red)
+                        .add_modifier(Modifier::BOLD),
+                )
+            },
+        ]
+    };
 
     // Completion flash — show for 1.5 seconds after task completion
     if let Some((ref text, when, color)) = app.completion_flash {
@@ -115,6 +151,53 @@ fn render_energy_bar(frame: &mut ratatui::Frame, app: &App, area: Rect) {
                 Style::default().fg(Color::DarkGray),
             ),
         ];
+        let bar = Paragraph::new(Line::from(spans))
+            .style(Style::default().bg(Color::Rgb(20, 20, 35)));
+        frame.render_widget(bar, area);
+        return;
+    }
+
+    // World 1: motion-count energy bar
+    if app.level.is_world1() {
+        let remaining = app.energy.motion_budget.saturating_sub(app.energy.motions_used);
+        let budget = app.energy.motion_budget;
+        let bar_width = area.width.saturating_sub(30) as usize;
+        let fraction = app.energy.motion_fraction();
+        let filled = (fraction * bar_width as f64).round() as usize;
+        let empty = bar_width.saturating_sub(filled);
+
+        let bar_color = if fraction > 0.5 {
+            Color::Green
+        } else if fraction > 0.25 {
+            Color::Yellow
+        } else {
+            Color::Red
+        };
+
+        let filled_str = "\u{2588}".repeat(filled);
+        let empty_str = "\u{2591}".repeat(empty);
+
+        let mut spans = vec![
+            Span::styled(" Energy: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(filled_str, Style::default().fg(bar_color)),
+            Span::styled(empty_str, Style::default().fg(Color::Rgb(60, 60, 60))),
+            Span::styled(
+                format!(" {}/{} ", remaining, budget),
+                Style::default().fg(bar_color).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!("  Errors: {}/{} ", app.energy.errors, app.energy.max_errors),
+                Style::default().fg(if app.energy.errors > 0 { Color::Red } else { Color::DarkGray }),
+            ),
+        ];
+
+        if app.engine.state == GameState::WaitingForInput {
+            spans.push(Span::styled(
+                " Press any key to start ",
+                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+            ));
+        }
+
         let bar = Paragraph::new(Line::from(spans))
             .style(Style::default().bg(Color::Rgb(20, 20, 35)));
         frame.render_widget(bar, area);
@@ -617,10 +700,12 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
 
     let reason_text = match app.game_over_reason {
         GameOverReason::TimerExpired => "Time's up!",
+        GameOverReason::ScrolledOff => "Scrolled off screen!",
+        GameOverReason::ErrorsExceeded => "Too many wrong moves!",
         GameOverReason::None => "",
     };
 
-    let text = vec![
+    let mut text = vec![
         Line::from(""),
         Line::from(Span::styled(
             title_text,
@@ -637,18 +722,45 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             ))
         },
         Line::from(""),
-        Line::from(Span::styled(
+    ];
+
+    if app.level.is_world1() {
+        // World 1: survive-or-die results (no scoring/stars)
+        text.push(Line::from(vec![
+            Span::styled("Targets: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                format!("{}/{}", s.tasks_completed, s.tasks_total),
+                Style::default().fg(Color::Magenta),
+            ),
+        ]));
+        text.push(Line::from(vec![
+            Span::styled("Errors: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                format!("{}/{}", app.energy.errors, app.energy.max_errors),
+                Style::default().fg(if app.energy.errors > app.energy.max_errors { Color::Red } else { Color::Yellow }),
+            ),
+        ]));
+        text.push(Line::from(vec![
+            Span::styled("Motions: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                format!("{}", s.keystrokes),
+                Style::default().fg(Color::Cyan),
+            ),
+        ]));
+    } else {
+        // Classic mode: full results
+        text.push(Line::from(Span::styled(
             stars,
             Style::default()
                 .fg(star_color)
                 .add_modifier(Modifier::BOLD),
-        )),
-        Line::from(""),
-        Line::from(vec![
+        )));
+        text.push(Line::from(""));
+        text.push(Line::from(vec![
             Span::styled("Score: ", Style::default().fg(Color::DarkGray)),
             Span::styled(format!("{}", s.score), Style::default().fg(Color::Green)),
-        ]),
-        Line::from(vec![
+        ]));
+        text.push(Line::from(vec![
             Span::styled("Tasks: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 format!("{}/{}", s.tasks_completed, s.tasks_total),
@@ -662,8 +774,8 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
             } else {
                 Span::raw("")
             },
-        ]),
-        Line::from(vec![
+        ]));
+        text.push(Line::from(vec![
             Span::styled("Great: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 format!("{}", s.tasks_great),
@@ -678,29 +790,49 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
                 format!("  /{}", s.tasks_total),
                 Style::default().fg(Color::DarkGray),
             ),
-        ]),
-        Line::from(vec![
+        ]));
+    }
+
+    if !app.level.is_world1() {
+        text.push(Line::from(vec![
             Span::styled("Keys: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 format!("{}", s.keystrokes),
                 Style::default().fg(Color::Yellow),
             ),
-        ]),
-        Line::from(vec![
+        ]));
+        text.push(Line::from(vec![
             Span::styled("Max combo: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 format!("{}", s.max_combo),
                 Style::default().fg(Color::Red),
             ),
-        ]),
-        Line::from(vec![
-            Span::styled("Time: ", Style::default().fg(Color::DarkGray)),
+        ]));
+    }
+
+    text.push(Line::from(vec![
+        Span::styled("Time: ", Style::default().fg(Color::DarkGray)),
+        Span::styled(
+            format!("{}s", app.engine.elapsed_secs()),
+            Style::default().fg(Color::Cyan),
+        ),
+    ]));
+
+    // World 1: show errors instead of timer
+    if app.level.is_world1() {
+        text.push(Line::from(vec![
+            Span::styled("Errors: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                format!("{}s", app.engine.elapsed_secs()),
-                Style::default().fg(Color::Cyan),
+                format!("{}/{}", app.energy.errors, app.energy.max_errors),
+                Style::default().fg(if app.energy.errors > app.energy.max_errors {
+                    Color::Red
+                } else {
+                    Color::Yellow
+                }),
             ),
-        ]),
-        Line::from(vec![
+        ]));
+    } else {
+        text.push(Line::from(vec![
             Span::styled("Timer: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 format!("{:.1}s remaining", app.energy.remaining_seconds()),
@@ -710,18 +842,33 @@ fn render_results(frame: &mut ratatui::Frame, app: &App, area: Rect) {
                     Color::Red
                 }),
             ),
-        ]),
-        Line::from(""),
-        Line::from(Span::styled(
-            format!("Level {}", app.level.display_id()),
-            Style::default().fg(Color::DarkGray),
-        )),
-        Line::from(""),
-        Line::from(Span::styled(
-            "R retry \u{2502} N next level \u{2502} Q quit",
-            Style::default().fg(Color::DarkGray),
-        )),
-    ];
+        ]));
+    }
+
+    // Death hint (World 1)
+    if let Some(ref hint) = app.death_hint {
+        text.push(Line::from(""));
+        // Wrap long hints
+        let max_width = 30;
+        for chunk in hint.as_bytes().chunks(max_width) {
+            let s = String::from_utf8_lossy(chunk);
+            text.push(Line::from(Span::styled(
+                s.to_string(),
+                Style::default().fg(Color::Yellow),
+            )));
+        }
+    }
+
+    text.push(Line::from(""));
+    text.push(Line::from(Span::styled(
+        format!("Level {}", app.level.display_id()),
+        Style::default().fg(Color::DarkGray),
+    )));
+    text.push(Line::from(""));
+    text.push(Line::from(Span::styled(
+        "R retry \u{2502} N next level \u{2502} Q quit",
+        Style::default().fg(Color::DarkGray),
+    )));
 
     let width: u16 = 34;
     let height: u16 = text.len() as u16 + 2;
@@ -790,6 +937,49 @@ fn render_countdown(frame: &mut ratatui::Frame, app: &App, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan))
         .title(" Get Ready ");
+
+    let paragraph = Paragraph::new(text)
+        .block(block)
+        .alignment(Alignment::Center);
+
+    frame.render_widget(Clear, popup_area);
+    frame.render_widget(paragraph, popup_area);
+}
+
+/// Render the "press any key to start" overlay (World 1).
+fn render_waiting_for_input(frame: &mut ratatui::Frame, app: &App, area: Rect) {
+    let text = vec![
+        Line::from(""),
+        Line::from(Span::styled(
+            format!(" Level {} ", app.level.display_id()),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            format!("\"{}\"", app.level.name),
+            Style::default().fg(Color::DarkGray),
+        )),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Press any key to start",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+    ];
+
+    let width: u16 = 30;
+    let height: u16 = text.len() as u16 + 2;
+    let x = area.x + (area.width.saturating_sub(width)) / 2;
+    let y = area.y + (area.height.saturating_sub(height)) / 2;
+    let popup_area = Rect::new(x, y, width, height);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan))
+        .title(" World 1: Motion ");
 
     let paragraph = Paragraph::new(text)
         .block(block)

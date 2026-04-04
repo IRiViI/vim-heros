@@ -7,6 +7,7 @@ use crate::content::assembler;
 use crate::content::loader;
 use crate::game::energy::Energy;
 use crate::game::engine::{Engine, GameState};
+use crate::game::pathfinder::{self, PathResult};
 use crate::game::scoring::Scoring;
 use crate::game::task::{self, Task, TaskKind, TaskState};
 use crate::game::viewport::Viewport;
@@ -111,6 +112,13 @@ impl Shape {
 const DEFAULT_SCROLL_SPEED_MS: u64 = 2000;
 const SEGMENTS_PER_LEVEL: usize = 4;
 
+/// Manhattan-ish distance between two cursor positions (for error detection).
+fn cursor_distance(l1: usize, c1: usize, l2: usize, c2: usize) -> usize {
+    let line_dist = if l1 > l2 { l1 - l2 } else { l2 - l1 };
+    let col_dist = if c1 > c2 { c1 - c2 } else { c2 - c1 };
+    line_dist + col_dist
+}
+
 /// Level metadata.
 pub struct LevelInfo {
     pub world: usize,
@@ -119,11 +127,18 @@ pub struct LevelInfo {
     pub zone: String,
     pub language: String,
     pub scroll_speed_ms: u64,
+    /// World 1 difficulty (1-5). 0 means not World 1 (use classic mechanics).
+    pub w1_difficulty: u8,
 }
 
 impl LevelInfo {
     pub fn display_id(&self) -> String {
         format!("{}-{}", self.world, self.level)
+    }
+
+    /// Whether this level uses World 1 mechanics (motion-count energy, no countdown).
+    pub fn is_world1(&self) -> bool {
+        self.world == 1
     }
 }
 
@@ -131,103 +146,104 @@ impl LevelInfo {
 /// Level X-5 in each world is a boss level (1.5× scroll speed).
 fn level_list() -> Vec<LevelInfo> {
     vec![
-        // ── World 1: First Steps (hjkl + counts) ──
-        LevelInfo { world: 1, level: 1, name: "First Steps".into(), zone: "nav".into(), language: "python".into(), scroll_speed_ms: 2500 },
-        LevelInfo { world: 1, level: 2, name: "Counting Moves".into(), zone: "nav".into(), language: "python".into(), scroll_speed_ms: 2500 },
-        LevelInfo { world: 1, level: 3, name: "Line Jumper".into(), zone: "nav".into(), language: "typescript".into(), scroll_speed_ms: 2500 },
-        LevelInfo { world: 1, level: 4, name: "All Together".into(), zone: "nav".into(), language: "python".into(), scroll_speed_ms: 2400 },
-        LevelInfo { world: 1, level: 5, name: "The Maze".into(), zone: "nav".into(), language: "typescript".into(), scroll_speed_ms: 1667 },
+        // ── World 1: Motion ──
+        // Scroll speed comes from difficulty, default = difficulty 2 (:wq Survivor = 2000ms)
+        LevelInfo { world: 1, level: 1, name: "Basic Movement".into(), zone: "nav".into(), language: "python".into(), scroll_speed_ms: 2000, w1_difficulty: 2 },
+        LevelInfo { world: 1, level: 2, name: "Word Jumps & Counts".into(), zone: "nav".into(), language: "python".into(), scroll_speed_ms: 2000, w1_difficulty: 2 },
+        LevelInfo { world: 1, level: 3, name: "Line Targeting".into(), zone: "nav".into(), language: "python".into(), scroll_speed_ms: 2000, w1_difficulty: 2 },
+        LevelInfo { world: 1, level: 4, name: "Restricted Zones".into(), zone: "nav".into(), language: "python".into(), scroll_speed_ms: 2000, w1_difficulty: 2 },
+        LevelInfo { world: 1, level: 5, name: "Perfect Motions".into(), zone: "nav".into(), language: "python".into(), scroll_speed_ms: 2000, w1_difficulty: 2 },
 
         // ── World 2: Word Surfer (w/b/e) ──
-        LevelInfo { world: 2, level: 1, name: "Word Jumps".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2400 },
-        LevelInfo { world: 2, level: 2, name: "Big Words".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2400 },
-        LevelInfo { world: 2, level: 3, name: "Word Counts".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2300 },
-        LevelInfo { world: 2, level: 4, name: "Word Mix".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2300 },
-        LevelInfo { world: 2, level: 5, name: "The Marathon".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 1600 },
+        LevelInfo { world: 2, level: 1, name: "Word Jumps".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2400, w1_difficulty: 0 },
+        LevelInfo { world: 2, level: 2, name: "Big Words".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2400, w1_difficulty: 0 },
+        LevelInfo { world: 2, level: 3, name: "Word Counts".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2300, w1_difficulty: 0 },
+        LevelInfo { world: 2, level: 4, name: "Word Mix".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2300, w1_difficulty: 0 },
+        LevelInfo { world: 2, level: 5, name: "The Marathon".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 1600, w1_difficulty: 0 },
 
         // ── World 3: Line Rider (0/^/$/f/t) ──
-        LevelInfo { world: 3, level: 1, name: "Line Ends".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2300 },
-        LevelInfo { world: 3, level: 2, name: "Find Char".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2300 },
-        LevelInfo { world: 3, level: 3, name: "Repeat Find".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2200 },
-        LevelInfo { world: 3, level: 4, name: "Line Precision".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2200 },
-        LevelInfo { world: 3, level: 5, name: "The Sniper Range".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 1533 },
+        LevelInfo { world: 3, level: 1, name: "Line Ends".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2300, w1_difficulty: 0 },
+        LevelInfo { world: 3, level: 2, name: "Find Char".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2300, w1_difficulty: 0 },
+        LevelInfo { world: 3, level: 3, name: "Repeat Find".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2200, w1_difficulty: 0 },
+        LevelInfo { world: 3, level: 4, name: "Line Precision".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2200, w1_difficulty: 0 },
+        LevelInfo { world: 3, level: 5, name: "The Sniper Range".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 1533, w1_difficulty: 0 },
 
         // ── World 4: The Writer (i/a/I/A/o/O/R) ──
-        LevelInfo { world: 4, level: 1, name: "Basic Insert".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2200 },
-        LevelInfo { world: 4, level: 2, name: "Line Insert".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2200 },
-        LevelInfo { world: 4, level: 3, name: "Open Lines".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2100 },
-        LevelInfo { world: 4, level: 4, name: "Replace Mode".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2100 },
-        LevelInfo { world: 4, level: 5, name: "The Blank Page".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 1467 },
+        LevelInfo { world: 4, level: 1, name: "Basic Insert".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2200, w1_difficulty: 0 },
+        LevelInfo { world: 4, level: 2, name: "Line Insert".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2200, w1_difficulty: 0 },
+        LevelInfo { world: 4, level: 3, name: "Open Lines".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2100, w1_difficulty: 0 },
+        LevelInfo { world: 4, level: 4, name: "Replace Mode".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2100, w1_difficulty: 0 },
+        LevelInfo { world: 4, level: 5, name: "The Blank Page".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 1467, w1_difficulty: 0 },
 
         // ── World 5: The Destroyer (x/dd/D) ──
-        LevelInfo { world: 5, level: 1, name: "Delete Chars".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2100 },
-        LevelInfo { world: 5, level: 2, name: "Delete Lines".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2100 },
-        LevelInfo { world: 5, level: 3, name: "Delete to End".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2000 },
-        LevelInfo { world: 5, level: 4, name: "Mixed Deletions".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2000 },
-        LevelInfo { world: 5, level: 5, name: "The Cleanup".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 1400 },
+        LevelInfo { world: 5, level: 1, name: "Delete Chars".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2100, w1_difficulty: 0 },
+        LevelInfo { world: 5, level: 2, name: "Delete Lines".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2100, w1_difficulty: 0 },
+        LevelInfo { world: 5, level: 3, name: "Delete to End".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 2000, w1_difficulty: 0 },
+        LevelInfo { world: 5, level: 4, name: "Mixed Deletions".into(), zone: "starter".into(), language: "typescript".into(), scroll_speed_ms: 2000, w1_difficulty: 0 },
+        LevelInfo { world: 5, level: 5, name: "The Cleanup".into(), zone: "starter".into(), language: "python".into(), scroll_speed_ms: 1400, w1_difficulty: 0 },
 
         // ── World 6: Verb + Noun (d/c{motion}, ., >>/<<) ──
-        LevelInfo { world: 6, level: 1, name: "Delete Motions".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 2000 },
-        LevelInfo { world: 6, level: 2, name: "Change Motions".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 2000 },
-        LevelInfo { world: 6, level: 3, name: "Dot Repeat".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1900 },
-        LevelInfo { world: 6, level: 4, name: "Indent Power".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1900 },
-        LevelInfo { world: 6, level: 5, name: "The Refactor".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1333 },
+        LevelInfo { world: 6, level: 1, name: "Delete Motions".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 2000, w1_difficulty: 0 },
+        LevelInfo { world: 6, level: 2, name: "Change Motions".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 2000, w1_difficulty: 0 },
+        LevelInfo { world: 6, level: 3, name: "Dot Repeat".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1900, w1_difficulty: 0 },
+        LevelInfo { world: 6, level: 4, name: "Indent Power".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1900, w1_difficulty: 0 },
+        LevelInfo { world: 6, level: 5, name: "The Refactor".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1333, w1_difficulty: 0 },
 
         // ── World 7: Copy Ninja (yy/yw/p/P) ──
-        LevelInfo { world: 7, level: 1, name: "Yank Lines".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1900 },
-        LevelInfo { world: 7, level: 2, name: "Yank Words".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1900 },
-        LevelInfo { world: 7, level: 3, name: "Paste Before".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1800 },
-        LevelInfo { world: 7, level: 4, name: "Cut & Move".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1800 },
-        LevelInfo { world: 7, level: 5, name: "The Rearrangement".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1267 },
+        LevelInfo { world: 7, level: 1, name: "Yank Lines".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1900, w1_difficulty: 0 },
+        LevelInfo { world: 7, level: 2, name: "Yank Words".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1900, w1_difficulty: 0 },
+        LevelInfo { world: 7, level: 3, name: "Paste Before".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1800, w1_difficulty: 0 },
+        LevelInfo { world: 7, level: 4, name: "Cut & Move".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1800, w1_difficulty: 0 },
+        LevelInfo { world: 7, level: 5, name: "The Rearrangement".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1267, w1_difficulty: 0 },
 
         // ── World 8: The Selector (v/V + operators) ──
-        LevelInfo { world: 8, level: 1, name: "Visual Chars".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1800 },
-        LevelInfo { world: 8, level: 2, name: "Visual Lines".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1800 },
-        LevelInfo { world: 8, level: 3, name: "Visual + Counts".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1700 },
-        LevelInfo { world: 8, level: 4, name: "Mixed Visual".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1700 },
-        LevelInfo { world: 8, level: 5, name: "The Bulk Edit".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1200 },
+        LevelInfo { world: 8, level: 1, name: "Visual Chars".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1800, w1_difficulty: 0 },
+        LevelInfo { world: 8, level: 2, name: "Visual Lines".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1800, w1_difficulty: 0 },
+        LevelInfo { world: 8, level: 3, name: "Visual + Counts".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1700, w1_difficulty: 0 },
+        LevelInfo { world: 8, level: 4, name: "Mixed Visual".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1700, w1_difficulty: 0 },
+        LevelInfo { world: 8, level: 5, name: "The Bulk Edit".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1200, w1_difficulty: 0 },
 
         // ── World 9: Text Object Surgeon (iw/aw/i"/ci(/da{) ──
-        LevelInfo { world: 9, level: 1, name: "Inner Word".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1700 },
-        LevelInfo { world: 9, level: 2, name: "Inside Quotes".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1700 },
-        LevelInfo { world: 9, level: 3, name: "Inside Brackets".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1600 },
-        LevelInfo { world: 9, level: 4, name: "Operator + Object".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1600 },
-        LevelInfo { world: 9, level: 5, name: "The Nested Beast".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1133 },
+        LevelInfo { world: 9, level: 1, name: "Inner Word".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1700, w1_difficulty: 0 },
+        LevelInfo { world: 9, level: 2, name: "Inside Quotes".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1700, w1_difficulty: 0 },
+        LevelInfo { world: 9, level: 3, name: "Inside Brackets".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1600, w1_difficulty: 0 },
+        LevelInfo { world: 9, level: 4, name: "Operator + Object".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1600, w1_difficulty: 0 },
+        LevelInfo { world: 9, level: 5, name: "The Nested Beast".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1133, w1_difficulty: 0 },
 
         // ── World 10: Code Navigator ({/}/%/marks) ──
-        LevelInfo { world: 10, level: 1, name: "Paragraphs".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1600 },
-        LevelInfo { world: 10, level: 2, name: "Bracket Match".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1600 },
-        LevelInfo { world: 10, level: 3, name: "Marks".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1500 },
-        LevelInfo { world: 10, level: 4, name: "Navigate All".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1500 },
-        LevelInfo { world: 10, level: 5, name: "The Labyrinth".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1067 },
+        LevelInfo { world: 10, level: 1, name: "Paragraphs".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1600, w1_difficulty: 0 },
+        LevelInfo { world: 10, level: 2, name: "Bracket Match".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1600, w1_difficulty: 0 },
+        LevelInfo { world: 10, level: 3, name: "Marks".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1500, w1_difficulty: 0 },
+        LevelInfo { world: 10, level: 4, name: "Navigate All".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1500, w1_difficulty: 0 },
+        LevelInfo { world: 10, level: 5, name: "The Labyrinth".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1067, w1_difficulty: 0 },
 
         // ── World 11: Search & Destroy (/?/n/N/*/#) ──
-        LevelInfo { world: 11, level: 1, name: "Search Forward".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1500 },
-        LevelInfo { world: 11, level: 2, name: "Search Backward".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1500 },
-        LevelInfo { world: 11, level: 3, name: "Word Search".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1400 },
-        LevelInfo { world: 11, level: 4, name: "Search + Operate".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1400 },
-        LevelInfo { world: 11, level: 5, name: "The Bug Hunt".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1000 },
+        LevelInfo { world: 11, level: 1, name: "Search Forward".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1500, w1_difficulty: 0 },
+        LevelInfo { world: 11, level: 2, name: "Search Backward".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1500, w1_difficulty: 0 },
+        LevelInfo { world: 11, level: 3, name: "Word Search".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1400, w1_difficulty: 0 },
+        LevelInfo { world: 11, level: 4, name: "Search + Operate".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1400, w1_difficulty: 0 },
+        LevelInfo { world: 11, level: 5, name: "The Bug Hunt".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1000, w1_difficulty: 0 },
 
         // ── World 12: Time Traveler (u/Ctrl-R/registers) ──
-        LevelInfo { world: 12, level: 1, name: "Undo / Redo".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1400 },
-        LevelInfo { world: 12, level: 2, name: "Named Registers".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1400 },
-        LevelInfo { world: 12, level: 3, name: "Undo Branches".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1300 },
-        LevelInfo { world: 12, level: 4, name: "Time Recovery".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1300 },
-        LevelInfo { world: 12, level: 5, name: "The Time Paradox".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 933 },
+        LevelInfo { world: 12, level: 1, name: "Undo / Redo".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1400, w1_difficulty: 0 },
+        LevelInfo { world: 12, level: 2, name: "Named Registers".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1400, w1_difficulty: 0 },
+        LevelInfo { world: 12, level: 3, name: "Undo Branches".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1300, w1_difficulty: 0 },
+        LevelInfo { world: 12, level: 4, name: "Time Recovery".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1300, w1_difficulty: 0 },
+        LevelInfo { world: 12, level: 5, name: "The Time Paradox".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 933, w1_difficulty: 0 },
 
         // ── World 13: Macro Wizard (q/@ /@@) ──
-        LevelInfo { world: 13, level: 1, name: "Record & Play".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1300 },
-        LevelInfo { world: 13, level: 2, name: "Replay Last".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1300 },
-        LevelInfo { world: 13, level: 3, name: "Counted Replay".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1200 },
-        LevelInfo { world: 13, level: 4, name: "Macro Chains".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1200 },
-        LevelInfo { world: 13, level: 5, name: "The Assembly Line".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 867 },
+        LevelInfo { world: 13, level: 1, name: "Record & Play".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1300, w1_difficulty: 0 },
+        LevelInfo { world: 13, level: 2, name: "Replay Last".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1300, w1_difficulty: 0 },
+        LevelInfo { world: 13, level: 3, name: "Counted Replay".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1200, w1_difficulty: 0 },
+        LevelInfo { world: 13, level: 4, name: "Macro Chains".into(), zone: "junior".into(), language: "typescript".into(), scroll_speed_ms: 1200, w1_difficulty: 0 },
+        LevelInfo { world: 13, level: 5, name: "The Assembly Line".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 867, w1_difficulty: 0 },
 
         // ── World 14: The Grandmaster (Grand Finale) ──
-        LevelInfo { world: 14, level: 1, name: "Fix Bubble Sort".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1200 },
-        LevelInfo { world: 14, level: 2, name: "Fix Binary Search".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1200 },
-        LevelInfo { world: 14, level: 3, name: "Fix Quicksort".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1100 },
-        LevelInfo { world: 14, level: 4, name: "Fix Merge Sort".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1100 },
-        LevelInfo { world: 14, level: 5, name: "The Final Boss".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 800 },
+        LevelInfo { world: 14, level: 1, name: "Fix Bubble Sort".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1200, w1_difficulty: 0 },
+        LevelInfo { world: 14, level: 2, name: "Fix Binary Search".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1200, w1_difficulty: 0 },
+        LevelInfo { world: 14, level: 3, name: "Fix Quicksort".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1100, w1_difficulty: 0 },
+        LevelInfo { world: 14, level: 4, name: "Fix Merge Sort".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 1100, w1_difficulty: 0 },
+        LevelInfo { world: 14, level: 5, name: "The Final Boss".into(), zone: "junior".into(), language: "python".into(), scroll_speed_ms: 800, w1_difficulty: 0 },
     ]
 }
 
@@ -251,6 +267,10 @@ struct RepeatableEdit {
 pub enum GameOverReason {
     /// Timer countdown reached 0.
     TimerExpired,
+    /// Player scrolled off the viewport (World 1).
+    ScrolledOff,
+    /// Too many errors / non-optimal motions (World 1).
+    ErrorsExceeded,
     /// Not game over (or level complete).
     None,
 }
@@ -304,6 +324,16 @@ pub struct App {
     pub locked_key_flash: Option<(String, Instant, Color)>,
     /// Keys already shown as locked this level (only flash once per key per level).
     locked_keys_shown: HashSet<&'static str>,
+
+    // ── World 1 specific fields ──
+    /// Pre-calculated BFS optimal paths for each target (World 1).
+    pub w1_paths: Vec<PathResult>,
+    /// Player motion names since last target (for death hints).
+    pub w1_player_motions: Vec<String>,
+    /// Index of the current target in w1_paths (0 = first target).
+    pub w1_current_target: usize,
+    /// Death hint text (set on game over).
+    pub death_hint: Option<String>,
 }
 
 impl App {
@@ -311,16 +341,53 @@ impl App {
         let level = default_level();
         let (buffer, tasks, seen) = Self::load_level(&level, &[]);
         let tasks_total = tasks.len();
-        let world = level.world;
+
+        let is_w1 = level.is_world1();
+
+        // World 1: pre-calculate optimal paths
+        let w1_paths = if is_w1 {
+            let targets: Vec<(usize, usize)> = tasks.iter()
+                .map(|t| (t.target_line, t.target_col))
+                .collect();
+            pathfinder::calculate_level_paths(&buffer, &targets, level.level)
+        } else {
+            Vec::new()
+        };
+
+        // World 1: use motion-count energy and WaitingForInput engine
+        let difficulty = worlds::w1_difficulty(level.w1_difficulty);
+        let engine = if is_w1 {
+            Engine::new_waiting(difficulty.scroll_ms)
+        } else {
+            Engine::new(level.scroll_speed_ms)
+        };
+        let energy = if is_w1 {
+            let mut e = Energy::new_motion_count(difficulty.max_errors);
+            // Set initial budget from first target's optimal path
+            if let Some(first_path) = w1_paths.first() {
+                e.set_budget(first_path.optimal_motions + 3); // buffer of 3
+            }
+            e
+        } else {
+            Energy::default_new()
+        };
+
+        // World 1: restrict skills to level-specific allowed set
+        let unlocked = if is_w1 {
+            worlds::w1_allowed_skills(level.level)
+        } else {
+            worlds::skills_for_world(level.world)
+        };
+
         Self {
             buffer,
             cursor: Cursor::new(0, 0),
             mode: Mode::Normal,
             running: true,
             viewport: Viewport::new(viewport_height),
-            engine: Engine::new(level.scroll_speed_ms),
+            engine,
             scoring: Scoring::new(tasks_total),
-            energy: Energy::default_new(),
+            energy,
             game_over_reason: GameOverReason::None,
             tasks,
             level,
@@ -342,9 +409,13 @@ impl App {
             completion_flash: None,
             practice_mode: false,
             camera_task_index: None,
-            unlocked_skills: worlds::skills_for_world(world),
+            unlocked_skills: unlocked,
             locked_key_flash: None,
             locked_keys_shown: HashSet::new(),
+            w1_paths,
+            w1_player_motions: Vec::new(),
+            w1_current_target: 0,
+            death_hint: None,
         }
     }
 
@@ -362,9 +433,9 @@ impl App {
             return (buffer, tasks, Vec::new());
         }
 
-        // For X-1 levels, try to load and prepend a tutorial intro segment
+        // Load tutorial intro segment: always for World 1, only level X-1 for others
         let level_id = format!("{}-{}", level.world, level.level);
-        let intro = if level.level == 1 {
+        let intro = if level.world == 1 || level.level == 1 {
             loader::load_intro_segment(&level.language, &level_id)
         } else {
             None
@@ -407,6 +478,7 @@ impl App {
     pub fn tick(&mut self) -> bool {
         match self.engine.state {
             GameState::Countdown => self.tick_countdown(),
+            GameState::WaitingForInput => self.tick_waiting_for_input(),
             GameState::Playing => self.tick_playing(),
             GameState::GameOver | GameState::LevelComplete => self.tick_game_over(),
         }
@@ -441,8 +513,36 @@ impl App {
         true
     }
 
+    /// World 1 start condition: waiting for the player's first keystroke.
+    fn tick_waiting_for_input(&mut self) -> bool {
+        if event::poll(Duration::from_millis(50)).unwrap_or(false) {
+            if let Ok(Event::Key(key)) = event::read() {
+                if key.modifiers.contains(KeyModifiers::CONTROL)
+                    && key.code == KeyCode::Char('c')
+                {
+                    self.running = false;
+                    return true;
+                }
+                if key.code == KeyCode::Char('q') {
+                    self.running = false;
+                    return true;
+                }
+                // First keystroke: start the game and process this key
+                self.engine.start_on_input();
+                if !self.practice_mode {
+                    self.energy.start();
+                }
+                // Process this key as a normal playing key
+                return self.handle_key(key);
+            }
+        }
+        // Always re-render so the "press any key" message shows
+        true
+    }
+
     fn tick_playing(&mut self) -> bool {
         let mut needs_render = false;
+        let is_w1 = self.level.is_world1();
 
         // Poll for input
         if event::poll(Duration::from_millis(50)).unwrap_or(false) {
@@ -451,37 +551,75 @@ impl App {
             }
         }
 
-        // Camera: auto-scroll to show a NEW task when it first activates,
-        // then let the player scroll freely (only keeping cursor visible).
+        // World 1: auto-scroll the viewport at engine speed
+        if is_w1 && self.engine.should_scroll() {
+            let max_line = self.buffer.line_count().saturating_sub(1);
+            if self.viewport.top_line < max_line {
+                self.viewport.scroll_down();
+                self.engine.record_scroll();
+                needs_render = true;
+
+                // Check if cursor scrolled off the top of the viewport (game over)
+                if self.cursor.line < self.viewport.top_line {
+                    if !self.practice_mode {
+                        self.engine.state = GameState::GameOver;
+                        self.game_over_reason = GameOverReason::ScrolledOff;
+                        // Generate death hint
+                        if self.w1_current_target < self.w1_paths.len() {
+                            self.death_hint = Some(pathfinder::generate_death_hint(
+                                &self.w1_player_motions,
+                                &self.w1_paths[self.w1_current_target],
+                            ));
+                        }
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // World 1: update catching_up mode (4x scroll when target not in view)
+        if is_w1 {
+            if let Some(task) = self.tasks.iter().find(|t| t.is_completable()) {
+                let target_in_view = self.viewport.contains(task.target_line);
+                self.engine.catching_up = !target_in_view;
+            }
+        }
+
+        // Camera behavior
         let max_line = self.buffer.line_count().saturating_sub(1);
         let current_task_index = self.tasks.iter().position(|t| t.is_completable());
-        if let Some(task_idx) = current_task_index {
-            if self.camera_task_index != Some(task_idx) {
-                // New task just became active — center viewport to show both cursor and task
-                self.camera_task_index = Some(task_idx);
-                let next_task_line = self.tasks[task_idx].target_line;
-                let lo = self.cursor.line.min(next_task_line);
-                let hi = self.cursor.line.max(next_task_line);
-                let span = hi - lo;
-                let usable = self.viewport.height.saturating_sub(4);
-                if span <= usable {
-                    let mid = lo + span / 2;
-                    let half = self.viewport.height / 2;
-                    let new_top = mid.saturating_sub(half);
-                    let max_top = max_line.saturating_sub(self.viewport.height.saturating_sub(1));
-                    self.viewport.top_line = new_top.min(max_top);
+
+        if is_w1 {
+            // World 1: viewport auto-scrolls. Just ensure cursor stays visible.
+            self.viewport.ensure_visible(self.cursor.line, 2, max_line);
+            needs_render = true;
+        } else {
+            // Classic mode: camera follows tasks
+            if let Some(task_idx) = current_task_index {
+                if self.camera_task_index != Some(task_idx) {
+                    self.camera_task_index = Some(task_idx);
+                    let next_task_line = self.tasks[task_idx].target_line;
+                    let lo = self.cursor.line.min(next_task_line);
+                    let hi = self.cursor.line.max(next_task_line);
+                    let span = hi - lo;
+                    let usable = self.viewport.height.saturating_sub(4);
+                    if span <= usable {
+                        let mid = lo + span / 2;
+                        let half = self.viewport.height / 2;
+                        let new_top = mid.saturating_sub(half);
+                        let max_top = max_line.saturating_sub(self.viewport.height.saturating_sub(1));
+                        self.viewport.top_line = new_top.min(max_top);
+                    } else {
+                        self.viewport.ensure_visible(next_task_line, 2, max_line);
+                    }
+                    needs_render = true;
                 } else {
-                    self.viewport.ensure_visible(next_task_line, 2, max_line);
+                    self.viewport.ensure_visible(self.cursor.line, 2, max_line);
                 }
                 needs_render = true;
             } else {
-                // Same task — just keep cursor visible, player controls the viewport
                 self.viewport.ensure_visible(self.cursor.line, 2, max_line);
             }
-            // Always render while tasks remain (timer bar, countdown, flashes need updating)
-            needs_render = true;
-        } else {
-            self.viewport.ensure_visible(self.cursor.line, 2, max_line);
         }
 
         // Activate the next incomplete task (tasks follow TOML order, not position)
@@ -494,10 +632,21 @@ impl App {
             }
         }
 
-        // Game over: timer depleted (skip in practice mode)
+        // Game over: energy depleted (skip in practice mode)
         if !self.practice_mode && self.energy.is_depleted() {
             self.engine.state = GameState::GameOver;
-            self.game_over_reason = GameOverReason::TimerExpired;
+            self.game_over_reason = if is_w1 {
+                GameOverReason::ErrorsExceeded
+            } else {
+                GameOverReason::TimerExpired
+            };
+            // Generate death hint for World 1
+            if is_w1 && self.w1_current_target < self.w1_paths.len() {
+                self.death_hint = Some(pathfinder::generate_death_hint(
+                    &self.w1_player_motions,
+                    &self.w1_paths[self.w1_current_target],
+                ));
+            }
         }
 
         // Check level complete: all tasks resolved
@@ -556,9 +705,33 @@ impl App {
         self.cursor = Cursor::new(0, 0);
         self.mode = Mode::Normal;
         self.viewport = Viewport::new(self.viewport.height);
-        self.engine.reset();
+
+        let is_w1 = self.level.is_world1();
+
+        // World 1: pre-calculate paths
+        self.w1_paths = if is_w1 {
+            let targets: Vec<(usize, usize)> = self.tasks.iter()
+                .map(|t| (t.target_line, t.target_col))
+                .collect();
+            pathfinder::calculate_level_paths(&self.buffer, &targets, self.level.level)
+        } else {
+            Vec::new()
+        };
+
+        // Reset engine
+        if is_w1 {
+            let difficulty = worlds::w1_difficulty(self.level.w1_difficulty);
+            self.engine = Engine::new_waiting(difficulty.scroll_ms);
+            self.energy = Energy::new_motion_count(difficulty.max_errors);
+            if let Some(first_path) = self.w1_paths.first() {
+                self.energy.set_budget(first_path.optimal_motions + 3);
+            }
+        } else {
+            self.engine.reset();
+            self.energy.reset();
+        }
+
         self.scoring.reset(self.tasks.len());
-        self.energy.reset();
         self.game_over_reason = GameOverReason::None;
         self.parser = CommandParser::new();
         self.registers = RegisterFile::new();
@@ -574,10 +747,19 @@ impl App {
         self.task_keystrokes = 0;
         self.last_task_completion = None;
         self.completion_flash = None;
-        self.unlocked_skills = worlds::skills_for_world(self.level.world);
+
+        self.unlocked_skills = if is_w1 {
+            worlds::w1_allowed_skills(self.level.level)
+        } else {
+            worlds::skills_for_world(self.level.world)
+        };
+
         self.locked_key_flash = None;
         self.locked_keys_shown.clear();
         self.camera_task_index = None;
+        self.w1_player_motions.clear();
+        self.w1_current_target = 0;
+        self.death_hint = None;
     }
 
     /// Move cursor (and viewport) by `lines` in a direction.
@@ -998,6 +1180,9 @@ impl App {
                             self.insert_chars.clear();
                         }
 
+                        // World 1: save cursor before motion for error detection
+                        let w1_before = self.cursor;
+
                         for _ in 0..count {
                             command::execute(
                                 action,
@@ -1007,6 +1192,31 @@ impl App {
                                 &mut self.registers,
                             );
                         }
+
+                        // World 1: track motion, energy, errors
+                        if self.level.is_world1() && worlds::is_motion_action(&action) {
+                            let motion_name = if count > 1 {
+                                format!("{}{}", count, worlds::skill_display_key(&action))
+                            } else {
+                                worlds::skill_display_key(&action).to_string()
+                            };
+                            self.w1_player_motions.push(motion_name);
+
+                            // Use 1 motion energy (each parsed action = 1 motion)
+                            self.energy.use_motion();
+
+                            // Error detection: check if we moved closer to the target
+                            if let Some(task) = self.tasks.iter().find(|t| t.is_completable()) {
+                                let target = (task.target_line, task.target_col);
+                                let dist_before = cursor_distance(w1_before.line, w1_before.col, target.0, target.1);
+                                let dist_after = cursor_distance(self.cursor.line, self.cursor.col, target.0, target.1);
+                                // If we didn't move closer and didn't reach the target, it's an error
+                                if dist_after >= dist_before && dist_after > 0 {
+                                    self.energy.record_error();
+                                }
+                            }
+                        }
+
                         self.check_task_completion();
                     }
                     ParseResult::Pending => {}
@@ -1367,6 +1577,22 @@ impl App {
                 self.completion_flash = Some((flash_text, Instant::now(), flash_color));
                 self.task_keystrokes = 0;
                 self.last_task_completion = Some(Instant::now());
+
+                // World 1: advance to next target, reset motion tracking, set new budget
+                if self.level.is_world1() {
+                    self.w1_current_target += 1;
+                    self.w1_player_motions.clear();
+                    if self.w1_current_target < self.w1_paths.len() {
+                        let next_optimal = self.w1_paths[self.w1_current_target].optimal_motions;
+                        // Level 5: budget = optimal exactly (must reach in 1 motion)
+                        let budget = if self.level.level == 5 {
+                            next_optimal
+                        } else {
+                            next_optimal + 3
+                        };
+                        self.energy.reset_for_target(budget);
+                    }
+                }
             }
         }
     }

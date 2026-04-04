@@ -255,6 +255,15 @@ pub fn assemble(segments: &[&Segment], level_ctx: Option<&LevelContext>) -> Asse
     // Recalculate keystroke budgets based on available motions for this world
     if let Some(ctx) = level_ctx {
         recalculate_keystroke_budgets(&buffer, &mut all_tasks, ctx.world);
+
+        // World 1: embed hint command into task description if not already there
+        if ctx.world == 1 {
+            for task in &mut all_tasks {
+                if !task.hint_command.is_empty() && !task.description.contains("hint:") {
+                    task.description = format!("{} (hint: {})", task.description, task.hint_command);
+                }
+            }
+        }
     }
 
     AssembledLevel {

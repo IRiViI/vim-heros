@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World 6: Search &amp; Replace (Regex) — Vim Heroes</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', Courier, monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ---- starfield ---- */
+#starfield {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 0; pointer-events: none;
+}
+
+/* ---- layout ---- */
+.container {
+  position: relative; z-index: 1;
+  max-width: 960px; margin: 0 auto; padding: 20px;
+}
+
+a.back {
+  color: #7b68ee; text-decoration: none; font-size: 14px;
+  display: inline-block; margin-bottom: 12px;
+  transition: color .2s;
+}
+a.back:hover { color: #a78bfa; }
+
+h1 {
+  font-size: 28px; text-align: center; margin-bottom: 6px;
+  background: linear-gradient(90deg, #7b68ee, #00e5ff);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.subtitle {
+  text-align: center; font-size: 13px; color: #888; margin-bottom: 18px;
+}
+
+/* ---- tabs ---- */
+.tabs {
+  display: flex; gap: 4px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap;
+}
+.tab-btn {
+  background: rgba(123,104,238,.12);
+  border: 1px solid rgba(123,104,238,.3);
+  color: #b0a0ff; padding: 8px 18px; font-family: inherit; font-size: 13px;
+  cursor: pointer; border-radius: 6px 6px 0 0; transition: .2s;
+}
+.tab-btn:hover { background: rgba(123,104,238,.25); }
+.tab-btn.active {
+  background: rgba(123,104,238,.3);
+  border-bottom-color: transparent;
+  color: #fff;
+}
+
+/* ---- demo panel ---- */
+.demo-panel {
+  display: none;
+  border: 1px solid rgba(123,104,238,.25);
+  border-radius: 0 8px 8px 8px;
+  overflow: hidden;
+  background: rgba(10,10,26,.85);
+}
+.demo-panel.active { display: block; }
+
+.demo-panel h2 {
+  padding: 12px 16px 4px;
+  font-size: 18px; color: #7b68ee;
+}
+.demo-panel .desc {
+  padding: 0 16px 10px;
+  font-size: 12px; color: #888;
+}
+
+canvas {
+  display: block; width: 100%; height: 420px;
+  background: transparent;
+}
+
+.caption-bar {
+  padding: 10px 16px;
+  font-size: 14px;
+  min-height: 44px;
+  color: #c8bfff;
+  border-top: 1px solid rgba(123,104,238,.15);
+  transition: opacity .4s;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0a0a1a; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+
+<div class="container">
+  <a href="index.html" class="back">&larr; Back to Overview</a>
+  <h1>World 6: Search &amp; Replace (Regex)</h1>
+  <p class="subtitle">Vim keys: / ? n N * # :s/pattern/replace/ :%s/</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="a">A: Space Fighter</button>
+    <button class="tab-btn" data-tab="b">B: Detective</button>
+    <button class="tab-btn" data-tab="c">C: Virus Scanner</button>
+  </div>
+
+  <div id="panel-a" class="demo-panel active">
+    <h2>Option A &mdash; Space Fighter</h2>
+    <p class="desc">Shoot-em-up: regex patterns fire lasers at alien code</p>
+    <canvas id="canvas-a"></canvas>
+    <div class="caption-bar" id="caption-a"></div>
+  </div>
+
+  <div id="panel-b" class="demo-panel">
+    <h2>Option B &mdash; Detective</h2>
+    <p class="desc">Mystery investigation: find and replace hidden bugs</p>
+    <canvas id="canvas-b"></canvas>
+    <div class="caption-bar" id="caption-b"></div>
+  </div>
+
+  <div id="panel-c" class="demo-panel">
+    <h2>Option C &mdash; Virus Scanner</h2>
+    <p class="desc">Tower defense: scan and quarantine infected code</p>
+    <canvas id="canvas-c"></canvas>
+    <div class="caption-bar" id="caption-c"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   SHARED UTILITIES
+   ========================================================= */
+
+// Star field background
+(function initStarfield() {
+  const cv = document.getElementById('starfield');
+  const ctx = cv.getContext('2d');
+  let stars = [];
+  function resize() {
+    cv.width = window.innerWidth;
+    cv.height = window.innerHeight;
+    stars = [];
+    for (let i = 0; i < 200; i++) {
+      stars.push({
+        x: Math.random() * cv.width,
+        y: Math.random() * cv.height,
+        r: Math.random() * 1.5 + 0.3,
+        a: Math.random(),
+        s: Math.random() * 0.005 + 0.002
+      });
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  (function draw() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    for (const s of stars) {
+      s.a += s.s;
+      const alpha = 0.3 + 0.7 * Math.abs(Math.sin(s.a));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180,200,255,${alpha})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  })();
+})();
+
+// Tab switching
+const tabBtns = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.demo-panel');
+let activeTab = 'a';
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const t = btn.dataset.tab;
+    document.getElementById('panel-' + t).classList.add('active');
+    activeTab = t;
+  });
+});
+
+// Caption cycler
+function cycleCaptions(elId, captions, interval) {
+  const el = document.getElementById(elId);
+  let idx = 0;
+  function show() {
+    el.style.opacity = 0;
+    setTimeout(() => {
+      el.textContent = captions[idx % captions.length];
+      el.style.opacity = 1;
+      idx++;
+    }, 400);
+  }
+  show();
+  setInterval(show, interval);
+}
+
+// High-DPI canvas helper
+function setupCanvas(id) {
+  const cv = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = cv.getBoundingClientRect();
+  let cw = rect.width, ch = rect.height;
+  if(!cw || !ch) {
+    const active = document.querySelector('.panel.active canvas');
+    if(active) { const ar = active.getBoundingClientRect(); cw = ar.width; ch = ar.height; }
+    else { cw = 700; ch = 420; }
+  }
+  cv.width = cw * dpr;
+  cv.height = ch * dpr;
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { cv, ctx, w: cw, h: ch };
+}
+
+// Ease
+function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+/* =========================================================
+   OPTION A — SPACE FIGHTER
+   ========================================================= */
+(function() {
+  const { cv, ctx, w, h } = setupCanvas('canvas-a');
+
+  const CYCLE = 10000; // 10s loop
+
+  const alienPatterns = [
+    { text: 'var x', x: 0.2 },
+    { text: 'TODO:', x: 0.5 },
+    { text: 'console.log', x: 0.8 },
+    { text: 'eval()', x: 0.35 },
+    { text: 'debugger', x: 0.65 }
+  ];
+
+  const regexCmds = [
+    { pattern: '/TODO/', target: 1, mode: 'destroy' },
+    { pattern: '/var/', target: 0, mode: 'destroy' },
+    { pattern: ':s/eval/safe/', target: 3, mode: 'transform' },
+    { pattern: '/console/', target: 2, mode: 'destroy' },
+    { pattern: ':s/debugger/logger/', target: 4, mode: 'transform' }
+  ];
+
+  // Stars for this canvas
+  const localStars = [];
+  for (let i = 0; i < 80; i++) {
+    localStars.push({ x: Math.random() * w, y: Math.random() * h, r: Math.random() * 1.2 + 0.2, speed: Math.random() * 0.4 + 0.1 });
+  }
+
+  // Particles
+  let particles = [];
+  function spawnParticles(px, py, color, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 3 + 1;
+      particles.push({
+        x: px, y: py,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        color: color,
+        r: Math.random() * 3 + 1
+      });
+    }
+  }
+
+  let score = 0;
+  let flashMsg = '';
+  let flashAlpha = 0;
+
+  // State machine
+  let phase = 0; // which regex command we're on
+  let phaseTime = 0;
+  let aliens = [];
+  let laser = null;
+  let done = false;
+  let lastTime = performance.now();
+
+  function resetAliens() {
+    aliens = alienPatterns.map((a, i) => ({
+      text: a.text,
+      x: a.x * w,
+      y: -30 - i * 50,
+      targetY: 60 + i * 55,
+      alive: true,
+      transformed: false,
+      alpha: 1,
+      transformText: ''
+    }));
+  }
+  resetAliens();
+
+  function resetAll() {
+    phase = 0;
+    phaseTime = 0;
+    score = 0;
+    laser = null;
+    done = false;
+    particles = [];
+    flashMsg = '';
+    flashAlpha = 0;
+    resetAliens();
+  }
+
+  const shipX = w / 2;
+  const shipY = h - 50;
+
+  function drawShip(x, y, friendly) {
+    ctx.save();
+    if (friendly) {
+      ctx.fillStyle = '#00e676';
+      ctx.strokeStyle = '#69f0ae';
+    } else {
+      ctx.fillStyle = '#7b68ee';
+      ctx.strokeStyle = '#a78bfa';
+    }
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y - 16);
+    ctx.lineTo(x - 14, y + 10);
+    ctx.lineTo(x + 14, y + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // engine glow
+    ctx.fillStyle = friendly ? 'rgba(0,230,118,0.3)' : 'rgba(0,229,255,0.3)';
+    ctx.beginPath();
+    ctx.arc(x, y + 12, 6 + Math.sin(performance.now() * 0.01) * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawAlien(a) {
+    ctx.save();
+    if (a.transformed) {
+      drawShip(a.x, a.y, true);
+      ctx.fillStyle = '#69f0ae';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(a.transformText, a.x, a.y + 26);
+    } else {
+      // alien body
+      ctx.globalAlpha = a.alpha;
+      ctx.fillStyle = '#ff1744';
+      ctx.strokeStyle = '#ff5252';
+      ctx.lineWidth = 2;
+      // hexagon
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 2;
+        const r = 18;
+        const px = a.x + Math.cos(angle) * r;
+        const py = a.y + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // text label
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(a.text, a.x, a.y);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
+  function update(dt) {
+    // Stars scroll
+    for (const s of localStars) {
+      s.y += s.speed;
+      if (s.y > h) { s.y = 0; s.x = Math.random() * w; }
+    }
+
+    // Move aliens down to target
+    for (const a of aliens) {
+      if (a.y < a.targetY) a.y += 1.2;
+    }
+
+    // Particles
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 0.02;
+    }
+    particles = particles.filter(p => p.life > 0);
+
+    // Flash fade
+    if (flashAlpha > 0) flashAlpha -= 0.015;
+
+    // Phase logic
+    phaseTime += dt;
+
+    const cmd = regexCmds[phase];
+    const target = aliens[cmd.target];
+
+    if (phaseTime < 500) {
+      // waiting
+    } else if (phaseTime < 800 && !laser) {
+      // Fire laser
+      laser = { x: shipX, y: shipY - 20, targetX: target.x, targetY: target.y, progress: 0 };
+    } else if (laser) {
+      laser.progress += 0.04;
+      if (laser.progress >= 1 && target.alive) {
+        if (cmd.mode === 'destroy') {
+          target.alive = false;
+          target.alpha = 0;
+          spawnParticles(target.x, target.y, '#ff5252', 25);
+          score += 100;
+          flashMsg = 'PATTERN MATCHED!';
+          flashAlpha = 1;
+        } else {
+          target.transformed = true;
+          target.transformText = cmd.pattern.split('/')[2] || 'ally';
+          spawnParticles(target.x, target.y, '#69f0ae', 15);
+          score += 150;
+          flashMsg = 'TRANSFORMED!';
+          flashAlpha = 1;
+        }
+        laser = null;
+      }
+    }
+
+    if (phaseTime > 2000 && !done) {
+      phaseTime = 0;
+      laser = null;
+      phase++;
+      if (phase >= regexCmds.length) {
+        done = true;
+        phase = regexCmds.length - 1; // hold on last
+        setTimeout(resetAll, 1500);
+      }
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Stars
+    for (const s of localStars) {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(150,170,255,0.6)';
+      ctx.fill();
+    }
+
+    // Aliens
+    for (const a of aliens) {
+      if (a.alive || a.transformed) drawAlien(a);
+    }
+
+    // Laser
+    if (laser) {
+      const lx = lerp(laser.x, laser.targetX, easeInOut(Math.min(laser.progress, 1)));
+      const ly = lerp(laser.y, laser.targetY, easeInOut(Math.min(laser.progress, 1)));
+      ctx.save();
+      ctx.strokeStyle = '#00e5ff';
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(shipX, shipY - 20);
+      ctx.lineTo(lx, ly);
+      ctx.stroke();
+      // glow ball at tip
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Ship
+    drawShip(shipX, shipY, false);
+
+    // Command input display
+    if (phase < regexCmds.length) {
+      const cmd = regexCmds[phase];
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.strokeStyle = '#7b68ee';
+      ctx.lineWidth = 1;
+      const tw = ctx.measureText(cmd.pattern).width;
+      const bw = Math.max(tw + 30, 120);
+      ctx.beginPath();
+      ctx.roundRect(shipX - bw/2, shipY + 18, bw, 26, 4);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = 'bold 13px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(cmd.pattern, shipX, shipY + 31);
+      ctx.restore();
+    }
+
+    // Particles
+    for (const p of particles) {
+      ctx.save();
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Score
+    ctx.save();
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('SCORE: ' + score, 16, 24);
+    ctx.restore();
+
+    // Flash message
+    if (flashAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = flashAlpha;
+      ctx.fillStyle = '#ffea00';
+      ctx.font = 'bold 22px monospace';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#ffea00';
+      ctx.shadowBlur = 20;
+      ctx.fillText(flashMsg, w / 2, h / 2 + 30);
+      ctx.restore();
+    }
+  }
+
+  function loop() {
+    const now = performance.now();
+    if (activeTab === 'a') {
+      update(now - lastTime);
+    }
+    lastTime = now;
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  cycleCaptions('caption-a', [
+    'Alien code patterns invade \u2014 type regex patterns to fire your lasers',
+    '/pattern/ searches and destroys matching aliens',
+    ':s/old/new/ transforms enemies into allies \u2014 search and replace in action'
+  ], 3500);
+})();
+
+
+/* =========================================================
+   OPTION B — DETECTIVE
+   ========================================================= */
+(function() {
+  const { cv, ctx, w, h } = setupCanvas('canvas-b');
+
+  const CYCLE = 12000;
+
+  const codeLines = [
+    'fn process_data(input: &str) -> Result<Data> {',
+    '    let parsed = parse(input)?;',
+    '    let bug = validate(parsed);  // suspicious',
+    '    if bug.is_err() {',
+    '        log_error("bug found in validation");',
+    '        return Err(bug.unwrap_err());',
+    '    }',
+    '    let result = transform(parsed);',
+    '    let bug = check_output(result);  // another one',
+    '    if bug.is_some() {',
+    '        eprintln!("bug detected in output");',
+    '    }',
+    '    Ok(result)',
+    '}'
+  ];
+
+  // Lines containing "bug"
+  const bugLines = [2, 3, 4, 5, 8, 9, 10];
+  const bugPositions = [];
+  // Pre-calculate bug text positions
+  for (const li of bugLines) {
+    const line = codeLines[li];
+    let idx = line.indexOf('bug');
+    while (idx !== -1) {
+      bugPositions.push({ line: li, col: idx });
+      idx = line.indexOf('bug', idx + 1);
+    }
+  }
+
+  const lineH = 22;
+  const codeX = 60;
+  const codeY = 50;
+
+  let phase = 0; // 0=reveal, 1=searching, 2=navigating, 3=replace
+  let phaseTime = 0;
+  let magX = -50, magY = codeY;
+  let magTargetIdx = 0;
+  let highlightedBugs = [];
+  let currentHighlight = -1;
+  let replaced = false;
+  let stampAlpha = 0;
+  let lastTime = performance.now();
+
+  function resetAll() {
+    phase = 0;
+    phaseTime = 0;
+    magX = -50;
+    magY = codeY;
+    magTargetIdx = 0;
+    highlightedBugs = [];
+    currentHighlight = -1;
+    replaced = false;
+    stampAlpha = 0;
+  }
+
+  // Manila folder background
+  function drawFolder() {
+    // Folder tab
+    ctx.fillStyle = '#c4a76c';
+    ctx.beginPath();
+    ctx.roundRect(30, 15, 120, 25, [6, 6, 0, 0]);
+    ctx.fill();
+    ctx.fillStyle = '#3a2f1a';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText('CASE #2847', 48, 32);
+
+    // Main folder
+    ctx.fillStyle = '#d4b87a';
+    ctx.fillRect(20, 35, w - 40, h - 50);
+    // Paper inside
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(35, 42, w - 70, h - 64);
+    // Subtle lines
+    ctx.strokeStyle = 'rgba(123,104,238,0.07)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < codeLines.length; i++) {
+      const y = codeY + i * lineH + 14;
+      ctx.beginPath();
+      ctx.moveTo(40, y);
+      ctx.lineTo(w - 40, y);
+      ctx.stroke();
+    }
+  }
+
+  function drawCode() {
+    ctx.font = '13px monospace';
+    for (let i = 0; i < codeLines.length; i++) {
+      const y = codeY + i * lineH;
+      // Line number
+      ctx.fillStyle = '#555';
+      ctx.textAlign = 'right';
+      ctx.fillText(String(i + 1), codeX - 8, y + 14);
+      ctx.textAlign = 'left';
+
+      if (replaced) {
+        // Show replaced text
+        const line = codeLines[i].replace(/bug/g, 'fix');
+        const isBugLine = bugLines.includes(i);
+        if (isBugLine) {
+          // Green glow on fixed text
+          const parts = line.split('fix');
+          let cx = codeX;
+          for (let p = 0; p < parts.length; p++) {
+            ctx.fillStyle = '#a0a0a0';
+            ctx.fillText(parts[p], cx, y + 14);
+            cx += ctx.measureText(parts[p]).width;
+            if (p < parts.length - 1) {
+              ctx.fillStyle = '#00e676';
+              ctx.shadowColor = '#00e676';
+              ctx.shadowBlur = 8;
+              ctx.fillText('fix', cx, y + 14);
+              ctx.shadowBlur = 0;
+              cx += ctx.measureText('fix').width;
+            }
+          }
+        } else {
+          ctx.fillStyle = '#a0a0a0';
+          ctx.fillText(line, codeX, y + 14);
+        }
+      } else {
+        const line = codeLines[i];
+        const isBugLine = bugLines.includes(i);
+        // Highlight matching bugs
+        if (isBugLine && highlightedBugs.some(b => b.line === i)) {
+          const parts = line.split('bug');
+          let cx = codeX;
+          for (let p = 0; p < parts.length; p++) {
+            ctx.fillStyle = '#a0a0a0';
+            ctx.fillText(parts[p], cx, y + 14);
+            cx += ctx.measureText(parts[p]).width;
+            if (p < parts.length - 1) {
+              // highlight background
+              const bugW = ctx.measureText('bug').width;
+              const isCurrentBug = highlightedBugs.findIndex(b => b.line === i) === currentHighlight;
+              ctx.fillStyle = isCurrentBug ? 'rgba(255,235,59,0.3)' : 'rgba(255,23,68,0.2)';
+              ctx.fillRect(cx - 2, y, bugW + 4, lineH);
+              ctx.fillStyle = '#ff1744';
+              ctx.shadowColor = '#ff1744';
+              ctx.shadowBlur = 6;
+              ctx.fillText('bug', cx, y + 14);
+              ctx.shadowBlur = 0;
+              cx += bugW;
+            }
+          }
+        } else if (isBugLine) {
+          // Subtle red tint before discovery
+          ctx.fillStyle = 'rgba(255,23,68,0.05)';
+          ctx.fillRect(codeX - 4, y, w - 120, lineH);
+          ctx.fillStyle = '#a0a0a0';
+          ctx.fillText(line, codeX, y + 14);
+        } else {
+          ctx.fillStyle = '#a0a0a0';
+          ctx.fillText(line, codeX, y + 14);
+        }
+      }
+    }
+  }
+
+  function drawMagnifyingGlass(x, y) {
+    ctx.save();
+    ctx.strokeStyle = '#7b68ee';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#7b68ee';
+    ctx.shadowBlur = 10;
+    // Glass circle
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.stroke();
+    // Handle
+    ctx.beginPath();
+    ctx.moveTo(x + 13, y + 13);
+    ctx.lineTo(x + 26, y + 26);
+    ctx.stroke();
+    // Lens shine
+    ctx.strokeStyle = 'rgba(123,104,238,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x - 4, y - 4, 8, -0.8, 0.5);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawCommandLine(text) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.strokeStyle = '#7b68ee';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(40, h - 42, w - 80, 28, 4);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(text, 52, h - 24);
+    ctx.restore();
+  }
+
+  function drawStamp() {
+    if (stampAlpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = stampAlpha;
+    ctx.translate(w / 2, h / 2);
+    ctx.rotate(-0.2);
+    ctx.strokeStyle = '#00e676';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(-100, -30, 200, 60, 8);
+    ctx.stroke();
+    ctx.fillStyle = '#00e676';
+    ctx.font = 'bold 28px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('CASE CLOSED', 0, 0);
+    ctx.restore();
+  }
+
+  function update(dt) {
+    phaseTime += dt;
+
+    if (phase === 0) {
+      // Show code, subtle bugs
+      if (phaseTime > 1500) { phase = 1; phaseTime = 0; }
+    } else if (phase === 1) {
+      // Magnifying glass searching
+      const searchSpeed = phaseTime / 3000;
+      if (searchSpeed < 1) {
+        // Sweep across lines
+        const sweepLine = Math.floor(searchSpeed * codeLines.length);
+        magY = codeY + sweepLine * lineH + lineH / 2;
+        magX = codeX + (searchSpeed * 4 % 1) * (w - 160);
+        // Discover bugs as we sweep
+        for (const bp of bugPositions) {
+          if (bp.line <= sweepLine && !highlightedBugs.some(h => h.line === bp.line && h.col === bp.col)) {
+            highlightedBugs.push(bp);
+          }
+        }
+      } else {
+        highlightedBugs = [...bugPositions];
+        phase = 2;
+        phaseTime = 0;
+        currentHighlight = 0;
+      }
+    } else if (phase === 2) {
+      // Navigate with n/N
+      const navInterval = 600;
+      const navStep = Math.floor(phaseTime / navInterval);
+      if (navStep < highlightedBugs.length) {
+        currentHighlight = navStep;
+      } else if (navStep < highlightedBugs.length * 2) {
+        // Going backwards with N
+        currentHighlight = highlightedBugs.length * 2 - 1 - navStep;
+        if (currentHighlight < 0) currentHighlight = 0;
+      } else {
+        phase = 3;
+        phaseTime = 0;
+      }
+      // Move magnifying glass to current
+      if (currentHighlight >= 0 && currentHighlight < highlightedBugs.length) {
+        const cb = highlightedBugs[currentHighlight];
+        magX = lerp(magX, codeX + cb.col * 7.8 + 12, 0.15);
+        magY = lerp(magY, codeY + cb.line * lineH + lineH / 2, 0.15);
+      }
+    } else if (phase === 3) {
+      // Replace all
+      if (phaseTime > 800 && !replaced) {
+        replaced = true;
+        stampAlpha = 1;
+      }
+      if (stampAlpha > 0 && replaced && phaseTime > 2000) {
+        // hold stamp
+      }
+      if (phaseTime > 4000) {
+        resetAll();
+      }
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    drawFolder();
+    drawCode();
+
+    if (phase === 1 || phase === 2) {
+      drawMagnifyingGlass(magX, magY);
+    }
+
+    // Command line
+    if (phase === 1) {
+      drawCommandLine('/bug');
+    } else if (phase === 2) {
+      const isForward = currentHighlight <= Math.floor(highlightedBugs.length / 2) || phaseTime < highlightedBugs.length * 600;
+      drawCommandLine(isForward ? 'n  (next match)' : 'N  (previous match)');
+    } else if (phase === 3) {
+      drawCommandLine(':%s/bug/fix/g');
+    }
+
+    drawStamp();
+  }
+
+  let lt = performance.now();
+  (function loop() {
+    const now = performance.now();
+    if (activeTab === 'b') {
+      update(now - lt);
+    }
+    lt = now;
+    draw();
+    requestAnimationFrame(loop);
+  })();
+
+  cycleCaptions('caption-b', [
+    'Bugs hide in the codebase \u2014 use /pattern to search for clues',
+    'n and N navigate between matches \u2014 investigate every instance',
+    ':%s/bug/fix/g fixes all instances at once \u2014 case closed'
+  ], 4000);
+})();
+
+
+/* =========================================================
+   OPTION C — VIRUS SCANNER
+   ========================================================= */
+(function() {
+  const { cv, ctx, w, h } = setupCanvas('canvas-c');
+
+  const codeLines = [
+    'use std::collections::HashMap;',
+    '',
+    'pub struct DataStore {',
+    '    infected: HashMap<String, Vec<u8>>,',
+    '    cache: Option<Vec<infected>>,',
+    '    status: infected,',
+    '}',
+    '',
+    'impl DataStore {',
+    '    pub fn new() -> Self {',
+    '        let infected = HashMap::new();',
+    '        DataStore { infected, cache: None, status: infected }',
+    '    }',
+    '    pub fn process(&mut self) {',
+    '        for (key, val) in &self.infected {',
+    '            // infected pattern spreads here',
+    '        }',
+    '    }',
+    '}'
+  ];
+
+  const infectedKeyword = 'infected';
+  // Find all occurrences
+  const infectedPositions = [];
+  codeLines.forEach((line, li) => {
+    let idx = line.indexOf(infectedKeyword);
+    while (idx !== -1) {
+      infectedPositions.push({ line: li, col: idx, scanned: false, quarantined: false, cleaned: false });
+      idx = line.indexOf(infectedKeyword, idx + 1);
+    }
+  });
+
+  const lineH = 20;
+  const codeX = 55;
+  const codeY = 40;
+
+  let phase = 0; // 0=spreading, 1=forward scan *, 2=backward scan #, 3=replace
+  let phaseTime = 0;
+  let spreadLevel = 0; // how many lines are "infected" visually
+  let scanBeamY = -10;
+  let scanDir = 1; // 1 forward, -1 backward
+  let infectionPct = 0;
+  let lastTime = performance.now();
+
+  // Infection glow per line
+  const lineInfection = new Array(codeLines.length).fill(0);
+
+  function resetAll() {
+    phase = 0;
+    phaseTime = 0;
+    spreadLevel = 0;
+    scanBeamY = -10;
+    scanDir = 1;
+    infectionPct = 0;
+    for (let i = 0; i < lineInfection.length; i++) lineInfection[i] = 0;
+    for (const p of infectedPositions) {
+      p.scanned = false;
+      p.quarantined = false;
+      p.cleaned = false;
+    }
+  }
+
+  function drawCode() {
+    ctx.font = '12px monospace';
+    for (let i = 0; i < codeLines.length; i++) {
+      const y = codeY + i * lineH;
+      const line = codeLines[i];
+
+      // Line number
+      ctx.fillStyle = '#444';
+      ctx.textAlign = 'right';
+      ctx.fillText(String(i + 1), codeX - 8, y + 14);
+      ctx.textAlign = 'left';
+
+      // Infection glow background
+      if (lineInfection[i] > 0) {
+        ctx.fillStyle = `rgba(255,23,68,${lineInfection[i] * 0.08})`;
+        ctx.fillRect(codeX - 4, y, w - 100, lineH);
+      }
+
+      // Render line with highlights
+      const matches = infectedPositions.filter(p => p.line === i);
+      if (matches.length > 0) {
+        let cx = codeX;
+        let lastEnd = 0;
+        for (const m of matches) {
+          // Text before match
+          const before = line.substring(lastEnd, m.col);
+          ctx.fillStyle = '#a0a0a0';
+          ctx.fillText(before, cx, y + 14);
+          cx += ctx.measureText(before).width;
+
+          // The keyword
+          const kw = m.cleaned ? 'clean' : infectedKeyword;
+          const kwW = ctx.measureText(kw).width;
+
+          if (m.cleaned) {
+            ctx.fillStyle = '#00e676';
+            ctx.shadowColor = '#00e676';
+            ctx.shadowBlur = 8;
+            ctx.fillText(kw, cx, y + 14);
+            ctx.shadowBlur = 0;
+          } else if (m.quarantined) {
+            // Yellow quarantine outline
+            ctx.strokeStyle = '#ffea00';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(cx - 2, y + 1, kwW + 4, lineH - 2);
+            ctx.fillStyle = '#ffea00';
+            ctx.fillText(kw, cx, y + 14);
+          } else if (m.scanned) {
+            ctx.fillStyle = '#ff5252';
+            ctx.shadowColor = '#ff1744';
+            ctx.shadowBlur = 6;
+            ctx.fillText(kw, cx, y + 14);
+            ctx.shadowBlur = 0;
+          } else {
+            // Infected but not yet found - subtle red
+            ctx.fillStyle = `rgba(255,23,68,${0.5 + lineInfection[i] * 0.05})`;
+            ctx.fillText(kw, cx, y + 14);
+          }
+
+          cx += kwW;
+          lastEnd = m.col + infectedKeyword.length;
+        }
+        // Remaining text
+        const after = line.substring(lastEnd);
+        ctx.fillStyle = '#a0a0a0';
+        ctx.fillText(after, cx, y + 14);
+      } else {
+        ctx.fillStyle = '#a0a0a0';
+        ctx.fillText(line, codeX, y + 14);
+      }
+    }
+  }
+
+  function drawScanBeam() {
+    if (phase !== 1 && phase !== 2) return;
+    ctx.save();
+    const beamColor = phase === 1 ? '#00e5ff' : '#e040fb';
+    ctx.strokeStyle = beamColor;
+    ctx.shadowColor = beamColor;
+    ctx.shadowBlur = 15;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(codeX - 10, scanBeamY);
+    ctx.lineTo(w - 50, scanBeamY);
+    ctx.stroke();
+    // Arrow
+    const arrowX = phase === 1 ? w - 55 : codeX - 15;
+    const arrowDir = phase === 1 ? 1 : -1;
+    ctx.fillStyle = beamColor;
+    ctx.beginPath();
+    ctx.moveTo(arrowX + 8 * arrowDir, scanBeamY);
+    ctx.lineTo(arrowX, scanBeamY - 5);
+    ctx.lineTo(arrowX, scanBeamY + 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawHUD() {
+    // Infection percentage
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.beginPath();
+    ctx.roundRect(w - 200, 8, 185, 22, 4);
+    ctx.fill();
+    const pct = Math.min(infectionPct, 100);
+    const barW = 100;
+    // Background bar
+    ctx.fillStyle = '#333';
+    ctx.fillRect(w - 190, 13, barW, 12);
+    // Fill
+    const fillColor = pct > 70 ? '#ff1744' : pct > 40 ? '#ffea00' : '#00e676';
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(w - 190, 13, barW * pct / 100, 12);
+    // Label
+    ctx.fillStyle = '#e0e0e0';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Infection: ${Math.round(pct)}%`, w - 82, 23);
+    ctx.restore();
+
+    // Command display
+    let cmdText = '';
+    if (phase === 1) cmdText = '* (search word forward)';
+    else if (phase === 2) cmdText = '# (search word backward)';
+    else if (phase === 3) cmdText = ':%s/infected/clean/g';
+    if (cmdText) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.8)';
+      ctx.strokeStyle = '#7b68ee';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(40, h - 38, w - 80, 26, 4);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = 'bold 13px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(cmdText, 52, h - 21);
+      ctx.restore();
+    }
+  }
+
+  function update(dt) {
+    phaseTime += dt;
+
+    if (phase === 0) {
+      // Infection spreads
+      const spreadRate = phaseTime / 2500;
+      // Infect lines containing the keyword first, then adjacent
+      for (const p of infectedPositions) {
+        if (spreadRate > 0.1) lineInfection[p.line] = Math.min(lineInfection[p.line] + 0.15, 3);
+      }
+      // Spread to adjacent
+      if (spreadRate > 0.3) {
+        for (let i = 0; i < lineInfection.length; i++) {
+          if (lineInfection[i] > 0) {
+            if (i > 0) lineInfection[i-1] = Math.min(lineInfection[i-1] + 0.02, 2);
+            if (i < lineInfection.length - 1) lineInfection[i+1] = Math.min(lineInfection[i+1] + 0.02, 2);
+          }
+        }
+      }
+      infectionPct = (lineInfection.reduce((a, b) => a + Math.min(b, 1), 0) / lineInfection.length) * 100;
+      if (phaseTime > 2500) { phase = 1; phaseTime = 0; scanBeamY = codeY; }
+    } else if (phase === 1) {
+      // Forward scan with *
+      scanBeamY = codeY + (phaseTime / 3000) * (codeLines.length * lineH);
+      for (const p of infectedPositions) {
+        const py = codeY + p.line * lineH + lineH / 2;
+        if (scanBeamY >= py && !p.scanned) {
+          p.scanned = true;
+          p.quarantined = true;
+        }
+      }
+      if (phaseTime > 3000) {
+        phase = 2;
+        phaseTime = 0;
+        scanBeamY = codeY + codeLines.length * lineH;
+        // Un-quarantine to re-scan backward
+        for (const p of infectedPositions) p.quarantined = false;
+      }
+    } else if (phase === 2) {
+      // Backward scan with #
+      scanBeamY = codeY + codeLines.length * lineH - (phaseTime / 3000) * (codeLines.length * lineH);
+      for (const p of infectedPositions) {
+        const py = codeY + p.line * lineH + lineH / 2;
+        if (scanBeamY <= py) {
+          p.quarantined = true;
+        }
+      }
+      // Infection slows
+      infectionPct = Math.max(infectionPct - 0.05, infectionPct * 0.7 + 10);
+      if (phaseTime > 3000) { phase = 3; phaseTime = 0; }
+    } else if (phase === 3) {
+      // Replace
+      if (phaseTime > 800) {
+        for (const p of infectedPositions) {
+          p.cleaned = true;
+          p.quarantined = false;
+        }
+        // Clear infection
+        for (let i = 0; i < lineInfection.length; i++) {
+          lineInfection[i] = Math.max(lineInfection[i] - 0.1, 0);
+        }
+        infectionPct = Math.max(infectionPct - 1, 0);
+      }
+      if (phaseTime > 4000) {
+        resetAll();
+      }
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Dark code editor background
+    ctx.fillStyle = '#0d0d24';
+    ctx.fillRect(15, 5, w - 30, h - 15);
+    ctx.strokeStyle = 'rgba(123,104,238,0.2)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(15, 5, w - 30, h - 15);
+
+    // Title bar
+    ctx.fillStyle = '#151530';
+    ctx.fillRect(15, 5, w - 30, 22);
+    ctx.fillStyle = '#666';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('data_store.rs \u2014 VIRUS SCANNER ACTIVE', w / 2, 19);
+
+    drawCode();
+    drawScanBeam();
+    drawHUD();
+  }
+
+  let lt = performance.now();
+  (function loop() {
+    const now = performance.now();
+    if (activeTab === 'c') {
+      update(now - lt);
+    }
+    lt = now;
+    draw();
+    requestAnimationFrame(loop);
+  })();
+
+  cycleCaptions('caption-c', [
+    'Infected code patterns spread \u2014 scan with * to find all instances of a word',
+    '# searches backward \u2014 corner the virus from both directions',
+    ':%s/infected/clean/g quarantines all matches \u2014 stop the spread'
+  ], 3500);
+})();
+
+</script>
+</body>
+</html>

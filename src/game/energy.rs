@@ -3,11 +3,22 @@ use std::time::{Duration, Instant};
 /// Default time limit per task (seconds).
 const DEFAULT_TIMER_SECS: f64 = 20.0;
 
+/// Energy mode determines how the survival mechanic works.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EnergyMode {
+    /// Classic timer-based: countdown in real time, resets on task completion.
+    Timer,
+    /// Motion-count-based (World 1): each motion costs 1, resets on target.
+    /// Budget is set per-target from BFS optimal path + buffer.
+    MotionCount,
+}
+
 /// A countdown timer — the core survival mechanic.
 ///
-/// The timer counts down in real time. Completing a task resets it.
-/// If the timer reaches 0 the game is over.
+/// In Timer mode: counts down in real time. Completing a task resets it.
+/// In MotionCount mode: each motion costs 1 energy. Budget is set per target.
 pub struct Energy {
+    // --- Timer mode fields ---
     /// Maximum seconds on the clock (reset value).
     pub max_seconds: f64,
     /// When the timer was last reset (game start or task completion).
@@ -18,6 +29,18 @@ pub struct Energy {
     paused: bool,
     /// Last restore info for "+time" popup display.
     pub last_restore: Option<f64>,
+
+    // --- MotionCount mode fields ---
+    /// Current energy mode.
+    pub mode: EnergyMode,
+    /// Current motion count budget (MotionCount mode).
+    pub motion_budget: usize,
+    /// Motions used so far for the current target.
+    pub motions_used: usize,
+    /// Errors committed (motions that didn't move closer to target).
+    pub errors: usize,
+    /// Maximum errors allowed before death.
+    pub max_errors: usize,
 }
 
 impl Energy {
@@ -28,6 +51,11 @@ impl Energy {
             paused_duration: Duration::ZERO,
             paused: true, // Start paused (countdown phase)
             last_restore: None,
+            mode: EnergyMode::Timer,
+            motion_budget: 0,
+            motions_used: 0,
+            errors: 0,
+            max_errors: 10,
         }
     }
 
@@ -35,6 +63,74 @@ impl Energy {
     pub fn default_new() -> Self {
         Self::new(DEFAULT_TIMER_SECS)
     }
+
+    /// Create a motion-count energy system (World 1).
+    pub fn new_motion_count(max_errors: usize) -> Self {
+        Self {
+            max_seconds: 0.0,
+            last_reset: Instant::now(),
+            paused_duration: Duration::ZERO,
+            paused: false,
+            last_restore: None,
+            mode: EnergyMode::MotionCount,
+            motion_budget: 0,
+            motions_used: 0,
+            errors: 0,
+            max_errors,
+        }
+    }
+
+    // --- Motion count methods ---
+
+    /// Set the energy budget for the next target.
+    pub fn set_budget(&mut self, budget: usize) {
+        self.motion_budget = budget;
+        self.motions_used = 0;
+    }
+
+    /// Use one motion. Returns true if still alive.
+    pub fn use_motion(&mut self) -> bool {
+        self.motions_used += 1;
+        !self.is_depleted()
+    }
+
+    /// Record an error (motion that didn't move closer to target).
+    /// Returns true if still alive.
+    pub fn record_error(&mut self) -> bool {
+        self.errors += 1;
+        self.errors <= self.max_errors
+    }
+
+    /// Check if energy is depleted based on current mode.
+    pub fn is_over_budget(&self) -> bool {
+        if self.mode == EnergyMode::MotionCount {
+            self.motion_budget > 0 && self.motions_used > self.motion_budget
+        } else {
+            false
+        }
+    }
+
+    /// Check if errors exceeded max allowed.
+    pub fn errors_exceeded(&self) -> bool {
+        self.errors > self.max_errors
+    }
+
+    /// Energy remaining as a fraction (for MotionCount bar display).
+    pub fn motion_fraction(&self) -> f64 {
+        if self.motion_budget == 0 {
+            return 1.0;
+        }
+        let remaining = self.motion_budget.saturating_sub(self.motions_used);
+        remaining as f64 / self.motion_budget as f64
+    }
+
+    /// Reset energy for next target in MotionCount mode.
+    pub fn reset_for_target(&mut self, budget: usize) {
+        self.motion_budget = budget;
+        self.motions_used = 0;
+    }
+
+    // --- Timer mode methods ---
 
     /// Seconds remaining on the timer.
     pub fn remaining_seconds(&self) -> f64 {
@@ -48,15 +144,27 @@ impl Energy {
 
     /// Is the timer depleted (game over)?
     pub fn is_depleted(&self) -> bool {
-        self.remaining_seconds() <= 0.0
+        match self.mode {
+            EnergyMode::Timer => self.remaining_seconds() <= 0.0,
+            EnergyMode::MotionCount => {
+                self.errors_exceeded()
+            }
+        }
     }
 
     /// Current timer as a percentage (0.0 to 100.0).
     pub fn percentage(&self) -> f64 {
-        if self.max_seconds <= 0.0 {
-            return 0.0;
+        match self.mode {
+            EnergyMode::Timer => {
+                if self.max_seconds <= 0.0 {
+                    return 0.0;
+                }
+                (self.remaining_seconds() / self.max_seconds * 100.0).clamp(0.0, 100.0)
+            }
+            EnergyMode::MotionCount => {
+                (self.motion_fraction() * 100.0).clamp(0.0, 100.0)
+            }
         }
-        (self.remaining_seconds() / self.max_seconds * 100.0).clamp(0.0, 100.0)
     }
 
     /// Start the timer (after countdown finishes).
@@ -68,10 +176,18 @@ impl Energy {
 
     /// Reset the timer to full (on task completion).
     pub fn restore_task(&mut self) {
-        let remaining = self.remaining_seconds();
-        self.last_restore = Some(self.max_seconds - remaining);
-        self.paused_duration = Duration::ZERO;
-        self.last_reset = Instant::now();
+        match self.mode {
+            EnergyMode::Timer => {
+                let remaining = self.remaining_seconds();
+                self.last_restore = Some(self.max_seconds - remaining);
+                self.paused_duration = Duration::ZERO;
+                self.last_reset = Instant::now();
+            }
+            EnergyMode::MotionCount => {
+                // Budget will be set separately via set_budget / reset_for_target
+                self.motions_used = 0;
+            }
+        }
     }
 
     /// Reset everything (for new level / restart).
@@ -80,6 +196,9 @@ impl Energy {
         self.last_reset = Instant::now();
         self.paused = true;
         self.last_restore = None;
+        self.motions_used = 0;
+        self.motion_budget = 0;
+        self.errors = 0;
     }
 
     /// Pause the timer (for practice mode).
@@ -165,5 +284,40 @@ mod tests {
         thread::sleep(Duration::from_millis(100));
         e.reset();
         assert!((e.remaining_seconds() - 2.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_motion_count_basic() {
+        let mut e = Energy::new_motion_count(3);
+        e.set_budget(5);
+        assert_eq!(e.motions_used, 0);
+        assert!(!e.is_depleted());
+
+        e.use_motion();
+        e.use_motion();
+        assert_eq!(e.motions_used, 2);
+        assert!(!e.is_depleted());
+    }
+
+    #[test]
+    fn test_motion_count_errors() {
+        let mut e = Energy::new_motion_count(2);
+        e.set_budget(10);
+        assert!(e.record_error()); // 1 error, max 2: alive
+        assert!(e.record_error()); // 2 errors: alive
+        assert!(!e.record_error()); // 3 errors: dead
+        assert!(e.is_depleted());
+    }
+
+    #[test]
+    fn test_motion_count_reset_for_target() {
+        let mut e = Energy::new_motion_count(5);
+        e.set_budget(3);
+        e.use_motion();
+        e.use_motion();
+        assert_eq!(e.motions_used, 2);
+        e.reset_for_target(5);
+        assert_eq!(e.motions_used, 0);
+        assert_eq!(e.motion_budget, 5);
     }
 }

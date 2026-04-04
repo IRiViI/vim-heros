@@ -1,5 +1,5 @@
 [meta]
-id = "intro-1-1-first-steps"
+id = "intro-1-1-basic-movement"
 zone = "intro"
 language = "python"
 tags = ["intro", "movement", "hjkl"]
@@ -9,29 +9,27 @@ intro_level = "1-1"
 
 [code]
 content = """
-# =============================================
-# WELCOME TO VIM HEROES!
-# =============================================
+# ===================================
+# WORLD 1: Motion
+# ===================================
 #
-# The code scrolls down. Your cursor must
-# keep up or it's GAME OVER.
+# Welcome to Vim Heroes!
 #
-# Highlighted words are TASKS -- move your
-# cursor to them to complete them!
+# Code scrolls down. Reach the targets
+# before they scroll away.
 #
-# YOUR FIRST COMMANDS:
+# Your keys:
+#   h -- left
+#   j -- down
+#   k -- up
+#   l -- right
 #
-#   h  move left
-#   j  move down
-#   k  move up
-#   l  move right
+# Each motion costs 1 energy.
+# Energy resets when you hit a target.
 #
-# You can also use COUNTS:
-#   5j  move down 5 lines
-#   3l  move right 3 characters
-#
-# Try it! Move to each highlighted target.
-# =============================================
+# The highlighted target below is your
+# first objective. Go!
+# ===================================
 
 name = "hero"
 level = 1
@@ -45,7 +43,7 @@ message = "Use h, j, k, l to move"
 [[tasks]]
 type = "move_to"
 anchor = { pattern = "hero", occurrence = 1 }
-description = "Move to 'hero'"
+description = "Move to 'hero' (hint: j then l)"
 points = 25
 optimal_keys = 3
 
@@ -53,7 +51,7 @@ optimal_keys = 3
 [[tasks]]
 type = "move_to"
 anchor = { pattern = "score", occurrence = 1 }
-description = "Move to 'score'"
+description = "Move to 'score' (hint: jj)"
 points = 25
 optimal_keys = 3
 
@@ -61,7 +59,7 @@ optimal_keys = 3
 [[tasks]]
 type = "move_to"
 anchor = { pattern = "greeting", occurrence = 1 }
-description = "Move to 'greeting'"
+description = "Move to 'greeting' (hint: jj)"
 points = 25
 optimal_keys = 2
 
@@ -69,6 +67,6 @@ optimal_keys = 2
 [[tasks]]
 type = "move_to"
 anchor = { pattern = "message", occurrence = 1 }
-description = "Move to 'message'"
+description = "Move to 'message' (hint: j)"
 points = 25
 optimal_keys = 2

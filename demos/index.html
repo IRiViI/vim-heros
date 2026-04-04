@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vim Heroes — World Gameplay Concepts</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0d0d1a;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Starfield background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 45% 45%, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 80% 15%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 25% 35%, rgba(255,255,255,0.5), transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 40px 20px 20px;
+  }
+
+  h1 {
+    font-size: 2.8em;
+    font-weight: bold;
+    background: linear-gradient(135deg, #00ff88, #00bbff, #ff44cc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+  }
+
+  header p {
+    color: #888;
+    font-size: 1em;
+    margin-bottom: 10px;
+  }
+
+  .subtitle {
+    color: #666;
+    font-size: 0.85em;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  /* Zone labels */
+  .zone-section {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .zone-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 30px 0 16px;
+    padding: 0 4px;
+  }
+
+  .zone-label h2 {
+    font-size: 1.1em;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    white-space: nowrap;
+  }
+
+  .zone-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, currentColor, transparent);
+    opacity: 0.3;
+  }
+
+  .zone-starter .zone-label h2 { color: #00ff88; }
+  .zone-starter .zone-label { color: #00ff88; }
+  .zone-junior .zone-label h2 { color: #00bbff; }
+  .zone-junior .zone-label { color: #00bbff; }
+  .zone-medior .zone-label h2 { color: #ff8844; }
+  .zone-medior .zone-label { color: #ff8844; }
+  .zone-senior .zone-label h2 { color: #ff44cc; }
+  .zone-senior .zone-label { color: #ff44cc; }
+
+  /* World grid */
+  .worlds-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+    margin-bottom: 10px;
+  }
+
+  .world-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px 24px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .world-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+    opacity: 0.8;
+  }
+
+  .world-card:hover {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+
+  .zone-starter .world-card::before { background: linear-gradient(90deg, #00ff88, #00cc66); }
+  .zone-starter .world-card:hover { border-color: rgba(0,255,136,0.3); }
+  .zone-junior .world-card::before { background: linear-gradient(90deg, #00bbff, #0088cc); }
+  .zone-junior .world-card:hover { border-color: rgba(0,187,255,0.3); }
+  .zone-medior .world-card::before { background: linear-gradient(90deg, #ff8844, #cc6622); }
+  .zone-medior .world-card:hover { border-color: rgba(255,136,68,0.3); }
+  .zone-senior .world-card::before { background: linear-gradient(90deg, #ff44cc, #cc2299); }
+  .zone-senior .world-card:hover { border-color: rgba(255,68,204,0.3); }
+
+  .world-number {
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    opacity: 0.5;
+    margin-bottom: 6px;
+  }
+
+  .world-title {
+    font-size: 1.3em;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+
+  .world-keys {
+    font-size: 0.8em;
+    color: #888;
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+
+  .world-keys code {
+    background: rgba(255,255,255,0.08);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.95em;
+    color: #aaa;
+  }
+
+  .world-options {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .option-tag {
+    font-size: 0.75em;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #aaa;
+    white-space: nowrap;
+  }
+
+  .zone-starter .option-tag { border-color: rgba(0,255,136,0.15); color: rgba(0,255,136,0.7); }
+  .zone-junior .option-tag { border-color: rgba(0,187,255,0.15); color: rgba(0,187,255,0.7); }
+  .zone-medior .option-tag { border-color: rgba(255,136,68,0.15); color: rgba(255,136,68,0.7); }
+  .zone-senior .option-tag { border-color: rgba(255,68,204,0.15); color: rgba(255,68,204,0.7); }
+
+  /* Footer */
+  footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 40px 20px;
+    color: #444;
+    font-size: 0.8em;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    h1 { font-size: 1.8em; }
+    .worlds-grid { grid-template-columns: 1fr; }
+    .world-card { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VIM HEROES</h1>
+  <p>World Gameplay Concepts</p>
+  <div class="subtitle">
+    Each world teaches a different Vim skill set through a unique gameplay genre.
+    Click a world to see 3 animated gameplay demos with narrated captions.
+  </div>
+</header>
+
+<!-- STARTER ZONE -->
+<div class="zone-section zone-starter">
+  <div class="zone-label"><h2>Starter Zone</h2></div>
+  <div class="worlds-grid">
+    <a class="world-card" href="world-01-movement.html">
+      <div class="world-number">World 1</div>
+      <div class="world-title">Basic Movement</div>
+      <div class="world-keys">
+        <code>h j k l</code> <code>w b e</code> <code>0 $</code> <code>gg G</code> <code>{n}G</code>
+      </div>
+      <div class="world-options">
+        <span class="option-tag">A: Rhythm Runner</span>
+        <span class="option-tag">B: Maze Runner</span>
+        <span class="option-tag">C: Courier</span>
+      </div>
+    </a>
+    <a class="world-card" href="world-02-editing.html">
+      <div class="world-number">World 2</div>
+      <div class="world-title">Insert & Basic Editing</div>
+      <div class="world-keys">
+        <code>i I a A</code> <code>o O</code> <code>x dd D</code> <code>C s S</code> <code>r R</code>
+      </div>
+      <div class="world-options">
+        <span class="option-tag">A: The Typewriter</span>
+        <span class="option-tag">B: Assembly Line</span>
+        <span class="option-tag">C: Code Hospital</span>
+      </div>
+    </a>
+    <a class="world-card" href="world-03-verbnoun.html">
+      <div class="world-number">World 3</div>
+      <div class="world-title">Operators + Motions</div>
+      <div class="world-keys">
+        <code>d{motion}</code> <code>c{motion}</code> <code>y{motion}</code> <code>>{motion}</code>
+      </div>
+      <div class="world-options">
+        <span class="option-tag">A: Combo Fighter</span>
+        <span class="option-tag">B: Spell Crafter</span>
+        <span class="option-tag">C: Code Sculptor</span>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- JUNIOR ZONE -->
+<div class="zone-section zone-junior">
+  <div class="zone-label"><h2>Junior Zone</h2></div>
+  <div class="worlds-grid">
+    <a class="world-card" href="world-04-textobjects.html">
+      <div class="world-number">World 4</div>
+      <div class="world-title">Text Objects</div>
+      <div class="world-keys">
+        <code>iw aw</code> <code>i" a"</code> <code>i( a(</code> <code>iB aB</code> <code>it at</code>
+      </div>
+      <div class="world-options">
+        <span class="option-tag">A: Surgeon</span>
+        <span class="option-tag">B: Matryoshka</span>
+        <span class="option-tag">C: Bomb Defusal</span>
+      </div>
+    </a>
+    <a class="world-card" href="world-05-visual.html">
+      <div class="world-number">World 5</div>
+      <div class="world-title">Visual Mode</div>
+      <div class="world-keys">
+        <code>v</code> <code>V</code> <code>Ctrl-v</code> + motions + operators
+      </div>
+      <div class="world-options">
+        <span class="option-tag">A: Lasso</span>
+        <span class="option-tag">B: Painter</span>
+        <span class="option-tag">C: Tetris Selector</span>
+      </div>
+    </a>
+    <a class="world-card" href="world-06-search.html">
+      <div class="world-number">World 6</div>
+      <div class="world-title">Search & Replace</div>
+      <div class="world-keys">
+        <code>/ ?</code> <code>n N</code> <code>* #</code> <code>:s/old/new/</code> <code>:%s/</code>
+      </div>
+      <div class="world-options">
+        <span class="option-tag">A: Space Fighter</span>
+        <span class="option-tag">B: Detective</span>
+        <span class="option-tag">C: Virus Scanner</span>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- MEDIOR ZONE -->
+<div class="zone-section zone-medior">
+  <div class="zone-label"><h2>Medior Zone</h2></div>
+  <div class="worlds-grid">
+    <a class="world-card" href="world-07-buffers.html">
+      <div class="world-number">World 7</div>
+      <div class="world-title">Buffers, Windows & Tabs</div>
+      <div class="world-keys">
+        <code>:e :split :vsplit</code> <code>Ctrl-w {hjkl}</code> <code>:bn :bp</code> <code>gt gT</code>
+      </div>
+      <div class="world-options">
+        <span class="option-tag">A: Air Traffic Control</span>
+        <span class="option-tag">B: Mission Control</span>
+        <span class="option-tag">C: Kitchen Rush</span>
+      </div>
+    </a>
+    <a class="world-card" href="world-08-marks.html">
+      <div class="world-number">World 8</div>
+      <div class="world-title">Marks, Jumps & Registers</div>
+      <div class="world-keys">
+        <code>m{a-z}</code> <code>'{mark}</code> <code>Ctrl-o Ctrl-i</code> <code>"{reg}y</code> <code>"{reg}p</code>
+      </div>
+      <div class="world-options">
+        <span class="option-tag">A: Time Traveler</span>
+        <span class="option-tag">B: Portal</span>
+        <span class="option-tag">C: Spy Network</span>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- SENIOR ZONE -->
+<div class="zone-section zone-senior">
+  <div class="zone-label"><h2>Senior Zone</h2></div>
+  <div class="worlds-grid">
+    <a class="world-card" href="world-09-macros.html">
+      <div class="world-number">World 9</div>
+      <div class="world-title">Macros</div>
+      <div class="world-keys">
+        <code>q{a-z}</code> <code>@{a-z}</code> <code>@@</code>
+      </div>
+      <div class="world-options">
+        <span class="option-tag">A: DJ / Loop Station</span>
+        <span class="option-tag">B: Robot Factory</span>
+        <span class="option-tag">C: Clone Army</span>
+      </div>
+    </a>
+    <a class="world-card" href="world-10-advanced.html">
+      <div class="world-number">World 10</div>
+      <div class="world-title">Advanced Motions</div>
+      <div class="world-keys">
+        <code>f F t T</code> <code>; ,</code> <code>%</code> <code>zt zz zb</code> <code>Ctrl-d Ctrl-u</code>
+      </div>
+      <div class="world-options">
+        <span class="option-tag">A: Sniper</span>
+        <span class="option-tag">B: Parkour</span>
+        <span class="option-tag">C: Radar Operator</span>
+      </div>
+    </a>
+    <a class="world-card" href="world-11-grandmaster.html">
+      <div class="world-number">World 11</div>
+      <div class="world-title">The Grandmaster</div>
+      <div class="world-keys">
+        All skills combined — the final challenge
+      </div>
+      <div class="world-options">
+        <span class="option-tag">A: Algorithm Fixer</span>
+        <span class="option-tag">B: Code Review</span>
+        <span class="option-tag">C: Hackathon</span>
+      </div>
+    </a>
+  </div>
+</div>
+
+<footer>
+  VIM HEROES &mdash; Gameplay Concept Demos &mdash; Click any world to see animated prototypes
+</footer>
+
+</body>
+</html>

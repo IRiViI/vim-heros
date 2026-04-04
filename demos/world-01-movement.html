@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World 1: Basic Movement — Vim Heroes</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:#1a1a2e;
+    color:#e0e0e0;
+    font-family:'Courier New',Consolas,monospace;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  a{color:#0ff;text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .back-link{
+    position:absolute;top:12px;left:16px;
+    font-size:13px;opacity:.7;z-index:10;
+  }
+  .back-link:hover{opacity:1}
+
+  header{
+    text-align:center;padding:32px 16px 12px;
+  }
+  header h1{
+    font-size:26px;
+    background:linear-gradient(90deg,#0ff,#f0f,#ff0);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;
+    letter-spacing:2px;
+  }
+  header .subtitle{
+    font-size:13px;color:#888;margin-top:4px;
+    letter-spacing:1px;
+  }
+  header .keys{
+    margin-top:8px;font-size:12px;color:#666;
+  }
+  header .keys kbd{
+    display:inline-block;background:#2a2a4a;color:#0ff;
+    border:1px solid #444;border-radius:3px;
+    padding:1px 5px;margin:0 2px;font-size:11px;
+  }
+
+  /* Tabs */
+  .tabs{
+    display:flex;justify-content:center;gap:4px;
+    margin:16px auto 0;max-width:720px;
+  }
+  .tab-btn{
+    flex:1;max-width:220px;
+    background:#16213e;border:1px solid #333;
+    color:#aaa;padding:10px 8px;cursor:pointer;
+    font-family:inherit;font-size:13px;
+    border-radius:6px 6px 0 0;transition:.2s;
+    text-align:center;
+  }
+  .tab-btn:hover{background:#1f305a;color:#ddd}
+  .tab-btn.active{
+    background:#0f3460;border-bottom-color:#0f3460;
+    color:#0ff;font-weight:bold;
+  }
+
+  /* Panel */
+  .panel{
+    display:none;
+    max-width:720px;margin:0 auto;
+    background:#0f0f23;
+    border:1px solid #333;border-top:none;
+    border-radius:0 0 8px 8px;
+    overflow:hidden;
+  }
+  .panel.active{display:block}
+
+  .canvas-wrap{
+    position:relative;
+    width:100%;height:420px;
+    overflow:hidden;
+    background:#0a0a1a;
+  }
+  canvas{display:block;width:100%;height:100%}
+
+  .caption-bar{
+    background:#16213e;border-top:1px solid #333;
+    padding:14px 20px;min-height:56px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .caption-icon{
+    font-size:18px;color:#0ff;flex-shrink:0;
+    width:24px;text-align:center;
+  }
+  .caption-text{
+    font-size:13px;line-height:1.5;color:#ccc;
+    transition:opacity .3s;
+  }
+
+  /* Score / HUD elements drawn on canvas */
+
+  @media(max-width:600px){
+    header h1{font-size:20px}
+    .tabs{flex-direction:column;align-items:center}
+    .tab-btn{max-width:90%;border-radius:6px}
+    .canvas-wrap{height:340px}
+  }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">&larr; Back to Overview</a>
+
+<header>
+  <h1>WORLD 1: BASIC MOVEMENT</h1>
+  <div class="subtitle">3 Gameplay Options &mdash; Animated Demos</div>
+  <div class="keys">
+    Keys: <kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd>
+    <kbd>w</kbd><kbd>b</kbd><kbd>e</kbd><kbd>W</kbd><kbd>B</kbd>
+    <kbd>0</kbd><kbd>$</kbd><kbd>gg</kbd><kbd>G</kbd><kbd>{n}G</kbd>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="a">A: Rhythm Runner</button>
+  <button class="tab-btn" data-tab="b">B: Maze Runner</button>
+  <button class="tab-btn" data-tab="c">C: Courier</button>
+</div>
+
+<div class="panel active" id="panel-a">
+  <div class="canvas-wrap"><canvas id="cv-a"></canvas></div>
+  <div class="caption-bar">
+    <div class="caption-icon">&#9654;</div>
+    <div class="caption-text" id="cap-a"></div>
+  </div>
+</div>
+
+<div class="panel" id="panel-b">
+  <div class="canvas-wrap"><canvas id="cv-b"></canvas></div>
+  <div class="caption-bar">
+    <div class="caption-icon">&#9654;</div>
+    <div class="caption-text" id="cap-b"></div>
+  </div>
+</div>
+
+<div class="panel" id="panel-c">
+  <div class="canvas-wrap"><canvas id="cv-c"></canvas></div>
+  <div class="caption-bar">
+    <div class="caption-icon">&#9654;</div>
+    <div class="caption-text" id="cap-c"></div>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────
+// Tab switching
+// ──────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ──────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────
+function initCanvas(id){
+  const c=document.getElementById(id);
+  const dpr=window.devicePixelRatio||1;
+  const rect=c.parentElement.getBoundingClientRect();
+  // If panel is hidden (display:none), getBoundingClientRect returns 0.
+  // Fall back to the active panel's canvas-wrap size.
+  let cw=rect.width, ch=rect.height;
+  if(!cw||!ch){
+    const activeWrap=document.querySelector('.panel.active .canvas-wrap');
+    if(activeWrap){
+      const ar=activeWrap.getBoundingClientRect();
+      cw=ar.width; ch=ar.height;
+    } else { cw=720; ch=420; }
+  }
+  c.width=cw*dpr;
+  c.height=ch*dpr;
+  const ctx=c.getContext('2d');
+  ctx.scale(dpr,dpr);
+  return {c,ctx,w:cw,h:ch};
+}
+
+function captionCycle(elId,msgs,interval){
+  const el=document.getElementById(elId);
+  let i=0;
+  el.textContent=msgs[0];
+  setInterval(()=>{
+    i=(i+1)%msgs.length;
+    el.style.opacity=0;
+    setTimeout(()=>{el.textContent=msgs[i];el.style.opacity=1},300);
+  },interval||3500);
+}
+
+// ──────────────────────────────────────────────
+// OPTION A: Rhythm Runner
+// ──────────────────────────────────────────────
+(function(){
+  const {c,ctx,w,h}=initCanvas('cv-a');
+
+  const codeLines=[
+    'fn main() {',
+    '    let score = 0;',
+    '    let mut player = Player::new();',
+    '    loop {',
+    '        player.update();',
+    '        if player.health <= 0 {',
+    '            break;',
+    '        }',
+    '        score += player.combo;',
+    '        render(&player, score);',
+    '    }',
+    '    println!("Game over: {}", score);',
+    '}',
+    '',
+    'struct Player {',
+    '    health: i32,',
+    '    combo: u32,',
+    '    pos: (f32, f32),',
+    '}',
+    '',
+    'impl Player {',
+    '    fn new() -> Self {',
+    '        Player { health: 100, combo: 1, pos: (0.0, 0.0) }',
+    '    }',
+    '    fn update(&mut self) {',
+    '        self.pos.0 += 1.0;',
+    '    }',
+    '}',
+  ];
+
+  const fontSize=14;
+  const lineH=20;
+  const leftPad=60;
+  const cursorRow=Math.floor(h/lineH/2); // fixed row in middle
+  const cursorY=cursorRow*lineH;
+
+  // Targets: {col, key, lineOffset (relative to scroll)}
+  // We'll generate repeating targets
+  function makeTargets(){
+    const keys=['w','l','b','e','h','w','l','$','0','w'];
+    const cols=[12,18,4,22,8,28,14,38,0,10];
+    return keys.map((k,i)=>({
+      key:k,col:cols[i],lineOff:i*3+2,
+      hit:false,missed:false,flash:0
+    }));
+  }
+
+  let targets=makeTargets();
+  let scrollY=0;
+  let cursorCol=0;
+  let score=0;
+  const cycleDuration=10000; // ms
+  let startTime=performance.now();
+
+  function draw(now){
+    const elapsed=(now-startTime)%cycleDuration;
+    const progress=elapsed/cycleDuration;
+
+    // Reset at loop
+    if(elapsed<50){
+      targets=makeTargets();
+      cursorCol=0;
+      score=0;
+    }
+
+    ctx.clearRect(0,0,w,h);
+
+    // Scroll offset
+    scrollY=progress*codeLines.length*lineH*1.2;
+
+    // Draw code lines scrolling down
+    ctx.font=fontSize+'px Courier New';
+    for(let i=0;i<codeLines.length*2;i++){
+      const li=i%codeLines.length;
+      const y=i*lineH-scrollY+h*0.7;
+      if(y<-lineH||y>h+lineH) continue;
+      // Line number
+      ctx.fillStyle='#444';
+      ctx.fillText(String(li+1).padStart(3,' '),8,y+14);
+      // Code
+      ctx.fillStyle='#8888cc';
+      ctx.fillText(codeLines[li],leftPad,y+14);
+    }
+
+    // Draw lane / fixed cursor row highlight
+    ctx.fillStyle='rgba(0,255,255,0.04)';
+    ctx.fillRect(0,cursorY,w,lineH);
+    ctx.strokeStyle='rgba(0,255,255,0.2)';
+    ctx.lineWidth=1;
+    ctx.strokeRect(0,cursorY,w,lineH);
+
+    // Process targets
+    const activeIdx=Math.floor(progress*targets.length);
+    targets.forEach((t,i)=>{
+      const targetScrollY=(t.lineOff*3)*lineH-scrollY+h*0.7;
+      const tx=leftPad+t.col*8.4;
+
+      // Check if target is near cursor row
+      const dist=Math.abs(targetScrollY-cursorY);
+
+      if(i<=activeIdx && !t.hit && !t.missed){
+        if(dist<lineH*1.5){
+          // "Hit" it
+          cursorCol=t.col;
+          t.hit=true;
+          t.flash=1;
+          score+=100;
+        } else if(targetScrollY>cursorY+lineH*4){
+          // Passed below — missed
+          t.missed=true;
+          t.flash=1;
+        }
+      }
+
+      // Draw target marker (circle + key label)
+      if(!t.hit && !t.missed && targetScrollY>-20 && targetScrollY<h+20){
+        ctx.beginPath();
+        ctx.arc(tx+4,targetScrollY+10,12,0,Math.PI*2);
+        ctx.strokeStyle='#ff0';
+        ctx.lineWidth=2;
+        ctx.stroke();
+        ctx.fillStyle='#ff0';
+        ctx.font='bold 12px Courier New';
+        ctx.fillText(t.key,tx-2,targetScrollY+14);
+      }
+
+      // Flash effect
+      if(t.flash>0){
+        t.flash-=0.02;
+        const fx=leftPad+t.col*8.4;
+        const fy=t.hit?cursorY:targetScrollY;
+        ctx.beginPath();
+        ctx.arc(fx+4,fy+10,20*(1-t.flash+0.5),0,Math.PI*2);
+        ctx.fillStyle=t.hit
+          ?`rgba(0,255,100,${t.flash*0.6})`
+          :`rgba(255,50,50,${t.flash*0.6})`;
+        ctx.fill();
+      }
+    });
+
+    // Draw cursor (blinking block)
+    const blink=Math.sin(now/150)>-0.3;
+    if(blink){
+      const cx=leftPad+cursorCol*8.4;
+      ctx.fillStyle='rgba(0,255,255,0.8)';
+      ctx.fillRect(cx,cursorY,9,lineH);
+      // char under cursor
+      ctx.fillStyle='#0a0a1a';
+      ctx.font=fontSize+'px Courier New';
+      ctx.fillText('_',cx+1,cursorY+14);
+    }
+
+    // HUD: Score
+    ctx.fillStyle='rgba(0,0,0,0.6)';
+    ctx.fillRect(w-140,8,130,32);
+    ctx.strokeStyle='#0ff';
+    ctx.lineWidth=1;
+    ctx.strokeRect(w-140,8,130,32);
+    ctx.fillStyle='#0ff';
+    ctx.font='bold 14px Courier New';
+    ctx.fillText('SCORE: '+score,w-132,29);
+
+    // Energy bar
+    const energyPct=Math.max(0,1-targets.filter(t=>t.missed).length*0.15);
+    ctx.fillStyle='rgba(0,0,0,0.6)';
+    ctx.fillRect(w-140,46,130,12);
+    ctx.fillStyle=energyPct>0.3?'#0f0':'#f33';
+    ctx.fillRect(w-140,46,130*energyPct,12);
+    ctx.strokeStyle='#444';
+    ctx.strokeRect(w-140,46,130,12);
+    ctx.fillStyle='#888';
+    ctx.font='10px Courier New';
+    ctx.fillText('ENERGY',w-138,55);
+
+    // Title overlay
+    ctx.fillStyle='rgba(0,255,255,0.15)';
+    ctx.font='bold 11px Courier New';
+    ctx.fillText('RHYTHM RUNNER',12,22);
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  captionCycle('cap-a',[
+    'Code scrolls down like Guitar Hero \u2014 targets appear on specific positions',
+    'Move cursor with h/j/k/l and word motions (w, b, e) to hit targets',
+    'Missed targets drain your energy bar \u2014 keep your combo alive!',
+    'Each target shows the Vim key needed \u2014 practice real navigation commands',
+  ],3500);
+})();
+
+// ──────────────────────────────────────────────
+// OPTION B: Maze Runner
+// ──────────────────────────────────────────────
+(function(){
+  const {c,ctx,w,h}=initCanvas('cv-b');
+
+  const cols=28, rows=16;
+  const cellW=Math.floor((w-40)/cols);
+  const cellH=Math.floor((h-40)/rows);
+  const ox=Math.floor((w-cols*cellW)/2);
+  const oy=Math.floor((h-rows*cellH)/2);
+
+  // Grid chars (code-like)
+  const codeGrid=[
+    'fn main() {               ',
+    '    let x = 10;           ',
+    '    #####  ####  ####     ',
+    '    let y = calculate(x); ',
+    '    ##### ##   # ####     ',
+    '    if y > 0 {            ',
+    '        println!("ok");   ',
+    '    #####  ####  ####     ',
+    '    } else {              ',
+    '        println!("err");  ',
+    '    ##### ##   # ####     ',
+    '    }                     ',
+    '    return score;         ',
+    '    #####  ####  ####     ',
+    '    println!("done");     ',
+    '}                         ',
+  ];
+
+  // Walls: '#' chars
+  function isWall(r,c){
+    if(r<0||r>=rows||c<0||c>=cols) return true;
+    return (codeGrid[r]||'')[c]==='#';
+  }
+
+  // Waypoints (path through the maze)
+  const waypoints=[
+    {r:0,c:3},{r:1,c:8},{r:1,c:14},{r:3,c:8},
+    {r:3,c:20},{r:5,c:7},{r:6,c:16},{r:8,c:5},
+    {r:9,c:16},{r:11,c:4},{r:12,c:11},{r:14,c:8},{r:15,c:0}
+  ];
+
+  // Movement keys for each segment
+  const moveKeys=['w','w','j','w','j','w','j','w','j','w','w','j','0'];
+
+  let curWP=0;
+  let cursorR=waypoints[0].r, cursorC=waypoints[0].c;
+  let animProgress=0;
+  let score=0;
+  let keystrokes=0;
+  const cycleDuration=11000;
+  let startTime=performance.now();
+
+  // Lerp cursor between waypoints
+  function lerp(a,b,t){return a+(b-a)*Math.min(1,Math.max(0,t))}
+
+  function draw(now){
+    const elapsed=(now-startTime)%cycleDuration;
+    const progress=elapsed/cycleDuration;
+
+    // Reset
+    if(elapsed<50){
+      curWP=0;cursorR=waypoints[0].r;cursorC=waypoints[0].c;
+      score=0;keystrokes=0;
+    }
+
+    ctx.clearRect(0,0,w,h);
+
+    // Current waypoint segment
+    const segDur=1/waypoints.length;
+    curWP=Math.min(Math.floor(progress/segDur),waypoints.length-1);
+    const segProgress=(progress-curWP*segDur)/segDur;
+
+    const fromWP=waypoints[curWP];
+    const toWP=waypoints[Math.min(curWP+1,waypoints.length-1)];
+    cursorR=lerp(fromWP.r,toWP.r,segProgress);
+    cursorC=lerp(fromWP.c,toWP.c,segProgress);
+
+    // Draw grid
+    ctx.font=(cellH-4)+'px Courier New';
+    for(let r=0;r<rows;r++){
+      for(let c_=0;c_<cols;c_++){
+        const x=ox+c_*cellW;
+        const y=oy+r*cellH;
+        const ch=(codeGrid[r]||' ')[c_]||' ';
+        const wall=ch==='#';
+
+        if(wall){
+          ctx.fillStyle='#1a1a2e';
+          ctx.fillRect(x,y,cellW,cellH);
+          ctx.fillStyle='#2a2a3e';
+          ctx.fillRect(x+1,y+1,cellW-2,cellH-2);
+        } else {
+          ctx.fillStyle='#0a0a18';
+          ctx.fillRect(x,y,cellW,cellH);
+          ctx.fillStyle='#556';
+          ctx.fillText(ch,x+2,y+cellH-4);
+        }
+      }
+    }
+
+    // Draw waypoints
+    waypoints.forEach((wp,i)=>{
+      const x=ox+wp.c*cellW+cellW/2;
+      const y=oy+wp.r*cellH+cellH/2;
+      const visited=i<=curWP;
+
+      ctx.beginPath();
+      ctx.arc(x,y,5,0,Math.PI*2);
+      if(visited){
+        ctx.fillStyle='#0f8';
+        ctx.fill();
+        // glow
+        ctx.beginPath();
+        ctx.arc(x,y,9,0,Math.PI*2);
+        ctx.fillStyle='rgba(0,255,136,0.15)';
+        ctx.fill();
+      } else {
+        const pulse=0.5+0.5*Math.sin(now/300+i);
+        ctx.fillStyle=`rgba(255,255,0,${0.4+pulse*0.5})`;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x,y,8+pulse*3,0,Math.PI*2);
+        ctx.strokeStyle=`rgba(255,255,0,${0.2+pulse*0.2})`;
+        ctx.lineWidth=1;
+        ctx.stroke();
+      }
+    });
+
+    // Draw path trail
+    ctx.beginPath();
+    ctx.strokeStyle='rgba(0,255,136,0.25)';
+    ctx.lineWidth=2;
+    for(let i=0;i<=curWP;i++){
+      const x=ox+waypoints[i].c*cellW+cellW/2;
+      const y=oy+waypoints[i].r*cellH+cellH/2;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    // To current cursor
+    ctx.lineTo(ox+cursorC*cellW+cellW/2,oy+cursorR*cellH+cellH/2);
+    ctx.stroke();
+
+    // Draw cursor
+    const cx=ox+cursorC*cellW;
+    const cy=oy+cursorR*cellH;
+    const blink=Math.sin(now/120)>-0.2;
+    if(blink){
+      ctx.fillStyle='rgba(0,255,255,0.7)';
+      ctx.fillRect(cx,cy,cellW,cellH);
+    }
+    ctx.strokeStyle='#0ff';
+    ctx.lineWidth=2;
+    ctx.strokeRect(cx,cy,cellW,cellH);
+
+    // Show current key being pressed
+    if(curWP<moveKeys.length){
+      const key=moveKeys[curWP];
+      ctx.fillStyle='rgba(0,0,0,0.7)';
+      const kx=cx+cellW+8, ky=cy-8;
+      ctx.fillRect(kx,ky,32,22);
+      ctx.strokeStyle='#ff0';
+      ctx.lineWidth=1;
+      ctx.strokeRect(kx,ky,32,22);
+      ctx.fillStyle='#ff0';
+      ctx.font='bold 14px Courier New';
+      ctx.fillText(key,kx+6,ky+16);
+    }
+
+    // HUD
+    ctx.fillStyle='rgba(0,0,0,0.6)';
+    ctx.fillRect(w-160,8,150,50);
+    ctx.strokeStyle='#0ff';
+    ctx.lineWidth=1;
+    ctx.strokeRect(w-160,8,150,50);
+    ctx.fillStyle='#0ff';
+    ctx.font='bold 12px Courier New';
+    ctx.fillText('WAYPOINTS: '+curWP+'/'+waypoints.length,w-152,26);
+    ctx.fillText('KEYS USED: '+(curWP),w-152,42);
+    ctx.fillStyle='#888';
+    ctx.font='10px Courier New';
+    ctx.fillText('(par: '+(waypoints.length+5)+')',w-152,54);
+
+    // Title
+    ctx.fillStyle='rgba(0,255,255,0.15)';
+    ctx.font='bold 11px Courier New';
+    ctx.fillText('MAZE RUNNER',12,22);
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  captionCycle('cap-b',[
+    'Code displayed as a 2D grid \u2014 navigate through glowing waypoints',
+    'Use word motions (w, b) to skip past walls efficiently',
+    'Fewer keystrokes = better score \u2014 find the optimal path',
+    'Visited waypoints turn green \u2014 the trail shows your route',
+  ],3500);
+})();
+
+// ──────────────────────────────────────────────
+// OPTION C: Courier
+// ──────────────────────────────────────────────
+(function(){
+  const {c,ctx,w,h}=initCanvas('cv-c');
+
+  const codeLines=[
+    'use std::io;',
+    '',
+    'fn fibonacci(n: u64) -> u64 {',
+    '    if n <= 1 { return n; }',
+    '    let mut a = 0u64;',
+    '    let mut b = 1u64;',
+    '    for _ in 2..=n {',
+    '        let temp = a + b;',
+    '        a = b;',
+    '        b = temp;',
+    '    }',
+    '    b',
+    '}',
+    '',
+    'fn is_prime(n: u64) -> bool {',
+    '    if n < 2 { return false; }',
+    '    if n == 2 { return true; }',
+    '    if n % 2 == 0 { return false; }',
+    '    let mut i = 3;',
+    '    while i * i <= n {',
+    '        if n % i == 0 { return false; }',
+    '        i += 2;',
+    '    }',
+    '    true',
+    '}',
+    '',
+    'fn main() {',
+    '    println!("Fibonacci sequence:");',
+    '    for i in 0..20 {',
+    '        let fib = fibonacci(i);',
+    '        let prime = is_prime(fib);',
+    '        println!("{}: {} {}", i, fib,',
+    '            if prime { "*" } else { "" }',
+    '        );',
+    '    }',
+    '    let total: u64 = (0..20)',
+    '        .map(|i| fibonacci(i))',
+    '        .filter(|&f| is_prime(f))',
+    '        .sum();',
+    '    println!("Sum of prime fibs: {}", total);',
+    '}',
+  ];
+
+  // Tasks: go to line/col
+  const tasks=[
+    {line:15,col:12,keys:['15G','w','w'],par:3,desc:'Go to line 15, col 12'},
+    {line:27,col:4, keys:['27G','l','l','l','l'],par:2,desc:'Go to line 27, col 4'},
+    {line:6, col:18,keys:['6G','w','w','e'],par:3,desc:'Go to line 6, col 18'},
+    {line:36,col:8, keys:['36G','w'],par:2,desc:'Go to line 36, col 8'},
+    {line:3, col:3, keys:['gg','3G','w'],par:2,desc:'Go to line 3, col 3'},
+  ];
+
+  const fontSize=13;
+  const lineH=16;
+  const leftPad=44;
+  const visibleLines=Math.floor((h-80)/lineH);
+
+  let taskIdx=0;
+  let cursorLine=1, cursorCol=0;
+  let scrollTop=0;
+  let phase='show'; // show, move, delivered
+  let phaseStart=0;
+  let keystrokeCount=0;
+  let totalScore=0;
+  let deliveredFlash=0;
+  let currentKeyIdx=0;
+
+  const cycleDuration=10000;
+  let startTime=performance.now();
+
+  function draw(now){
+    const elapsed=(now-startTime)%cycleDuration;
+
+    // Reset cycle
+    if(elapsed<50 && phase!=='reset'){
+      phase='reset';
+      taskIdx=0;cursorLine=1;cursorCol=0;
+      totalScore=0;keystrokeCount=0;
+    }
+
+    // Task timing: each task gets cycleDuration/tasks.length ms
+    const taskDur=cycleDuration/tasks.length;
+    const newTaskIdx=Math.min(Math.floor(elapsed/taskDur),tasks.length-1);
+
+    if(newTaskIdx!==taskIdx || phase==='reset'){
+      taskIdx=newTaskIdx;
+      phase='show';
+      phaseStart=elapsed;
+      currentKeyIdx=0;
+      deliveredFlash=0;
+    }
+
+    const task=tasks[taskIdx];
+    const taskElapsed=elapsed-taskIdx*taskDur;
+
+    // Phase transitions
+    if(phase==='show' && taskElapsed>600){
+      phase='move';
+      phaseStart=elapsed;
+      currentKeyIdx=0;
+    }
+
+    if(phase==='move'){
+      const moveTime=taskElapsed-600;
+      const keyInterval=400;
+      const newKeyIdx=Math.min(Math.floor(moveTime/keyInterval),task.keys.length-1);
+      if(newKeyIdx!==currentKeyIdx || currentKeyIdx===0){
+        currentKeyIdx=newKeyIdx;
+        // Simulate cursor movement based on key index
+        if(currentKeyIdx===0){
+          // First key is usually the line jump
+          cursorLine=task.line;
+          cursorCol=0;
+        } else {
+          // Subsequent keys move within the line
+          const targetCol=task.col;
+          cursorCol=Math.round(lerp(0,targetCol,currentKeyIdx/(task.keys.length-1)));
+        }
+        keystrokeCount=currentKeyIdx+1;
+      }
+
+      if(moveTime>task.keys.length*keyInterval+200){
+        phase='delivered';
+        phaseStart=elapsed;
+        cursorLine=task.line;
+        cursorCol=task.col;
+        deliveredFlash=1;
+        const bonus=Math.max(0,(task.par+1-task.keys.length)*50);
+        totalScore+=100+bonus;
+      }
+    }
+
+    if(phase==='delivered'){
+      deliveredFlash=Math.max(0,deliveredFlash-0.015);
+    }
+
+    function lerp(a,b,t){return a+(b-a)*Math.min(1,Math.max(0,t))}
+
+    ctx.clearRect(0,0,w,h);
+
+    // Scroll to keep cursor visible
+    const targetScroll=Math.max(0,cursorLine-Math.floor(visibleLines/2));
+    scrollTop+=(targetScroll-scrollTop)*0.15;
+
+    // Task bar at top
+    ctx.fillStyle='#16213e';
+    ctx.fillRect(0,0,w,40);
+    ctx.strokeStyle='#333';
+    ctx.lineWidth=1;
+    ctx.strokeRect(0,0,w,40);
+
+    ctx.fillStyle='#ff0';
+    ctx.font='bold 13px Courier New';
+    ctx.fillText('\u{1F4E6} '+task.desc,12,25);
+
+    // Timer
+    const timerPct=Math.max(0,1-taskElapsed/taskDur);
+    ctx.fillStyle='#222';
+    ctx.fillRect(w-110,12,90,16);
+    ctx.fillStyle=timerPct>0.3?'#0ff':'#f55';
+    ctx.fillRect(w-110,12,90*timerPct,16);
+    ctx.strokeStyle='#555';
+    ctx.strokeRect(w-110,12,90,16);
+
+    // Code view
+    const codeTop=46;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0,codeTop,w,h-codeTop);
+    ctx.clip();
+
+    const startLine=Math.floor(scrollTop);
+    for(let i=0;i<visibleLines+2;i++){
+      const li=startLine+i;
+      if(li<0||li>=codeLines.length) continue;
+      const y=codeTop+(i-(scrollTop-startLine))*lineH;
+
+      // Highlight current target line
+      if(li+1===task.line){
+        ctx.fillStyle='rgba(255,255,0,0.05)';
+        ctx.fillRect(0,y,w,lineH);
+      }
+
+      // Line number
+      ctx.fillStyle='#555';
+      ctx.font=fontSize+'px Courier New';
+      ctx.fillText(String(li+1).padStart(3,' '),6,y+12);
+
+      // Separator
+      ctx.fillStyle='#333';
+      ctx.fillRect(38,y,1,lineH);
+
+      // Code text - syntax-like coloring
+      const line=codeLines[li];
+      const words=line.split(/(\s+)/);
+      let xOff=leftPad;
+      const keywords=['fn','let','mut','if','for','while','return','use','else','true','false','in','struct','impl','pub','self','Self'];
+      words.forEach(word=>{
+        if(keywords.includes(word)){
+          ctx.fillStyle='#c678dd';
+        } else if(word.match(/^\d+/)){
+          ctx.fillStyle='#d19a66';
+        } else if(word.includes('"')){
+          ctx.fillStyle='#98c379';
+        } else if(word.match(/^(println|fibonacci|is_prime|map|filter|sum)$/)){
+          ctx.fillStyle='#61afef';
+        } else {
+          ctx.fillStyle='#abb2bf';
+        }
+        ctx.fillText(word,xOff,y+12);
+        xOff+=ctx.measureText(word).width;
+      });
+    }
+
+    // Draw cursor
+    const cursorScreenY=codeTop+((cursorLine-1)-scrollTop)*lineH;
+    const cursorScreenX=leftPad+cursorCol*ctx.measureText(' ').width;
+    const blink=Math.sin(now/150)>-0.3;
+
+    if(blink && cursorScreenY>codeTop-lineH && cursorScreenY<h){
+      ctx.fillStyle='rgba(0,255,255,0.75)';
+      ctx.fillRect(cursorScreenX,cursorScreenY,8,lineH);
+    }
+
+    // Delivered flash
+    if(phase==='delivered' && deliveredFlash>0){
+      ctx.fillStyle=`rgba(0,255,100,${deliveredFlash*0.3})`;
+      ctx.fillRect(0,cursorScreenY-20,w,lineH+40);
+
+      ctx.fillStyle=`rgba(0,255,100,${deliveredFlash})`;
+      ctx.font='bold 20px Courier New';
+      const txt='DELIVERED!';
+      const tw=ctx.measureText(txt).width;
+      ctx.fillText(txt,(w-tw)/2,cursorScreenY+lineH+30);
+    }
+
+    ctx.restore();
+
+    // HUD: keystrokes and score
+    ctx.fillStyle='rgba(0,0,0,0.6)';
+    ctx.fillRect(w-170,codeTop+8,160,55);
+    ctx.strokeStyle='#0ff';
+    ctx.lineWidth=1;
+    ctx.strokeRect(w-170,codeTop+8,160,55);
+    ctx.fillStyle='#0ff';
+    ctx.font='bold 12px Courier New';
+    ctx.fillText('SCORE: '+totalScore,w-162,codeTop+24);
+    ctx.fillStyle='#ccc';
+    ctx.fillText('KEYS: '+(phase==='show'?'-':keystrokeCount)+' / par '+task.par,w-162,codeTop+40);
+
+    // Show current keystroke
+    if(phase==='move' && currentKeyIdx<task.keys.length){
+      const key=task.keys[currentKeyIdx];
+      const kw=Math.max(36,key.length*12+12);
+      ctx.fillStyle='rgba(0,0,0,0.8)';
+      ctx.fillRect(cursorScreenX+14,cursorScreenY-6,kw,22);
+      ctx.strokeStyle='#ff0';
+      ctx.strokeRect(cursorScreenX+14,cursorScreenY-6,kw,22);
+      ctx.fillStyle='#ff0';
+      ctx.font='bold 13px Courier New';
+      ctx.fillText(key,cursorScreenX+20,cursorScreenY+10);
+    }
+
+    // Compare at delivery
+    if(phase==='delivered'){
+      const used=task.keys.length;
+      const par=task.par;
+      let msg='';
+      if(used<=par) msg='Perfect! On par!';
+      else msg='Delivered! ('+used+' keys vs par '+par+')';
+      ctx.fillStyle='#0f8';
+      ctx.font='11px Courier New';
+      ctx.fillText(msg,w-162,codeTop+55);
+    }
+
+    // Title
+    ctx.fillStyle='rgba(0,255,255,0.15)';
+    ctx.font='bold 11px Courier New';
+    ctx.fillText('COURIER',12,codeTop+16);
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  captionCycle('cap-c',[
+    'Tasks tell you exactly where to go \u2014 like delivery orders',
+    'Use efficient motions: 15G jumps to line 15 instantly',
+    'Fewer keystrokes than par = bigger tip (more points)',
+    'Watch the cursor jump with {n}G, then navigate with w and e',
+  ],3500);
+})();
+
+// ──────────────────────────────────────────────
+// Handle resize
+// ──────────────────────────────────────────────
+window.addEventListener('resize',()=>{
+  ['cv-a','cv-b','cv-c'].forEach(id=>{
+    const c=document.getElementById(id);
+    const dpr=window.devicePixelRatio||1;
+    const rect=c.parentElement.getBoundingClientRect();
+    c.width=rect.width*dpr;
+    c.height=rect.height*dpr;
+    const ctx=c.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  });
+});
+</script>
+
+</body>
+</html>

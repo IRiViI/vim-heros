@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World 3: Motions + Operators — Vim Heroes</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Courier New', Courier, monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a { color: #0ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.back-link {
+  display: inline-block;
+  padding: 18px 24px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+header {
+  text-align: center;
+  padding: 12px 20px 0;
+}
+
+header h1 {
+  font-size: 28px;
+  color: #ff6ec7;
+  text-shadow: 0 0 12px #ff6ec780;
+  margin-bottom: 4px;
+}
+
+header .subtitle {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 16px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  padding: 0 12px;
+}
+
+.tab-btn {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  color: #aaa;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 10px 18px;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover { color: #fff; border-color: #e94560; }
+
+.tab-btn.active {
+  background: #0f3460;
+  color: #0ff;
+  border-color: #0ff;
+  box-shadow: 0 0 10px #0ff40;
+}
+
+/* Demo area */
+.demo-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 16px 40px;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #0f3460;
+  background: #0d1117;
+  box-shadow: 0 0 30px #0f346040;
+}
+
+.caption-bar {
+  text-align: center;
+  padding: 14px 16px;
+  min-height: 52px;
+  font-size: 14px;
+  color: #ccc;
+  background: #16213e;
+  border-radius: 0 0 10px 10px;
+  border: 1px solid #0f3460;
+  border-top: none;
+  line-height: 1.5;
+}
+
+.caption-bar em {
+  color: #0ff;
+  font-style: normal;
+  font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">&larr; Back to Overview</a>
+
+<header>
+  <h1>World 3 &mdash; Motions + Operators</h1>
+  <div class="subtitle">Verb-Noun Grammar: d/c/y + w e b $ 0 j k</div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="a">A: Combo Fighter</button>
+  <button class="tab-btn" data-tab="b">B: Spell Crafter</button>
+  <button class="tab-btn" data-tab="c">C: Code Sculptor</button>
+</div>
+
+<div class="demo-container">
+  <!-- Option A -->
+  <div class="tab-panel active" id="panel-a">
+    <canvas id="canvas-a" width="900" height="420"></canvas>
+    <div class="caption-bar" id="caption-a"></div>
+  </div>
+  <!-- Option B -->
+  <div class="tab-panel" id="panel-b">
+    <canvas id="canvas-b" width="900" height="420"></canvas>
+    <div class="caption-bar" id="caption-b"></div>
+  </div>
+  <!-- Option C -->
+  <div class="tab-panel" id="panel-c">
+    <canvas id="canvas-c" width="900" height="420"></canvas>
+    <div class="caption-bar" id="caption-c"></div>
+  </div>
+</div>
+
+<script>
+// ─── Tab switching ───────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ─── Helpers ─────────────────────────────────────────────────────
+function lerp(a, b, t) { return a + (b - a) * t; }
+function easeInOut(t) { return t < 0.5 ? 2*t*t : 1-(-2*t+2)**2/2; }
+function easeOut(t) { return 1 - (1 - t) ** 3; }
+
+function drawRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ─── OPTION A: Combo Fighter ────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('canvas-a');
+  const ctx = canvas.getContext('2d');
+  const W = 900, H = 420;
+  const captionEl = document.getElementById('caption-a');
+
+  const captions = [
+    "Enemies attack with code challenges \u2014 counter with the right Vim combo",
+    "<em>d$</em> = delete to end of line, <em>cw</em> = change word \u2014 learn the Vim grammar",
+    "Chain combos for bonus damage \u2014 Vim operators + motions = fighting moves"
+  ];
+
+  const challenges = [
+    { text: "Delete to end of line", combo: "d $", keys: ["d", "$"] },
+    { text: "Change word", combo: "c w", keys: ["c", "w"] },
+    { text: "Yank down a line", combo: "y j", keys: ["y", "j"] },
+    { text: "Delete to beginning", combo: "d 0", keys: ["d", "0"] },
+  ];
+
+  const CYCLE = 10000; // ms per loop
+  let shakeX = 0, shakeY = 0;
+  let startTime = performance.now();
+
+  function draw(now) {
+    if (document.getElementById('panel-a').classList.contains('active')) {
+      const elapsed = (now - startTime) % (CYCLE * challenges.length);
+      const challengeIdx = Math.floor(elapsed / CYCLE) % challenges.length;
+      const t = (elapsed % CYCLE) / CYCLE; // 0-1 within this challenge
+
+      const ch = challenges[challengeIdx];
+
+      // Phases: 0-0.2 enemy appears, 0.2-0.5 challenge shown, 0.5-0.65 combo input, 0.65-0.8 hit, 0.8-1.0 cooldown
+      const enemyAppear = Math.min(t / 0.2, 1);
+      const comboPhase = t >= 0.5 && t < 0.65 ? (t - 0.5) / 0.15 : (t >= 0.65 ? 1 : 0);
+      const hitPhase = t >= 0.65 && t < 0.8 ? (t - 0.65) / 0.15 : 0;
+      const enemyHP = t < 0.65 ? 1 : Math.max(0, 1 - (t - 0.65) / 0.15);
+
+      // Screen shake on hit
+      if (hitPhase > 0 && hitPhase < 0.5) {
+        shakeX = (Math.random() - 0.5) * 12 * (1 - hitPhase * 2);
+        shakeY = (Math.random() - 0.5) * 8 * (1 - hitPhase * 2);
+      } else {
+        shakeX *= 0.8; shakeY *= 0.8;
+      }
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+
+      // Background
+      ctx.fillStyle = '#0d1117';
+      ctx.fillRect(-10, -10, W + 20, H + 20);
+
+      // Floor
+      const floorY = 330;
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(0, floorY, W, H - floorY + 20);
+      ctx.strokeStyle = '#0f3460';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, floorY); ctx.lineTo(W, floorY); ctx.stroke();
+
+      // Grid lines on floor
+      ctx.strokeStyle = '#0f346030';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 20; i++) {
+        const gx = (i * 50 + (now * 0.02) % 50) % (W + 50) - 25;
+        ctx.beginPath(); ctx.moveTo(gx, floorY); ctx.lineTo(gx - 20, H + 10); ctx.stroke();
+      }
+
+      // Player character (left side, simplified fighter)
+      const playerX = 180;
+      const playerY = floorY;
+      const punchPhase = hitPhase > 0 ? easeOut(Math.min(hitPhase * 3, 1)) : 0;
+
+      // Player body
+      ctx.fillStyle = '#0ff';
+      ctx.shadowColor = '#0ff';
+      ctx.shadowBlur = 10;
+      // Torso
+      ctx.fillRect(playerX - 12, playerY - 70, 24, 40);
+      // Head
+      ctx.beginPath();
+      ctx.arc(playerX, playerY - 82, 14, 0, Math.PI * 2);
+      ctx.fill();
+      // Legs
+      ctx.fillRect(playerX - 10, playerY - 30, 8, 30);
+      ctx.fillRect(playerX + 2, playerY - 30, 8, 30);
+      // Arm (punching)
+      const armExtend = punchPhase * 80;
+      ctx.fillStyle = '#0ff';
+      ctx.fillRect(playerX + 12, playerY - 65, 10 + armExtend, 8);
+      ctx.shadowBlur = 0;
+
+      // Enemy character (right side)
+      const enemyBaseX = 620;
+      const enemyX = enemyBaseX + (1 - easeOut(enemyAppear)) * 200;
+      const enemyY = floorY;
+      const enemyHit = hitPhase > 0 ? Math.sin(hitPhase * Math.PI * 4) * 10 : 0;
+
+      ctx.globalAlpha = enemyAppear;
+      // Enemy body
+      ctx.fillStyle = '#e94560';
+      ctx.shadowColor = '#e94560';
+      ctx.shadowBlur = 8;
+      // Torso
+      ctx.fillRect(enemyX - 15 + enemyHit, enemyY - 75, 30, 45);
+      // Head
+      ctx.beginPath();
+      ctx.arc(enemyX + enemyHit, enemyY - 88, 16, 0, Math.PI * 2);
+      ctx.fill();
+      // Legs
+      ctx.fillRect(enemyX - 12 + enemyHit, enemyY - 30, 10, 30);
+      ctx.fillRect(enemyX + 4 + enemyHit, enemyY - 30, 10, 30);
+      // Arms
+      ctx.fillRect(enemyX - 35 + enemyHit, enemyY - 70, 20, 8);
+      ctx.fillRect(enemyX + 15 + enemyHit, enemyY - 70, 20, 8);
+      ctx.shadowBlur = 0;
+
+      // Hit flash
+      if (hitPhase > 0 && hitPhase < 0.5) {
+        ctx.globalAlpha = (1 - hitPhase * 2) * 0.4;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, W, H);
+      }
+      ctx.globalAlpha = 1;
+
+      // Enemy HP bar
+      if (enemyAppear > 0.5) {
+        const hpBarW = 120;
+        const hpBarH = 10;
+        const hpX = enemyX - hpBarW / 2;
+        const hpY = enemyY - 125;
+        ctx.fillStyle = '#333';
+        drawRoundRect(ctx, hpX, hpY, hpBarW, hpBarH, 3);
+        ctx.fill();
+        ctx.fillStyle = enemyHP > 0.3 ? '#4ade80' : '#e94560';
+        drawRoundRect(ctx, hpX, hpY, hpBarW * enemyHP, hpBarH, 3);
+        ctx.fill();
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        drawRoundRect(ctx, hpX, hpY, hpBarW, hpBarH, 3);
+        ctx.stroke();
+      }
+
+      // Challenge text above enemy
+      if (t >= 0.2 && t < 0.9) {
+        const fadeIn = Math.min((t - 0.2) / 0.05, 1);
+        ctx.globalAlpha = fadeIn * (t < 0.8 ? 1 : 1 - (t - 0.8) / 0.1);
+        ctx.fillStyle = '#ffcc00';
+        ctx.font = 'bold 18px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#ffcc00';
+        ctx.shadowBlur = 8;
+        ctx.fillText(ch.text, enemyX, enemyY - 140);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+
+      // Combo input display (arcade style)
+      const comboY = 380;
+      const comboStartX = W / 2 - 60;
+      for (let i = 0; i < ch.keys.length; i++) {
+        const keyShown = comboPhase > i / ch.keys.length;
+        const keyAlpha = keyShown ? Math.min((comboPhase - i / ch.keys.length) * ch.keys.length * 2, 1) : 0.2;
+        const kx = comboStartX + i * 70;
+
+        ctx.globalAlpha = Math.max(0.2, keyAlpha);
+        // Key box
+        ctx.fillStyle = keyShown ? '#ff6ec7' : '#333';
+        ctx.shadowColor = keyShown ? '#ff6ec7' : 'transparent';
+        ctx.shadowBlur = keyShown ? 12 : 0;
+        drawRoundRect(ctx, kx, comboY - 20, 50, 40, 6);
+        ctx.fill();
+        ctx.strokeStyle = keyShown ? '#ff6ec7' : '#555';
+        ctx.lineWidth = 2;
+        drawRoundRect(ctx, kx, comboY - 20, 50, 40, 6);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Key letter
+        ctx.fillStyle = keyShown ? '#fff' : '#666';
+        ctx.font = 'bold 22px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(ch.keys[i], kx + 25, comboY + 7);
+      }
+      ctx.globalAlpha = 1;
+
+      // "COMBO!" text on hit
+      if (t >= 0.65 && t < 0.85) {
+        const comboFade = (t - 0.65) / 0.2;
+        ctx.globalAlpha = 1 - comboFade;
+        ctx.fillStyle = '#ffcc00';
+        ctx.font = 'bold 36px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#ffcc00';
+        ctx.shadowBlur = 20;
+        ctx.fillText('HIT!', W / 2, 80 - comboFade * 30);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+
+      // Damage number on hit
+      if (t >= 0.68 && t < 0.9) {
+        const dmgFade = (t - 0.68) / 0.22;
+        ctx.globalAlpha = 1 - dmgFade;
+        ctx.fillStyle = '#e94560';
+        ctx.font = 'bold 28px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#e94560';
+        ctx.shadowBlur = 10;
+        ctx.fillText('-50 HP', enemyX, enemyY - 160 - dmgFade * 40);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+
+      // Punch trail effect
+      if (punchPhase > 0.3 && punchPhase < 1) {
+        for (let i = 0; i < 5; i++) {
+          ctx.globalAlpha = (1 - punchPhase) * 0.3;
+          ctx.fillStyle = '#0ff';
+          const trailX = lerp(playerX + 22, playerX + 22 + armExtend, i / 5);
+          ctx.beginPath();
+          ctx.arc(trailX, playerY - 61, 4 - i * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      // Title label
+      ctx.fillStyle = '#ff6ec7';
+      ctx.font = 'bold 14px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.shadowColor = '#ff6ec7';
+      ctx.shadowBlur = 6;
+      ctx.fillText('COMBO FIGHTER', 20, 30);
+      ctx.shadowBlur = 0;
+
+      // Combo counter
+      ctx.fillStyle = '#0ff';
+      ctx.font = '12px "Courier New", monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText('COMBO: ' + ch.combo, W - 20, 30);
+
+      ctx.restore();
+
+      // Caption
+      const captionIdx = Math.floor((elapsed / 3500)) % captions.length;
+      captionEl.innerHTML = captions[captionIdx];
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ─── OPTION B: Spell Crafter ────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('canvas-b');
+  const ctx = canvas.getContext('2d');
+  const W = 900, H = 420;
+  const captionEl = document.getElementById('caption-b');
+
+  const captions = [
+    "Operators are verbs (<em>d</em>=delete, <em>c</em>=change, <em>y</em>=yank), motions are nouns (<em>w</em>=word, <em>$</em>=end)",
+    "Craft spells by combining: <em>d</em> + <em>w</em> = 'delete word' spell",
+    "The Vim grammar is composable \u2014 learn the parts, know hundreds of commands"
+  ];
+
+  const spells = [
+    { verb: 'd', verbName: 'delete', noun: 'w', nounName: 'word', before: 'const foo = bar(x);', after: 'const = bar(x);', spell: 'dw' },
+    { verb: 'c', verbName: 'change', noun: '$', nounName: 'end of line', before: 'let msg = "hello";', after: 'let msg = |', spell: 'c$' },
+    { verb: 'y', verbName: 'yank', noun: 'j', nounName: 'down line', before: 'line1\\nline2', after: '[yanked 2 lines]', spell: 'yj' },
+    { verb: 'd', verbName: 'delete', noun: 'b', nounName: 'back word', before: 'foo.bar.baz', after: 'foo.baz', spell: 'db' },
+  ];
+
+  const verbs = [
+    { key: 'd', label: 'delete', color: '#e94560' },
+    { key: 'c', label: 'change', color: '#ffcc00' },
+    { key: 'y', label: 'yank', color: '#4ade80' },
+  ];
+
+  const nouns = [
+    { key: 'w', label: 'word' },
+    { key: 'e', label: 'end' },
+    { key: 'b', label: 'back' },
+    { key: '$', label: 'line end' },
+    { key: '0', label: 'line start' },
+    { key: 'j', label: 'down' },
+    { key: 'k', label: 'up' },
+  ];
+
+  const particles = [];
+  const CYCLE = 10000;
+  let startTime = performance.now();
+
+  function draw(now) {
+    if (document.getElementById('panel-b').classList.contains('active')) {
+      const elapsed = (now - startTime) % (CYCLE * spells.length);
+      const spellIdx = Math.floor(elapsed / CYCLE) % spells.length;
+      const t = (elapsed % CYCLE) / CYCLE;
+      const sp = spells[spellIdx];
+
+      ctx.fillStyle = '#0d1117';
+      ctx.fillRect(0, 0, W, H);
+
+      // Phase: 0-0.25 idle/highlight, 0.25-0.55 particles fly, 0.55-0.75 spell forms, 0.75-1.0 transform
+      const highlightPhase = t < 0.25 ? t / 0.25 : 1;
+      const particlePhase = t >= 0.25 && t < 0.55 ? (t - 0.25) / 0.3 : (t >= 0.55 ? 1 : 0);
+      const spellFormPhase = t >= 0.55 && t < 0.75 ? (t - 0.55) / 0.2 : (t >= 0.75 ? 1 : 0);
+      const transformPhase = t >= 0.75 ? (t - 0.75) / 0.25 : 0;
+
+      // Left panel: Verb Tome
+      const tomeX = 40, tomeY = 60, tomeW = 180, tomeH = 280;
+      ctx.fillStyle = '#16213e';
+      drawRoundRect(ctx, tomeX, tomeY, tomeW, tomeH, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#e94560';
+      ctx.lineWidth = 2;
+      drawRoundRect(ctx, tomeX, tomeY, tomeW, tomeH, 8);
+      ctx.stroke();
+
+      ctx.fillStyle = '#e94560';
+      ctx.font = 'bold 14px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#e94560';
+      ctx.shadowBlur = 6;
+      ctx.fillText('\u2694 VERB TOME', tomeX + tomeW / 2, tomeY + 28);
+      ctx.shadowBlur = 0;
+
+      verbs.forEach((v, i) => {
+        const vy = tomeY + 55 + i * 70;
+        const isActive = v.key === sp.verb;
+        const glow = isActive && highlightPhase > 0.5 ? Math.sin(now * 0.008) * 0.3 + 0.7 : 0;
+
+        ctx.globalAlpha = isActive ? 1 : 0.4;
+        ctx.fillStyle = isActive ? v.color : '#444';
+        ctx.shadowColor = isActive ? v.color : 'transparent';
+        ctx.shadowBlur = isActive ? 12 + glow * 8 : 0;
+        drawRoundRect(ctx, tomeX + 20, vy, tomeW - 40, 50, 6);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = isActive ? '#fff' : '#888';
+        ctx.font = 'bold 24px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(v.key, tomeX + 50, vy + 33);
+
+        ctx.font = '12px "Courier New", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(v.label, tomeX + 72, vy + 33);
+        ctx.globalAlpha = 1;
+      });
+
+      // Right panel: Noun Scroll
+      const scrollX = W - 220, scrollY = 60, scrollW = 180, scrollH = 280;
+      ctx.fillStyle = '#16213e';
+      drawRoundRect(ctx, scrollX, scrollY, scrollW, scrollH, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#0ff';
+      ctx.lineWidth = 2;
+      drawRoundRect(ctx, scrollX, scrollY, scrollW, scrollH, 8);
+      ctx.stroke();
+
+      ctx.fillStyle = '#0ff';
+      ctx.font = 'bold 14px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#0ff';
+      ctx.shadowBlur = 6;
+      ctx.fillText('\u2728 NOUN SCROLL', scrollX + scrollW / 2, scrollY + 28);
+      ctx.shadowBlur = 0;
+
+      const nounRows = Math.ceil(nouns.length / 2);
+      nouns.forEach((n, i) => {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const nx = scrollX + 15 + col * 85;
+        const ny = scrollY + 45 + row * 55;
+        const isActive = n.key === sp.noun;
+        const glow = isActive && highlightPhase > 0.5 ? Math.sin(now * 0.008) * 0.3 + 0.7 : 0;
+
+        ctx.globalAlpha = isActive ? 1 : 0.4;
+        ctx.fillStyle = isActive ? '#0ff' : '#333';
+        ctx.shadowColor = isActive ? '#0ff' : 'transparent';
+        ctx.shadowBlur = isActive ? 10 + glow * 6 : 0;
+        drawRoundRect(ctx, nx, ny, 75, 40, 5);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = isActive ? '#000' : '#777';
+        ctx.font = 'bold 18px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(n.key, nx + 22, ny + 27);
+
+        ctx.font = '10px "Courier New", monospace';
+        ctx.fillStyle = isActive ? '#0d1117' : '#666';
+        ctx.fillText(n.label, nx + 52, ny + 27);
+        ctx.globalAlpha = 1;
+      });
+
+      // Center area
+      const centerX = W / 2;
+      const centerY = 190;
+
+      // Particles flowing from verb and noun to center
+      if (particlePhase > 0 && particlePhase < 1) {
+        const verbColor = verbs.find(v => v.key === sp.verb)?.color || '#e94560';
+        // Verb particles (left to center)
+        for (let i = 0; i < 12; i++) {
+          const pt = (particlePhase + i * 0.08) % 1;
+          const px = lerp(tomeX + tomeW, centerX - 40, easeOut(pt));
+          const py = centerY + Math.sin(pt * Math.PI * 3 + i) * 30;
+          ctx.globalAlpha = (1 - pt) * 0.8;
+          ctx.fillStyle = verbColor;
+          ctx.shadowColor = verbColor;
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(px, py, 3 + (1 - pt) * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // Noun particles (right to center)
+        for (let i = 0; i < 12; i++) {
+          const pt = (particlePhase + i * 0.08) % 1;
+          const px = lerp(scrollX, centerX + 40, easeOut(pt));
+          const py = centerY + Math.cos(pt * Math.PI * 3 + i) * 30;
+          ctx.globalAlpha = (1 - pt) * 0.8;
+          ctx.fillStyle = '#0ff';
+          ctx.shadowColor = '#0ff';
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(px, py, 3 + (1 - pt) * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+      }
+
+      // Spell formation in center
+      if (spellFormPhase > 0) {
+        const scale = easeOut(spellFormPhase);
+        const verbColor = verbs.find(v => v.key === sp.verb)?.color || '#e94560';
+
+        // Glow circle
+        ctx.globalAlpha = spellFormPhase * 0.3;
+        ctx.fillStyle = '#fff';
+        ctx.shadowColor = '#fff';
+        ctx.shadowBlur = 40 * scale;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 50 * scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+
+        // Spell text
+        ctx.globalAlpha = Math.min(spellFormPhase * 2, 1);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold ' + (40 * scale) + 'px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = verbColor;
+        ctx.shadowBlur = 20;
+        ctx.fillText(sp.spell, centerX, centerY + 14 * scale);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+
+        // Spell description
+        if (spellFormPhase > 0.4) {
+          ctx.globalAlpha = (spellFormPhase - 0.4) / 0.6;
+          ctx.fillStyle = '#ccc';
+          ctx.font = '14px "Courier New", monospace';
+          ctx.fillText(sp.verbName + ' ' + sp.nounName, centerX, centerY + 50);
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      // Code transformation at bottom
+      const transY = 350;
+      if (t > 0.15) {
+        const showAlpha = Math.min((t - 0.15) / 0.1, 1);
+        ctx.globalAlpha = showAlpha;
+
+        // Before label
+        ctx.fillStyle = '#888';
+        ctx.font = '11px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('BEFORE', centerX - 140, transY - 10);
+
+        // Before code
+        ctx.fillStyle = '#16213e';
+        drawRoundRect(ctx, centerX - 230, transY, 180, 32, 4);
+        ctx.fill();
+        ctx.fillStyle = '#4ade80';
+        ctx.font = '13px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(sp.before.replace('\\n', ' | '), centerX - 140, transY + 20);
+
+        // Arrow
+        ctx.fillStyle = transformPhase > 0 ? '#ffcc00' : '#555';
+        ctx.font = '20px "Courier New", monospace';
+        ctx.fillText('\u2192', centerX, transY + 20);
+
+        // After label
+        ctx.fillStyle = '#888';
+        ctx.font = '11px "Courier New", monospace';
+        ctx.fillText('AFTER', centerX + 140, transY - 10);
+
+        // After code
+        ctx.fillStyle = transformPhase > 0 ? '#1a2e1a' : '#16213e';
+        drawRoundRect(ctx, centerX + 50, transY, 180, 32, 4);
+        ctx.fill();
+
+        if (transformPhase > 0) {
+          ctx.fillStyle = '#ffcc00';
+          ctx.shadowColor = '#ffcc00';
+          ctx.shadowBlur = 6;
+        } else {
+          ctx.fillStyle = '#555';
+        }
+        ctx.font = '13px "Courier New", monospace';
+        ctx.fillText(transformPhase > 0 ? sp.after : '???', centerX + 140, transY + 20);
+        ctx.shadowBlur = 0;
+
+        ctx.globalAlpha = 1;
+      }
+
+      // Title
+      ctx.fillStyle = '#ff6ec7';
+      ctx.font = 'bold 14px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.shadowColor = '#ff6ec7';
+      ctx.shadowBlur = 6;
+      ctx.fillText('SPELL CRAFTER', 20, 30);
+      ctx.shadowBlur = 0;
+
+      // Ambient sparkles
+      for (let i = 0; i < 8; i++) {
+        const sx = (Math.sin(now * 0.001 + i * 1.7) * 0.5 + 0.5) * W;
+        const sy = (Math.cos(now * 0.0013 + i * 2.3) * 0.5 + 0.5) * H;
+        const sa = Math.sin(now * 0.003 + i) * 0.3 + 0.3;
+        ctx.globalAlpha = sa * 0.3;
+        ctx.fillStyle = i % 2 === 0 ? '#0ff' : '#ff6ec7';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // Caption
+      const captionIdx = Math.floor((elapsed / 3700)) % captions.length;
+      captionEl.innerHTML = captions[captionIdx];
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ─── OPTION C: Code Sculptor ────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('canvas-c');
+  const ctx = canvas.getContext('2d');
+  const W = 900, H = 420;
+  const captionEl = document.getElementById('caption-c');
+
+  const captions = [
+    "Transform the code from BEFORE to AFTER using Vim commands",
+    "Each command counts as a stroke \u2014 beat par for maximum stars",
+    "<em>dw</em> removes a word, <em>c$</em> changes to end of line \u2014 find the shortest path"
+  ];
+
+  const puzzles = [
+    {
+      before: [
+        'function calculateTotal(items, tax) {',
+        '  let total = 0;',
+        '  for (let i = 0; i < items.length; i++) {',
+        '    total += items[i].price;',
+        '  }',
+        '  return total * tax;',
+        '}'
+      ],
+      after: [
+        'function calculateTotal(items) {',
+        '  let total = 0;',
+        '  for (let i = 0; i < items.length; i++) {',
+        '    total += items[i].price;',
+        '  }',
+        '  return total;',
+        '}'
+      ],
+      steps: [
+        { cmd: 'dw', line: 0, desc: 'delete ", tax"', startCol: 33, endCol: 38, newText: 'function calculateTotal(items) {' },
+        { cmd: 'd$', line: 5, desc: 'fix return', startCol: 15, endCol: 22, newText: '  return total;' },
+      ],
+      par: 2
+    },
+    {
+      before: [
+        'const name = "world";',
+        'const greeting = "hi";',
+        'console.log(greeting);',
+      ],
+      after: [
+        'const name = "world";',
+        'const greeting = "hello";',
+        'console.log(greeting);',
+      ],
+      steps: [
+        { cmd: 'cw', line: 1, desc: 'change "hi" to "hello"', startCol: 19, endCol: 21, newText: 'const greeting = "hello";' },
+      ],
+      par: 1
+    },
+    {
+      before: [
+        'let x = 10;',
+        'let temp = 0;',
+        'let y = 20;',
+        'swap(x, y);',
+      ],
+      after: [
+        'let x = 10;',
+        'let y = 20;',
+        'swap(x, y);',
+      ],
+      steps: [
+        { cmd: 'dj', line: 1, desc: 'delete temp line', startCol: 0, endCol: 13, newText: null },
+      ],
+      par: 1
+    },
+  ];
+
+  const CYCLE = 11000;
+  let startTime = performance.now();
+
+  function draw(now) {
+    if (document.getElementById('panel-c').classList.contains('active')) {
+      const elapsed = (now - startTime) % (CYCLE * puzzles.length);
+      const puzzleIdx = Math.floor(elapsed / CYCLE) % puzzles.length;
+      const t = (elapsed % CYCLE) / CYCLE;
+      const puzzle = puzzles[puzzleIdx];
+
+      ctx.fillStyle = '#0d1117';
+      ctx.fillRect(0, 0, W, H);
+
+      // Phase: 0-0.15 show puzzle, 0.15-0.75 apply steps, 0.75-1.0 celebration
+      const stepsPhase = t >= 0.15 && t < 0.75 ? (t - 0.15) / 0.6 : (t >= 0.75 ? 1 : 0);
+      const celebPhase = t >= 0.75 ? (t - 0.75) / 0.25 : 0;
+
+      // Current step
+      const totalSteps = puzzle.steps.length;
+      const currentStepFloat = stepsPhase * totalSteps;
+      const currentStep = Math.min(Math.floor(currentStepFloat), totalSteps - 1);
+      const stepProgress = t >= 0.15 && t < 0.75 ? (currentStepFloat % 1) : (t >= 0.75 ? 1 : 0);
+      const completedSteps = t >= 0.75 ? totalSteps : Math.floor(currentStepFloat);
+
+      // Build current code state
+      let currentLines = [...puzzle.before];
+      for (let s = 0; s < completedSteps && s < totalSteps; s++) {
+        const step = puzzle.steps[s];
+        if (step.newText === null) {
+          currentLines.splice(step.line, 1);
+        } else {
+          currentLines[step.line] = step.newText;
+        }
+      }
+
+      // BEFORE panel (left)
+      const panelW = 380, panelH = 250;
+      const leftX = 30, panelY = 70;
+
+      ctx.fillStyle = '#16213e';
+      drawRoundRect(ctx, leftX, panelY, panelW, panelH, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#e94560';
+      ctx.lineWidth = 2;
+      drawRoundRect(ctx, leftX, panelY, panelW, panelH, 8);
+      ctx.stroke();
+
+      // BEFORE label
+      ctx.fillStyle = '#e94560';
+      ctx.font = 'bold 13px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('CURRENT', leftX + panelW / 2, panelY - 8);
+
+      // Current code lines
+      ctx.textAlign = 'left';
+      ctx.font = '13px "Courier New", monospace';
+      currentLines.forEach((line, i) => {
+        const ly = panelY + 28 + i * 22;
+
+        // Highlight active line
+        const isActiveLine = stepsPhase > 0 && stepsPhase < 1 && completedSteps < totalSteps && puzzle.steps[currentStep].line === i;
+        if (isActiveLine && stepProgress > 0.2 && stepProgress < 0.8) {
+          ctx.fillStyle = '#e9456020';
+          ctx.fillRect(leftX + 8, ly - 14, panelW - 16, 20);
+
+          // Highlight affected region
+          const step = puzzle.steps[currentStep];
+          const highlightProgress = easeInOut(Math.min((stepProgress - 0.2) / 0.4, 1));
+          ctx.fillStyle = `rgba(233, 69, 96, ${0.3 * highlightProgress})`;
+          const charW = 7.8;
+          const hx = leftX + 38 + step.startCol * charW;
+          const hw = (step.endCol - step.startCol) * charW;
+          ctx.fillRect(hx, ly - 14, hw, 20);
+        }
+
+        // Line number
+        ctx.fillStyle = '#555';
+        ctx.fillText((i + 1).toString().padStart(2, ' '), leftX + 12, ly);
+
+        // Code
+        ctx.fillStyle = isActiveLine ? '#fff' : '#8be9fd';
+        ctx.fillText(line, leftX + 38, ly);
+      });
+
+      // AFTER panel (right)
+      const rightX = W - panelW - 30;
+
+      ctx.fillStyle = '#16213e';
+      drawRoundRect(ctx, rightX, panelY, panelW, panelH, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#4ade80';
+      ctx.lineWidth = 2;
+      drawRoundRect(ctx, rightX, panelY, panelW, panelH, 8);
+      ctx.stroke();
+
+      // AFTER label
+      ctx.fillStyle = '#4ade80';
+      ctx.font = 'bold 13px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('TARGET', rightX + panelW / 2, panelY - 8);
+
+      // After code lines
+      ctx.textAlign = 'left';
+      ctx.font = '13px "Courier New", monospace';
+      puzzle.after.forEach((line, i) => {
+        const ly = panelY + 28 + i * 22;
+
+        // Line number
+        ctx.fillStyle = '#555';
+        ctx.fillText((i + 1).toString().padStart(2, ' '), rightX + 12, ly);
+
+        // Code
+        ctx.fillStyle = '#4ade80';
+        ctx.fillText(line, rightX + 38, ly);
+      });
+
+      // Command display area (bottom)
+      const cmdY = 340;
+
+      // Par display
+      ctx.fillStyle = '#888';
+      ctx.font = '13px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('PAR: ' + puzzle.par, 40, cmdY);
+
+      // Strokes counter
+      const strokes = completedSteps;
+      ctx.fillStyle = strokes <= puzzle.par ? '#4ade80' : '#ffcc00';
+      ctx.fillText('STROKES: ' + strokes + '/' + puzzle.par, 40, cmdY + 22);
+
+      // Stars
+      const starsEarned = celebPhase > 0 ? (strokes <= puzzle.par ? 3 : 2) : 0;
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = i < starsEarned ? '#ffcc00' : '#333';
+        ctx.font = '20px sans-serif';
+        ctx.fillText('\u2605', 40 + i * 28, cmdY + 52);
+      }
+
+      // Command log
+      ctx.fillStyle = '#555';
+      ctx.font = '11px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('COMMANDS:', W / 2 - 80, cmdY - 4);
+
+      puzzle.steps.forEach((step, i) => {
+        const sx = W / 2 - 80 + i * 160;
+        const sy = cmdY + 18;
+        const isDone = i < completedSteps;
+        const isActive = i === completedSteps && stepsPhase > 0 && stepsPhase < 1;
+
+        // Command box
+        ctx.fillStyle = isDone ? '#0f3460' : (isActive ? '#2a1a3e' : '#1a1a2e');
+        drawRoundRect(ctx, sx, sy, 140, 55, 6);
+        ctx.fill();
+        ctx.strokeStyle = isDone ? '#4ade80' : (isActive ? '#ff6ec7' : '#333');
+        ctx.lineWidth = isActive ? 2 : 1;
+        drawRoundRect(ctx, sx, sy, 140, 55, 6);
+        ctx.stroke();
+
+        // Command text
+        ctx.fillStyle = isDone ? '#4ade80' : (isActive ? '#ff6ec7' : '#555');
+        ctx.font = 'bold 22px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = isDone ? '#4ade80' : (isActive ? '#ff6ec7' : 'transparent');
+        ctx.shadowBlur = isDone || isActive ? 8 : 0;
+        ctx.fillText(step.cmd, sx + 45, sy + 30);
+        ctx.shadowBlur = 0;
+
+        // Description
+        ctx.fillStyle = isDone ? '#8be9fd' : '#666';
+        ctx.font = '10px "Courier New", monospace';
+        ctx.fillText(step.desc, sx + 70, sy + 48);
+
+        // Check mark
+        if (isDone) {
+          ctx.fillStyle = '#4ade80';
+          ctx.font = '16px sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText('\u2713', sx + 134, sy + 18);
+        }
+
+        // Active animation pulse
+        if (isActive) {
+          const pulse = Math.sin(now * 0.006) * 0.15 + 0.15;
+          ctx.globalAlpha = pulse;
+          ctx.fillStyle = '#ff6ec7';
+          drawRoundRect(ctx, sx, sy, 140, 55, 6);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      });
+
+      ctx.textAlign = 'left';
+
+      // Celebration
+      if (celebPhase > 0) {
+        const celebFade = easeOut(Math.min(celebPhase * 2, 1));
+
+        // "MATCH!" text
+        ctx.globalAlpha = celebFade;
+        ctx.fillStyle = '#4ade80';
+        ctx.font = 'bold 48px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#4ade80';
+        ctx.shadowBlur = 30;
+        ctx.fillText('MATCH!', W / 2, 55);
+        ctx.shadowBlur = 0;
+
+        // Celebration particles
+        for (let i = 0; i < 20; i++) {
+          const angle = (i / 20) * Math.PI * 2 + celebPhase * 3;
+          const dist = 40 + celebPhase * 120;
+          const px = W / 2 + Math.cos(angle) * dist;
+          const py = 45 + Math.sin(angle) * dist * 0.5;
+          ctx.globalAlpha = (1 - celebPhase) * 0.7;
+          ctx.fillStyle = ['#4ade80', '#ffcc00', '#0ff', '#ff6ec7'][i % 4];
+          ctx.beginPath();
+          ctx.arc(px, py, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // Green border flash on both panels
+        ctx.strokeStyle = '#4ade80';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#4ade80';
+        ctx.shadowBlur = 15 * (1 - celebPhase);
+        drawRoundRect(ctx, leftX, panelY, panelW, panelH, 8);
+        ctx.stroke();
+        drawRoundRect(ctx, rightX, panelY, panelW, panelH, 8);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // Title
+      ctx.fillStyle = '#ff6ec7';
+      ctx.font = 'bold 14px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.shadowColor = '#ff6ec7';
+      ctx.shadowBlur = 6;
+      ctx.fillText('CODE SCULPTOR', 20, 30);
+      ctx.shadowBlur = 0;
+
+      // Puzzle counter
+      ctx.fillStyle = '#888';
+      ctx.font = '12px "Courier New", monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText('PUZZLE ' + (puzzleIdx + 1) + '/' + puzzles.length, W - 20, 30);
+
+      // Caption
+      const captionIdx = Math.floor((elapsed / 3500)) % captions.length;
+      captionEl.innerHTML = captions[captionIdx];
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+[meta]
+id = "intro-1-2-word-jumps"
+zone = "intro"
+language = "python"
+tags = ["intro", "movement", "words", "counts"]
+difficulty = 1
+intro = true
+intro_level = "1-2"
+
+[code]
+content = """
+# ===================================
+# Level 1-2: Word jumps & counts
+# ===================================
+#
+# Pressing 'l' 20 times is slow.
+# There's a better way:
+#
+#   w -- jump to next word
+#   b -- jump back a word
+#   W -- jump to next WORD (skip punct)
+#   B -- jump back a WORD
+#   e -- jump to end of word
+#
+# And counts multiply ANY motion:
+#   5j -- move 5 lines down (1 motion!)
+#   3w -- jump 3 words forward
+#
+# Targets are further apart now.
+# You'll need these to survive.
+# ===================================
+
+database_url = "postgres://localhost:5432/app"
+secret_key = "super_secret_value_here"
+max_retries = 3
+timeout = 30
+
+def connect(url, retries, timeout):
+    for attempt in range(retries):
+        print(f"Connecting to {url}...")
+        if try_connect(url, timeout):
+            return True
+    return False
+"""
+
+# Task 1: jump to 'database_url' (w from top)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "database_url", occurrence = 1 }
+description = "Jump to 'database_url' (hint: j)"
+points = 50
+optimal_keys = 2
+
+# Task 2: jump to 'max_retries' (2j from database_url)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "max_retries", occurrence = 1 }
+description = "Jump to 'max_retries' (hint: 2j)"
+points = 50
+optimal_keys = 2
+
+# Task 3: jump to 'connect' function (2j w)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "connect", occurrence = 1 }
+description = "Jump to 'connect' (hint: 2j w)"
+points = 75
+optimal_keys = 3
+
+# Task 4: jump to 'try_connect' (3j 3w)
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "try_connect", occurrence = 1 }
+description = "Jump to 'try_connect' (hint: 3j 3w)"
+points = 75
+optimal_keys = 3

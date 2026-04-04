@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World 8: Marks, Jumps, Registers - Vim Heroes</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #1a1a2e;
+  color: #e0e0ff;
+  font-family: 'Courier New', 'Consolas', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: rgba(10, 10, 30, 0.8);
+  border-bottom: 1px solid #3a2a6e;
+}
+
+.back-link {
+  color: #b090ff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+.back-link:hover { color: #d0b0ff; }
+
+.world-title {
+  font-size: 18px;
+  color: #c8a0ff;
+  text-shadow: 0 0 12px rgba(180, 120, 255, 0.4);
+}
+
+.tabs {
+  display: flex;
+  gap: 0;
+  background: rgba(10, 10, 30, 0.6);
+  border-bottom: 2px solid #2a1a5e;
+}
+
+.tab {
+  flex: 1;
+  padding: 14px 16px;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #8070a0;
+  font-family: inherit;
+  font-size: 14px;
+  transition: all 0.3s;
+  border-bottom: 3px solid transparent;
+  position: relative;
+}
+.tab:hover { color: #c0b0e0; background: rgba(100, 60, 180, 0.1); }
+.tab.active {
+  color: #e0d0ff;
+  border-bottom-color: #a060ff;
+  background: rgba(100, 60, 180, 0.15);
+  text-shadow: 0 0 8px rgba(160, 96, 255, 0.5);
+}
+.tab-label { font-weight: bold; display: block; }
+.tab-sub { font-size: 11px; color: #7060a0; margin-top: 2px; display: block; }
+.tab.active .tab-sub { color: #a090c0; }
+
+.demo-container {
+  max-width: 900px;
+  margin: 24px auto;
+  padding: 0 20px;
+}
+
+.demo-panel {
+  display: none;
+  background: rgba(20, 16, 40, 0.9);
+  border: 1px solid #3a2a6e;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(100, 50, 200, 0.15);
+}
+.demo-panel.active { display: block; }
+
+.canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  background: #0d0d1a;
+  overflow: hidden;
+}
+.canvas-wrap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.caption-bar {
+  padding: 16px 20px;
+  background: rgba(30, 20, 60, 0.95);
+  border-top: 1px solid #3a2a6e;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+}
+.caption-text {
+  font-size: 15px;
+  color: #d0c0f0;
+  line-height: 1.5;
+  transition: opacity 0.4s;
+}
+.caption-key {
+  display: inline-block;
+  background: rgba(140, 80, 255, 0.25);
+  border: 1px solid #7050c0;
+  border-radius: 4px;
+  padding: 1px 7px;
+  margin: 0 2px;
+  color: #c8a0ff;
+  font-weight: bold;
+  text-shadow: 0 0 6px rgba(160, 96, 255, 0.6);
+}
+
+.keys-ref {
+  padding: 12px 20px;
+  background: rgba(15, 12, 30, 0.9);
+  border-top: 1px solid #2a1a4e;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.key-badge {
+  font-size: 11px;
+  background: rgba(80, 40, 160, 0.2);
+  border: 1px solid #3a2a5e;
+  border-radius: 4px;
+  padding: 3px 8px;
+  color: #9080b0;
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="index.html" class="back-link">&larr; Back to Overview</a>
+  <div class="world-title">World 8 &mdash; Marks, Jumps, Registers</div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="a" onclick="switchTab('a')">
+    <span class="tab-label">Option A: Time Traveler</span>
+    <span class="tab-sub">Time-travel puzzle</span>
+  </button>
+  <button class="tab" data-tab="b" onclick="switchTab('b')">
+    <span class="tab-label">Option B: Portal</span>
+    <span class="tab-sub">Portal-style puzzle</span>
+  </button>
+  <button class="tab" data-tab="c" onclick="switchTab('c')">
+    <span class="tab-label">Option C: Spy Network</span>
+    <span class="tab-sub">Espionage</span>
+  </button>
+</div>
+
+<div class="demo-container">
+  <!-- Option A -->
+  <div class="demo-panel active" id="panel-a">
+    <div class="canvas-wrap"><canvas id="canvas-a"></canvas></div>
+    <div class="caption-bar"><div class="caption-text" id="caption-a"></div></div>
+    <div class="keys-ref">
+      <span class="key-badge">m{a-z}</span>
+      <span class="key-badge">'{mark}</span>
+      <span class="key-badge">``</span>
+      <span class="key-badge">Ctrl-o</span>
+      <span class="key-badge">Ctrl-i</span>
+      <span class="key-badge">"{reg}y</span>
+      <span class="key-badge">"{reg}p</span>
+      <span class="key-badge">:reg</span>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="demo-panel" id="panel-b">
+    <div class="canvas-wrap"><canvas id="canvas-b"></canvas></div>
+    <div class="caption-bar"><div class="caption-text" id="caption-b"></div></div>
+    <div class="keys-ref">
+      <span class="key-badge">m{a-z}</span>
+      <span class="key-badge">'{mark}</span>
+      <span class="key-badge">``</span>
+      <span class="key-badge">Ctrl-o</span>
+      <span class="key-badge">Ctrl-i</span>
+      <span class="key-badge">"{reg}y</span>
+      <span class="key-badge">"{reg}p</span>
+      <span class="key-badge">:reg</span>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="demo-panel" id="panel-c">
+    <div class="canvas-wrap"><canvas id="canvas-c"></canvas></div>
+    <div class="caption-bar"><div class="caption-text" id="caption-c"></div></div>
+    <div class="keys-ref">
+      <span class="key-badge">m{a-z}</span>
+      <span class="key-badge">'{mark}</span>
+      <span class="key-badge">``</span>
+      <span class="key-badge">Ctrl-o</span>
+      <span class="key-badge">Ctrl-i</span>
+      <span class="key-badge">"{reg}y</span>
+      <span class="key-badge">"{reg}p</span>
+      <span class="key-badge">:reg</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Shared utilities ──────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  document.querySelectorAll('.demo-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + id));
+}
+
+function fitCanvas(canvas) {
+  const r = canvas.parentElement.getBoundingClientRect();
+  let cw = r.width, ch = r.height;
+  if(!cw || !ch) {
+    const active = document.querySelector('.demo-panel.active canvas');
+    if(active) { const ar = active.parentElement.getBoundingClientRect(); cw = ar.width; ch = ar.height; }
+    else { cw = 700; ch = 420; }
+  }
+  canvas.width = cw * devicePixelRatio;
+  canvas.height = ch * devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  return { ctx, w: cw, h: ch };
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function easeInOut(t) { return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; }
+
+const CODE_LINES = [
+  'fn process_data(input: &str) -> Result<Data> {',
+  '    let parsed = parse_input(input)?;',
+  '    let validated = validate(&parsed);',
+  '    ',
+  '    for item in validated.iter() {',
+  '        transform(item);',
+  '    }',
+  '    ',
+  '    let result = aggregate(validated);',
+  '    apply_filters(&mut result);',
+  '    ',
+  '    Ok(result)',
+  '}'
+];
+
+function drawCodeLines(ctx, x, y, w, lines, fontSize, highlightLine) {
+  ctx.font = fontSize + 'px Courier New';
+  const lh = fontSize * 1.6;
+  for (let i = 0; i < lines.length; i++) {
+    const ly = y + i * lh;
+    // line number
+    ctx.fillStyle = '#4a4070';
+    ctx.textAlign = 'right';
+    ctx.fillText((i + 1).toString(), x + 20, ly + fontSize);
+    ctx.textAlign = 'left';
+    // highlight
+    if (highlightLine === i) {
+      ctx.fillStyle = 'rgba(120, 60, 220, 0.15)';
+      ctx.fillRect(x + 28, ly, w - 28, lh);
+    }
+    // code text
+    ctx.fillStyle = syntaxColor(lines[i]);
+    ctx.fillText(lines[i], x + 32, ly + fontSize);
+  }
+  return lh;
+}
+
+function syntaxColor(line) {
+  if (line.match(/^\s*(fn |let |for |if |return )/)) return '#c8a0ff';
+  if (line.match(/^\s*\/\//)) return '#5a5080';
+  if (line.includes('Ok(') || line.includes('Result')) return '#80e0a0';
+  return '#b0a0d0';
+}
+
+// caption cycling helper
+function makeCaptionCycler(elId, captions, intervalMs) {
+  const el = document.getElementById(elId);
+  let idx = 0;
+  function show() {
+    el.style.opacity = 0;
+    setTimeout(() => {
+      el.innerHTML = captions[idx % captions.length];
+      el.style.opacity = 1;
+      idx++;
+    }, 300);
+  }
+  show();
+  setInterval(show, intervalMs);
+}
+
+// ── OPTION A: Time Traveler ───────────────────────────────
+(function() {
+  const canvas = document.getElementById('canvas-a');
+  let ctx, W, H;
+
+  function resize() { ({ctx, w: W, h: H} = fitCanvas(canvas)); }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const CYCLE = 10000; // 10s loop
+  const marks = [
+    { label: 'a', line: 1, col: 4 },
+    { label: 'b', line: 4, col: 8 },
+    { label: 'c', line: 8, col: 4 }
+  ];
+
+  // timeline: [startFrac, endFrac, action]
+  const steps = [
+    { t0: 0.00, t1: 0.10, action: 'move_to', line: 1 },
+    { t0: 0.10, t1: 0.18, action: 'set_mark', mark: 0 },
+    { t0: 0.18, t1: 0.28, action: 'move_to', line: 4 },
+    { t0: 0.28, t1: 0.36, action: 'set_mark', mark: 1 },
+    { t0: 0.36, t1: 0.46, action: 'move_to', line: 8 },
+    { t0: 0.46, t1: 0.54, action: 'set_mark', mark: 2 },
+    { t0: 0.54, t1: 0.64, action: 'jump_mark', mark: 0 }, // 'a
+    { t0: 0.64, t1: 0.72, action: 'yank_reg', mark: 0 },  // "ay
+    { t0: 0.72, t1: 0.82, action: 'jump_mark', mark: 2 }, // 'c
+    { t0: 0.82, t1: 0.90, action: 'paste_reg', mark: 0 }, // "ap
+    { t0: 0.90, t1: 1.00, action: 'ctrl_o' }
+  ];
+
+  let activeMarks = [];
+  let cursorLine = 0;
+  let cursorTargetLine = 0;
+  let rippleTime = -1;
+  let rippleX = 0, rippleY = 0;
+  let registers = {};
+  let showYank = false;
+  let showPaste = false;
+  let ctrlOTrail = [];
+  let actionLabel = '';
+
+  function getStep(frac) {
+    for (const s of steps) if (frac >= s.t0 && frac < s.t1) return s;
+    return steps[steps.length - 1];
+  }
+
+  function draw(time) {
+    const frac = (time % CYCLE) / CYCLE;
+    ctx.clearRect(0, 0, W, H);
+
+    // background gradient
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#12102a');
+    bg.addColorStop(1, '#1a1a2e');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // subtle grid
+    ctx.strokeStyle = 'rgba(80, 50, 140, 0.08)';
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx < W; gx += 40) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
+    for (let gy = 0; gy < H; gy += 40) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+
+    // determine state from step
+    const step = getStep(frac);
+    const stepLocal = (frac - step.t0) / (step.t1 - step.t0);
+    const eased = easeInOut(Math.min(1, stepLocal));
+
+    if (frac < 0.10) { activeMarks = []; registers = {}; cursorLine = 0; }
+
+    if (step.action === 'move_to') {
+      cursorTargetLine = step.line;
+      cursorLine = lerp(cursorLine, cursorTargetLine, eased);
+    } else if (step.action === 'set_mark') {
+      cursorLine = marks[step.mark].line;
+      if (eased > 0.5 && !activeMarks.includes(step.mark)) activeMarks.push(step.mark);
+      actionLabel = 'm' + marks[step.mark].label;
+    } else if (step.action === 'jump_mark') {
+      const from = cursorLine;
+      const to = marks[step.mark].line;
+      cursorLine = lerp(from, to, eased);
+      if (eased < 0.3) { rippleTime = time; rippleX = W * 0.35; rippleY = 40 + marks[step.mark].line * 22; }
+      actionLabel = "'" + marks[step.mark].label;
+    } else if (step.action === 'yank_reg') {
+      cursorLine = marks[step.mark].line;
+      showYank = eased > 0.3 && eased < 0.9;
+      if (eased > 0.5) registers['a'] = CODE_LINES[marks[step.mark].line];
+      actionLabel = '"ay';
+    } else if (step.action === 'paste_reg') {
+      cursorLine = marks[step.mark].line;
+      showPaste = eased > 0.3 && eased < 0.9;
+      actionLabel = '"ap';
+    } else if (step.action === 'ctrl_o') {
+      // animate back through jump list
+      const jumpList = [8, 1, 8, 4, 1, 0];
+      const ji = Math.floor(eased * (jumpList.length - 1));
+      cursorLine = jumpList[Math.min(ji, jumpList.length - 1)];
+      actionLabel = 'Ctrl-o';
+    }
+
+    // draw code
+    const codeX = 30, codeY = 30;
+    const fontSize = 13;
+    const lh = drawCodeLines(ctx, codeX, codeY, W * 0.6, CODE_LINES, fontSize, Math.round(cursorLine));
+
+    // draw cursor
+    const cursorY = codeY + Math.round(cursorLine) * lh;
+    ctx.fillStyle = 'rgba(180, 120, 255, 0.3)';
+    ctx.fillRect(codeX + 28, cursorY, W * 0.6 - 28, lh);
+    ctx.fillStyle = '#c080ff';
+    ctx.fillRect(codeX + 32, cursorY + 2, 2, lh - 4);
+
+    // draw marks (time anchors)
+    for (const mi of activeMarks) {
+      const m = marks[mi];
+      const my = codeY + m.line * lh + lh / 2;
+      const mx = codeX + 16;
+      // glow
+      const grd = ctx.createRadialGradient(mx, my, 0, mx, my, 18);
+      const colors = ['#ff6040', '#40a0ff', '#40ff80'];
+      grd.addColorStop(0, colors[mi] + 'cc');
+      grd.addColorStop(1, colors[mi] + '00');
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(mx, my, 18, 0, Math.PI * 2); ctx.fill();
+      // dot
+      ctx.fillStyle = colors[mi];
+      ctx.beginPath(); ctx.arc(mx, my, 5, 0, Math.PI * 2); ctx.fill();
+      // label
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(m.label, mx, my - 10);
+      ctx.textAlign = 'left';
+    }
+
+    // time-warp ripple
+    if (rippleTime > 0) {
+      const age = (time - rippleTime) / 1000;
+      if (age < 1.2) {
+        const r = age * 120;
+        ctx.strokeStyle = `rgba(160, 100, 255, ${Math.max(0, 0.6 - age * 0.5)})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(rippleX, rippleY, r, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(rippleX, rippleY, r * 0.6, 0, Math.PI * 2); ctx.stroke();
+      } else {
+        rippleTime = -1;
+      }
+    }
+
+    // Timeline bar at bottom
+    const tlY = H - 40, tlX = 40, tlW = W * 0.6 - 20;
+    ctx.fillStyle = 'rgba(60, 40, 100, 0.4)';
+    ctx.fillRect(tlX, tlY, tlW, 8);
+    ctx.fillStyle = '#a060ff';
+    ctx.fillRect(tlX, tlY, tlW * frac, 8);
+    // timeline markers
+    for (const mi of activeMarks) {
+      const m = marks[mi];
+      const mx2 = tlX + (m.line / 12) * tlW;
+      const colors = ['#ff6040', '#40a0ff', '#40ff80'];
+      ctx.fillStyle = colors[mi];
+      ctx.beginPath(); ctx.arc(mx2, tlY + 4, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = '9px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(m.label, mx2, tlY - 4);
+      ctx.textAlign = 'left';
+    }
+    ctx.fillStyle = '#8070a0';
+    ctx.font = '11px Courier New';
+    ctx.fillText('TIMELINE', tlX, tlY - 10);
+
+    // Register inventory slots on right
+    const regX = W * 0.68, regY = 40, regW = W * 0.28, regH = 160;
+    ctx.fillStyle = 'rgba(30, 20, 60, 0.7)';
+    ctx.strokeStyle = '#3a2a6e';
+    ctx.lineWidth = 1;
+    ctx.fillRect(regX, regY, regW, regH);
+    ctx.strokeRect(regX, regY, regW, regH);
+
+    ctx.fillStyle = '#9080b0';
+    ctx.font = 'bold 12px Courier New';
+    ctx.fillText('REGISTERS', regX + 10, regY + 20);
+
+    const slotNames = ['a', 'b', 'c'];
+    for (let i = 0; i < 3; i++) {
+      const sy = regY + 35 + i * 38;
+      ctx.fillStyle = registers[slotNames[i]] ? 'rgba(140, 80, 255, 0.2)' : 'rgba(40, 30, 70, 0.5)';
+      ctx.fillRect(regX + 10, sy, regW - 20, 30);
+      ctx.strokeStyle = registers[slotNames[i]] ? '#8060c0' : '#3a2a5e';
+      ctx.strokeRect(regX + 10, sy, regW - 20, 30);
+      ctx.fillStyle = '#c8a0ff';
+      ctx.font = 'bold 11px Courier New';
+      ctx.fillText('"' + slotNames[i], regX + 16, sy + 19);
+      if (registers[slotNames[i]]) {
+        ctx.fillStyle = '#b0a0d0';
+        ctx.font = '10px Courier New';
+        const txt = registers[slotNames[i]];
+        ctx.fillText(txt.substring(0, 22) + (txt.length > 22 ? '..' : ''), regX + 38, sy + 19);
+      } else {
+        ctx.fillStyle = '#4a4060';
+        ctx.font = '10px Courier New';
+        ctx.fillText('(empty)', regX + 38, sy + 19);
+      }
+    }
+
+    // yank/paste flash
+    if (showYank) {
+      ctx.fillStyle = 'rgba(100, 200, 120, 0.15)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#80ff80';
+      ctx.font = 'bold 16px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText('YANK  "ay', W / 2, H / 2 - 30);
+      ctx.textAlign = 'left';
+    }
+    if (showPaste) {
+      ctx.fillStyle = 'rgba(100, 120, 200, 0.15)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#80a0ff';
+      ctx.font = 'bold 16px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText('PASTE  "ap', W / 2, H / 2 - 30);
+      ctx.textAlign = 'left';
+    }
+    showYank = false;
+    showPaste = false;
+
+    // action label
+    if (actionLabel) {
+      ctx.fillStyle = 'rgba(20, 14, 40, 0.85)';
+      ctx.fillRect(regX, regY + regH + 20, regW, 36);
+      ctx.strokeStyle = '#5040a0';
+      ctx.strokeRect(regX, regY + regH + 20, regW, 36);
+      ctx.fillStyle = '#e0c0ff';
+      ctx.font = 'bold 14px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(actionLabel, regX + regW / 2, regY + regH + 43);
+      ctx.textAlign = 'left';
+    }
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  makeCaptionCycler('caption-a', [
+    'Set time anchors with <span class="caption-key">ma</span>, <span class="caption-key">mb</span> &mdash; bookmark key positions in your code',
+    '<span class="caption-key">\'a</span> jumps back to mark a &mdash; teleport through your edit history',
+    'Registers are inventory slots: <span class="caption-key">"ay</span> stores text, <span class="caption-key">"ap</span> retrieves it'
+  ], 3500);
+})();
+
+// ── OPTION B: Portal ──────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('canvas-b');
+  let ctx, W, H;
+
+  function resize() { ({ctx, w: W, h: H} = fitCanvas(canvas)); }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const CYCLE = 10000;
+  const portalA = { line: 1, color: '#ff8030', label: 'a' };
+  const portalB = { line: 9, color: '#3080ff', label: 'b' };
+
+  const steps = [
+    { t0: 0.00, t1: 0.12, action: 'move_to', line: 1 },
+    { t0: 0.12, t1: 0.22, action: 'set_portal', portal: 'a' },
+    { t0: 0.22, t1: 0.34, action: 'move_to', line: 9 },
+    { t0: 0.34, t1: 0.44, action: 'set_portal', portal: 'b' },
+    { t0: 0.44, t1: 0.58, action: 'teleport', from: 'b', to: 'a' },
+    { t0: 0.58, t1: 0.68, action: 'yank_briefcase' },
+    { t0: 0.68, t1: 0.82, action: 'teleport', from: 'a', to: 'b' },
+    { t0: 0.82, t1: 0.92, action: 'paste_briefcase' },
+    { t0: 0.92, t1: 1.00, action: 'idle' }
+  ];
+
+  let portalsActive = { a: false, b: false };
+  let cursorLine = 0;
+  let briefcases = [
+    { reg: 'a', content: '', x: 0, y: 0 },
+    { reg: 'b', content: '', x: 0, y: 0 },
+    { reg: 'c', content: '', x: 0, y: 0 }
+  ];
+  let whooshParticles = [];
+  let actionLabel = '';
+
+  function getStep(frac) {
+    for (const s of steps) if (frac >= s.t0 && frac < s.t1) return s;
+    return steps[steps.length - 1];
+  }
+
+  function drawPortal(x, y, color, label, time, size) {
+    size = size || 1;
+    const pulse = Math.sin(time * 3) * 0.15 + 1;
+    const r = 22 * size * pulse;
+    // outer glow
+    const g1 = ctx.createRadialGradient(x, y, r * 0.3, x, y, r * 1.8);
+    g1.addColorStop(0, color + '80');
+    g1.addColorStop(0.5, color + '30');
+    g1.addColorStop(1, color + '00');
+    ctx.fillStyle = g1;
+    ctx.beginPath(); ctx.arc(x, y, r * 1.8, 0, Math.PI * 2); ctx.fill();
+    // inner swirl
+    ctx.strokeStyle = color + 'cc';
+    ctx.lineWidth = 2.5;
+    for (let i = 0; i < 3; i++) {
+      const a0 = time * 2 + i * Math.PI * 2 / 3;
+      ctx.beginPath();
+      ctx.arc(x, y, r * (0.5 + i * 0.2), a0, a0 + Math.PI * 0.8);
+      ctx.stroke();
+    }
+    // center
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y, 4 * size, 0, Math.PI * 2); ctx.fill();
+    // label
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, x, y - r - 6);
+    ctx.textAlign = 'left';
+  }
+
+  function draw(time) {
+    const ts = time / 1000;
+    const frac = (time % CYCLE) / CYCLE;
+    ctx.clearRect(0, 0, W, H);
+
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#14102a');
+    bg.addColorStop(1, '#1a1a2e');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // portal background ambiance
+    if (portalsActive.a && portalsActive.b) {
+      ctx.fillStyle = 'rgba(255, 128, 48, 0.03)';
+      ctx.fillRect(0, 0, W / 2, H);
+      ctx.fillStyle = 'rgba(48, 128, 255, 0.03)';
+      ctx.fillRect(W / 2, 0, W / 2, H);
+    }
+
+    const step = getStep(frac);
+    const sl = (frac - step.t0) / (step.t1 - step.t0);
+    const eased = easeInOut(Math.min(1, sl));
+
+    if (frac < 0.05) { portalsActive = { a: false, b: false }; briefcases[0].content = ''; }
+
+    if (step.action === 'move_to') {
+      cursorLine = lerp(cursorLine, step.line, eased);
+    } else if (step.action === 'set_portal') {
+      const p = step.portal === 'a' ? portalA : portalB;
+      cursorLine = p.line;
+      if (eased > 0.4) portalsActive[step.portal] = true;
+      actionLabel = 'm' + step.portal;
+    } else if (step.action === 'teleport') {
+      const from = step.from === 'a' ? portalA : portalB;
+      const to = step.to === 'a' ? portalA : portalB;
+      cursorLine = lerp(from.line, to.line, eased);
+      actionLabel = "'" + step.to;
+      // whoosh particles
+      if (eased > 0.2 && eased < 0.8 && Math.random() < 0.3) {
+        whooshParticles.push({
+          x: lerp(20, 20, eased),
+          y: lerp(40 + from.line * 22, 40 + to.line * 22, eased),
+          vx: (Math.random() - 0.5) * 3,
+          vy: (Math.random() - 0.5) * 3,
+          life: 1,
+          color: from === portalA ? '#ff8030' : '#3080ff'
+        });
+      }
+    } else if (step.action === 'yank_briefcase') {
+      cursorLine = portalA.line;
+      if (eased > 0.4) briefcases[0].content = CODE_LINES[portalA.line];
+      actionLabel = '"ay';
+    } else if (step.action === 'paste_briefcase') {
+      cursorLine = portalB.line;
+      actionLabel = '"ap';
+    } else {
+      actionLabel = '';
+    }
+
+    // code
+    const codeX = 30, codeY = 30, fontSize = 13;
+    const lh = drawCodeLines(ctx, codeX, codeY, W * 0.58, CODE_LINES, fontSize, Math.round(cursorLine));
+
+    // cursor
+    const cy = codeY + Math.round(cursorLine) * lh;
+    ctx.fillStyle = 'rgba(180, 120, 255, 0.25)';
+    ctx.fillRect(codeX + 28, cy, W * 0.58 - 28, lh);
+
+    // portals
+    if (portalsActive.a) drawPortal(codeX + 12, codeY + portalA.line * lh + lh / 2, portalA.color, portalA.label, ts, 1);
+    if (portalsActive.b) drawPortal(codeX + 12, codeY + portalB.line * lh + lh / 2, portalB.color, portalB.label, ts, 1);
+
+    // whoosh particles
+    whooshParticles = whooshParticles.filter(p => {
+      p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+      if (p.life <= 0) return false;
+      ctx.fillStyle = p.color + Math.floor(p.life * 200).toString(16).padStart(2, '0');
+      ctx.beginPath(); ctx.arc(p.x + codeX, p.y, 2, 0, Math.PI * 2); ctx.fill();
+      return true;
+    });
+
+    // briefcase panel
+    const bx = W * 0.64, by = 40, bw = W * 0.32, bh = 200;
+    ctx.fillStyle = 'rgba(30, 20, 60, 0.7)';
+    ctx.strokeStyle = '#3a2a6e';
+    ctx.lineWidth = 1;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#9080b0';
+    ctx.font = 'bold 12px Courier New';
+    ctx.fillText('BRIEFCASES', bx + 10, by + 22);
+
+    for (let i = 0; i < 3; i++) {
+      const sy = by + 38 + i * 50;
+      const bc = briefcases[i];
+      const has = bc.content.length > 0;
+      // briefcase icon
+      ctx.fillStyle = has ? 'rgba(140, 100, 60, 0.5)' : 'rgba(40, 30, 60, 0.4)';
+      ctx.strokeStyle = has ? '#c0a060' : '#3a2a5e';
+      // draw briefcase shape
+      const bix = bx + 14, biy = sy;
+      ctx.fillRect(bix, biy, 22, 16);
+      ctx.strokeRect(bix, biy, 22, 16);
+      ctx.fillStyle = has ? '#c0a060' : '#4a3a6a';
+      ctx.fillRect(bix + 7, biy - 4, 8, 5);
+      // label
+      ctx.fillStyle = '#c8a0ff';
+      ctx.font = 'bold 11px Courier New';
+      ctx.fillText('"' + bc.reg, bix + 28, biy + 12);
+      // content
+      if (has) {
+        ctx.fillStyle = '#b0a0d0';
+        ctx.font = '10px Courier New';
+        ctx.fillText(bc.content.substring(0, 20) + '..', bix + 50, biy + 12);
+      } else {
+        ctx.fillStyle = '#4a4060';
+        ctx.font = '10px Courier New';
+        ctx.fillText('(empty)', bix + 50, biy + 12);
+      }
+    }
+
+    // action label
+    if (actionLabel) {
+      const alY = by + bh + 20;
+      ctx.fillStyle = 'rgba(20, 14, 40, 0.85)';
+      ctx.fillRect(bx, alY, bw, 36);
+      ctx.strokeStyle = '#5040a0';
+      ctx.strokeRect(bx, alY, bw, 36);
+      ctx.fillStyle = '#e0c0ff';
+      ctx.font = 'bold 14px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(actionLabel, bx + bw / 2, alY + 23);
+      ctx.textAlign = 'left';
+    }
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  makeCaptionCycler('caption-b', [
+    'Place portals with <span class="caption-key">ma</span> and <span class="caption-key">mb</span> &mdash; create teleportation points in your code',
+    '<span class="caption-key">\'a</span> and <span class="caption-key">\'b</span> teleport between portals &mdash; instant navigation',
+    'Carry text through portals with registers: <span class="caption-key">"ay</span> packs it, <span class="caption-key">"ap</span> unpacks it'
+  ], 3500);
+})();
+
+// ── OPTION C: Spy Network ─────────────────────────────────
+(function() {
+  const canvas = document.getElementById('canvas-c');
+  let ctx, W, H;
+
+  function resize() { ({ctx, w: W, h: H} = fitCanvas(canvas)); }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const CYCLE = 11000;
+  const agents = [
+    { label: 'a', line: 1, deployed: false },
+    { label: 'b', line: 5, deployed: false },
+    { label: 'c', line: 10, deployed: false }
+  ];
+
+  const steps = [
+    { t0: 0.00, t1: 0.10, action: 'move_to', line: 1 },
+    { t0: 0.10, t1: 0.20, action: 'plant_agent', idx: 0 },
+    { t0: 0.20, t1: 0.28, action: 'move_to', line: 5 },
+    { t0: 0.28, t1: 0.38, action: 'plant_agent', idx: 1 },
+    { t0: 0.38, t1: 0.46, action: 'move_to', line: 10 },
+    { t0: 0.46, t1: 0.56, action: 'plant_agent', idx: 2 },
+    { t0: 0.56, t1: 0.66, action: 'jump_agent', idx: 0 },
+    { t0: 0.66, t1: 0.76, action: 'dead_drop', reg: 'a' },
+    { t0: 0.76, t1: 0.86, action: 'jump_agent', idx: 2 },
+    { t0: 0.86, t1: 0.94, action: 'pickup', reg: 'a' },
+    { t0: 0.94, t1: 1.00, action: 'ctrl_retrace' }
+  ];
+
+  let cursorLine = 0;
+  let deadDrops = {};
+  let missionText = 'Awaiting orders...';
+  let actionLabel = '';
+
+  function getStep(frac) {
+    for (const s of steps) if (frac >= s.t0 && frac < s.t1) return s;
+    return steps[steps.length - 1];
+  }
+
+  function drawSpyIcon(x, y, label, active) {
+    // figure
+    const c = active ? '#40ff90' : '#306040';
+    ctx.fillStyle = c;
+    // head
+    ctx.beginPath(); ctx.arc(x, y - 10, 5, 0, Math.PI * 2); ctx.fill();
+    // body
+    ctx.strokeStyle = c;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 6); ctx.stroke();
+    // arms
+    ctx.beginPath(); ctx.moveTo(x - 6, y - 1); ctx.lineTo(x + 6, y - 1); ctx.stroke();
+    // legs
+    ctx.beginPath(); ctx.moveTo(x, y + 6); ctx.lineTo(x - 4, y + 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, y + 6); ctx.lineTo(x + 4, y + 14); ctx.stroke();
+    // hat (triangle)
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.moveTo(x - 7, y - 13); ctx.lineTo(x + 7, y - 13); ctx.lineTo(x, y - 20); ctx.closePath(); ctx.fill();
+    // label
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 9px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(label.toUpperCase(), x, y + 26);
+    ctx.textAlign = 'left';
+    // active ping
+    if (active) {
+      ctx.strokeStyle = 'rgba(64, 255, 144, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  function draw(time) {
+    const ts = time / 1000;
+    const frac = (time % CYCLE) / CYCLE;
+    ctx.clearRect(0, 0, W, H);
+
+    // dark spy background
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#0e0e1e');
+    bg.addColorStop(1, '#1a1a28');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // grid coordinates (spy map)
+    ctx.strokeStyle = 'rgba(40, 80, 60, 0.15)';
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx < W; gx += 50) {
+      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+      ctx.fillStyle = 'rgba(40, 80, 60, 0.25)';
+      ctx.font = '8px Courier New';
+      ctx.fillText(Math.floor(gx / 50).toString(), gx + 2, 10);
+    }
+    for (let gy = 0; gy < H; gy += 50) {
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+    }
+
+    const step = getStep(frac);
+    const sl = (frac - step.t0) / (step.t1 - step.t0);
+    const eased = easeInOut(Math.min(1, sl));
+
+    if (frac < 0.05) { agents.forEach(a => a.deployed = false); deadDrops = {}; }
+
+    if (step.action === 'move_to') {
+      cursorLine = lerp(cursorLine, step.line, eased);
+      missionText = 'Moving to position...';
+      actionLabel = '';
+    } else if (step.action === 'plant_agent') {
+      cursorLine = agents[step.idx].line;
+      if (eased > 0.5) agents[step.idx].deployed = true;
+      missionText = 'Deploying agent ' + agents[step.idx].label.toUpperCase();
+      actionLabel = 'm' + agents[step.idx].label;
+    } else if (step.action === 'jump_agent') {
+      const target = agents[step.idx].line;
+      cursorLine = lerp(cursorLine, target, eased);
+      missionText = 'Jumping to agent ' + agents[step.idx].label.toUpperCase();
+      actionLabel = "'" + agents[step.idx].label;
+    } else if (step.action === 'dead_drop') {
+      cursorLine = agents[0].line;
+      if (eased > 0.4) deadDrops[step.reg] = CODE_LINES[agents[0].line];
+      missionText = 'Leaving dead drop: register "' + step.reg;
+      actionLabel = '"' + step.reg + 'y';
+    } else if (step.action === 'pickup') {
+      cursorLine = agents[2].line;
+      missionText = 'Retrieving dead drop "' + step.reg;
+      actionLabel = '"' + step.reg + 'p';
+    } else if (step.action === 'ctrl_retrace') {
+      const trail = [10, 1, 10, 5, 1, 0];
+      const ti = Math.floor(eased * (trail.length - 1));
+      cursorLine = trail[Math.min(ti, trail.length - 1)];
+      missionText = 'Retracing steps... Ctrl-o';
+      actionLabel = 'Ctrl-o';
+    }
+
+    // code (left side)
+    const codeX = 30, codeY = 30, fontSize = 13;
+    const lh = drawCodeLines(ctx, codeX, codeY, W * 0.52, CODE_LINES, fontSize, Math.round(cursorLine));
+
+    // cursor as crosshair
+    const cy = codeY + Math.round(cursorLine) * lh + lh / 2;
+    ctx.strokeStyle = 'rgba(64, 255, 144, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(codeX, cy); ctx.lineTo(codeX + W * 0.52, cy); ctx.stroke();
+    ctx.strokeStyle = 'rgba(64, 255, 144, 0.6)';
+    ctx.beginPath(); ctx.arc(codeX + 36, cy, 8, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(codeX + 36, cy - 12); ctx.lineTo(codeX + 36, cy + 12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(codeX + 24, cy); ctx.lineTo(codeX + 48, cy); ctx.stroke();
+
+    // agents (spy icons along left margin)
+    for (const ag of agents) {
+      if (ag.deployed) {
+        const ay = codeY + ag.line * lh + lh / 2;
+        drawSpyIcon(codeX + 8, ay, ag.label, true);
+      }
+    }
+
+    // Mission briefing panel (top right)
+    const mx = W * 0.58, my = 30, mw = W * 0.38, mh = 70;
+    ctx.fillStyle = 'rgba(20, 30, 25, 0.85)';
+    ctx.strokeStyle = '#306040';
+    ctx.lineWidth = 1;
+    ctx.fillRect(mx, my, mw, mh);
+    ctx.strokeRect(mx, my, mw, mh);
+    // classified stamp
+    ctx.fillStyle = 'rgba(255, 60, 40, 0.15)';
+    ctx.font = 'bold 28px Courier New';
+    ctx.textAlign = 'center';
+    ctx.save();
+    ctx.translate(mx + mw / 2, my + mh / 2);
+    ctx.rotate(-0.15);
+    ctx.fillText('CLASSIFIED', 0, 8);
+    ctx.restore();
+    ctx.textAlign = 'left';
+    // mission text
+    ctx.fillStyle = '#40c070';
+    ctx.font = 'bold 11px Courier New';
+    ctx.fillText('MISSION BRIEF', mx + 10, my + 18);
+    ctx.fillStyle = '#90d0a0';
+    ctx.font = '12px Courier New';
+    ctx.fillText(missionText, mx + 10, my + 40);
+    // action
+    if (actionLabel) {
+      ctx.fillStyle = '#e0ffe0';
+      ctx.font = 'bold 13px Courier New';
+      ctx.fillText('> ' + actionLabel, mx + 10, my + 58);
+    }
+
+    // Dead drops panel (right side)
+    const dx = W * 0.58, dy = 120, dw = W * 0.38, dh = 190;
+    ctx.fillStyle = 'rgba(20, 25, 30, 0.8)';
+    ctx.strokeStyle = '#304060';
+    ctx.lineWidth = 1;
+    ctx.fillRect(dx, dy, dw, dh);
+    ctx.strokeRect(dx, dy, dw, dh);
+    ctx.fillStyle = '#6090b0';
+    ctx.font = 'bold 12px Courier New';
+    ctx.fillText('DEAD DROPS', dx + 10, dy + 22);
+
+    const dropSlots = ['a', 'b', 'c'];
+    for (let i = 0; i < 3; i++) {
+      const sy = dy + 35 + i * 48;
+      const has = deadDrops[dropSlots[i]];
+      // compartment
+      ctx.fillStyle = has ? 'rgba(40, 60, 50, 0.6)' : 'rgba(25, 30, 35, 0.5)';
+      ctx.strokeStyle = has ? '#40a060' : '#304050';
+      ctx.fillRect(dx + 10, sy, dw - 20, 38);
+      ctx.strokeRect(dx + 10, sy, dw - 20, 38);
+      // lock icon
+      ctx.fillStyle = has ? '#40ff90' : '#405060';
+      ctx.font = '14px Courier New';
+      ctx.fillText(has ? '\u25A3' : '\u25A2', dx + 16, sy + 24);
+      // label
+      ctx.fillStyle = '#90c0a0';
+      ctx.font = 'bold 11px Courier New';
+      ctx.fillText('"' + dropSlots[i], dx + 34, sy + 16);
+      // content
+      if (has) {
+        ctx.fillStyle = '#b0d0c0';
+        ctx.font = '10px Courier New';
+        const txt = deadDrops[dropSlots[i]];
+        ctx.fillText(txt.substring(0, 22) + (txt.length > 22 ? '..' : ''), dx + 34, sy + 30);
+      } else {
+        ctx.fillStyle = '#405060';
+        ctx.font = '10px Courier New';
+        ctx.fillText('(awaiting intel)', dx + 34, sy + 30);
+      }
+    }
+
+    // scanline effect
+    ctx.fillStyle = 'rgba(0, 255, 100, 0.02)';
+    const scanY = (ts * 60) % H;
+    ctx.fillRect(0, scanY, W, 3);
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  makeCaptionCycler('caption-c', [
+    'Plant agents (marks) at strategic positions: <span class="caption-key">ma</span> places agent \'a\'',
+    'Dead drops (registers) carry intelligence between locations',
+    '<span class="caption-key">Ctrl-o</span> retraces your steps &mdash; <span class="caption-key">Ctrl-i</span> follows them forward'
+  ], 3500);
+})();
+</script>
+</body>
+</html>

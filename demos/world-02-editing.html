@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World 2: Insert &amp; Basic Editing — Vim Heroes</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-family: 'Courier New', Consolas, monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  a { color: #7fdbca; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .back-link {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    font-size: 14px;
+    z-index: 100;
+    color: #7fdbca;
+  }
+
+  header {
+    text-align: center;
+    padding: 40px 20px 10px;
+  }
+
+  header h1 {
+    font-size: 28px;
+    color: #e94560;
+    text-shadow: 0 0 12px rgba(233, 69, 96, .5);
+    margin-bottom: 4px;
+  }
+
+  header p {
+    color: #888;
+    font-size: 13px;
+  }
+
+  /* ---- Tabs ---- */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 20px auto 0;
+    max-width: 720px;
+  }
+
+  .tab-btn {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    color: #7fdbca;
+    padding: 10px 18px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    border-radius: 6px 6px 0 0;
+    transition: background .2s, color .2s, border-color .2s;
+    white-space: nowrap;
+  }
+
+  .tab-btn:hover { background: #1a2a50; }
+
+  .tab-btn.active {
+    background: #0f3460;
+    color: #fff;
+    border-color: #e94560;
+    border-bottom-color: #0f3460;
+  }
+
+  /* ---- Panel ---- */
+  .panel-wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    border: 1px solid #0f3460;
+    border-radius: 0 0 10px 10px;
+    background: #16213e;
+    overflow: hidden;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ---- Canvas area ---- */
+  .stage {
+    position: relative;
+    width: 100%;
+    height: 370px;
+    overflow: hidden;
+    background: #111827;
+    border-bottom: 1px solid #0f3460;
+  }
+
+  /* ---- Captions ---- */
+  .caption-bar {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 24px;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #c0c0c0;
+  }
+
+  .caption-bar span {
+    opacity: 0;
+    animation: captionFade 12s infinite;
+  }
+
+  @keyframes captionFade {
+    0%,2%   { opacity: 0; }
+    5%,30%  { opacity: 1; }
+    33%,100%{ opacity: 0; }
+  }
+
+  .caption-bar span:nth-child(2) { animation-delay: 4s; }
+  .caption-bar span:nth-child(3) { animation-delay: 8s; }
+
+  /* helper: neon glow text */
+  .neon { text-shadow: 0 0 6px currentColor; }
+
+  /* ===== OPTION A: Typewriter ===== */
+  #stageA .deadline {
+    position: absolute;
+    top: 30px;
+    left: 0; right: 0;
+    height: 2px;
+    background: #e94560;
+    box-shadow: 0 0 8px #e94560;
+    z-index: 5;
+  }
+
+  #stageA .deadline-label {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    z-index: 5;
+  }
+
+  #stageA .score-display {
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    font-size: 12px;
+    color: #7fdbca;
+    z-index: 5;
+  }
+
+  .bug-line {
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    border-radius: 4px;
+    padding: 0 10px;
+    background: rgba(17,24,39,.9);
+    transition: background .3s;
+    white-space: nowrap;
+  }
+
+  .bug-line .bug-char {
+    color: #ff6b6b;
+    background: rgba(255,50,50,.15);
+    border-radius: 2px;
+    padding: 0 2px;
+    font-weight: bold;
+  }
+
+  .bug-line .cmd-tag {
+    position: absolute;
+    right: 10px;
+    background: #e94560;
+    color: #fff;
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+
+  .bug-line .cmd-tag.show { opacity: 1; }
+
+  .bug-line.fixed {
+    background: rgba(50,205,100,.12);
+  }
+
+  .bug-line.fixed .bug-char {
+    color: #50fa7b;
+    background: rgba(80,250,123,.15);
+  }
+
+  .bug-line.escaped {
+    background: rgba(255,50,50,.2);
+  }
+
+  .cursor-a {
+    position: absolute;
+    width: 8px;
+    height: 20px;
+    background: #7fdbca;
+    border-radius: 2px;
+    z-index: 10;
+    transition: top .4s ease, left .4s ease;
+    box-shadow: 0 0 8px #7fdbca;
+  }
+
+  /* ===== OPTION B: Assembly Line ===== */
+  #stageB {
+    background: #111827;
+  }
+
+  #stageB .belt {
+    position: absolute;
+    bottom: 100px;
+    left: 0; right: 0;
+    height: 40px;
+    background: repeating-linear-gradient(
+      90deg,
+      #2a2a4a 0px, #2a2a4a 38px,
+      #1e1e3a 38px, #1e1e3a 40px
+    );
+    border-top: 2px solid #444;
+    border-bottom: 2px solid #444;
+  }
+
+  #stageB .belt-stripe {
+    position: absolute;
+    bottom: 100px;
+    left: 0;
+    width: 200%;
+    height: 40px;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 36px,
+      rgba(255,255,255,.06) 36px,
+      rgba(255,255,255,.06) 40px
+    );
+    animation: beltScroll 2s linear infinite;
+  }
+
+  @keyframes beltScroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-40px); }
+  }
+
+  #stageB .station-marker {
+    position: absolute;
+    bottom: 140px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90px;
+    text-align: center;
+    font-size: 10px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  #stageB .station-marker::after {
+    content: '';
+    display: block;
+    margin: 4px auto 0;
+    width: 2px;
+    height: 16px;
+    background: #e94560;
+    box-shadow: 0 0 6px #e94560;
+  }
+
+  #stageB .counter {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    font-size: 13px;
+    color: #7fdbca;
+    z-index: 5;
+  }
+
+  .part-box {
+    position: absolute;
+    bottom: 142px;
+    width: 110px;
+    background: #1e1e3a;
+    border: 1px solid #3a3a6a;
+    border-radius: 6px;
+    padding: 8px 8px 6px;
+    font-size: 11px;
+    text-align: center;
+    transition: border-color .4s, box-shadow .4s, background .4s;
+  }
+
+  .part-box .defect-label {
+    color: #ff6b6b;
+    font-size: 10px;
+    margin-top: 4px;
+  }
+
+  .part-box .cmd-label {
+    color: #e94560;
+    font-size: 12px;
+    font-weight: bold;
+    margin-top: 2px;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+
+  .part-box.at-station .cmd-label { opacity: 1; }
+
+  .part-box.fixed {
+    border-color: #50fa7b;
+    box-shadow: 0 0 12px rgba(80,250,123,.3);
+    background: rgba(50,205,100,.08);
+  }
+
+  .part-box.fixed .defect-label { color: #50fa7b; }
+
+  /* ===== OPTION C: Code Hospital ===== */
+  #stageC {
+    display: flex;
+    background: #111827;
+  }
+
+  .chart-area {
+    flex: 1;
+    padding: 16px;
+    position: relative;
+  }
+
+  .chart-title {
+    font-size: 12px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .chart-code {
+    font-size: 12px;
+    line-height: 1.7;
+    background: #0d1117;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #1e3050;
+    min-height: 160px;
+  }
+
+  .chart-code .line-num {
+    color: #555;
+    display: inline-block;
+    width: 22px;
+    text-align: right;
+    margin-right: 8px;
+    user-select: none;
+  }
+
+  .chart-code .sick {
+    color: #ff6b6b;
+    background: rgba(255,50,50,.1);
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
+  .chart-code .healed {
+    color: #50fa7b;
+    background: rgba(80,250,123,.1);
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
+  .sidebar-area {
+    width: 220px;
+    padding: 16px;
+    border-left: 1px solid #1e3050;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .heartbeat-monitor {
+    height: 60px;
+    border: 1px solid #1e3050;
+    border-radius: 6px;
+    background: #0d1117;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .heartbeat-monitor canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .symptom-list {
+    list-style: none;
+    font-size: 11px;
+  }
+
+  .symptom-list li {
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    background: rgba(255,50,50,.08);
+    border-left: 3px solid #ff6b6b;
+    color: #ddd;
+    transition: all .4s;
+  }
+
+  .symptom-list li.cured {
+    background: rgba(80,250,123,.08);
+    border-left-color: #50fa7b;
+    color: #888;
+    text-decoration: line-through;
+  }
+
+  .symptom-list li .op-cmd {
+    display: inline-block;
+    background: #e94560;
+    color: #fff;
+    font-size: 10px;
+    padding: 0 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+
+  .symptom-list li.operating .op-cmd { opacity: 1; }
+
+  .vitals-label {
+    font-size: 10px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .bpm-display {
+    font-size: 22px;
+    color: #50fa7b;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="back-link">&larr; Back to Overview</a>
+
+<header>
+  <h1>World 2: Insert &amp; Basic Editing</h1>
+  <p>Keys: i I a A o O x dd D C s S r R</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="A">A &mdash; The Typewriter</button>
+  <button class="tab-btn" data-tab="B">B &mdash; Assembly Line</button>
+  <button class="tab-btn" data-tab="C">C &mdash; Code Hospital</button>
+</div>
+
+<div class="panel-wrap">
+
+  <!-- ========== OPTION A ========== -->
+  <div class="panel active" id="panelA">
+    <div class="stage" id="stageA">
+      <div class="deadline"></div>
+      <div class="deadline-label">Deadline</div>
+      <div class="score-display">Score: <span id="scoreA">0</span></div>
+      <div class="cursor-a" id="cursorA"></div>
+    </div>
+    <div class="caption-bar" id="captionsA">
+      <span>Broken code scrolls toward the deadline &mdash; fix bugs before they escape</span>
+      <span>Use <b style="color:#e94560">x</b> to delete, <b style="color:#e94560">i</b> to insert, <b style="color:#e94560">r</b> to replace single characters</span>
+      <span>Each correct fix scores points &mdash; let bugs escape and lose energy</span>
+    </div>
+  </div>
+
+  <!-- ========== OPTION B ========== -->
+  <div class="panel" id="panelB">
+    <div class="stage" id="stageB">
+      <div class="belt"></div>
+      <div class="belt-stripe"></div>
+      <div class="station-marker">Work Station</div>
+      <div class="counter">Fixed: <span id="fixedCount">0</span> / <span id="totalCount">0</span></div>
+    </div>
+    <div class="caption-bar" id="captionsB">
+      <span>Code parts arrive on a conveyor belt &mdash; each has a defect</span>
+      <span>Apply the right edit command: <b style="color:#e94560">dd</b> to remove lines, <b style="color:#e94560">o</b> to add new ones</span>
+      <span>Fix parts before they fall off the belt &mdash; speed increases over time</span>
+    </div>
+  </div>
+
+  <!-- ========== OPTION C ========== -->
+  <div class="panel" id="panelC">
+    <div class="stage" id="stageC">
+      <div class="chart-area">
+        <div class="chart-title">Patient: calculateTotal()</div>
+        <div class="chart-code" id="codeChart"></div>
+      </div>
+      <div class="sidebar-area">
+        <div class="vitals-label">Heart Rate</div>
+        <div class="heartbeat-monitor"><canvas id="hbCanvas"></canvas></div>
+        <div class="bpm-display"><span id="bpmVal">62</span> BPM</div>
+        <div class="vitals-label" style="margin-top:6px;">Symptoms</div>
+        <ul class="symptom-list" id="symptomList"></ul>
+      </div>
+    </div>
+    <div class="caption-bar" id="captionsC">
+      <span>The function is sick &mdash; diagnose and fix each symptom</span>
+      <span>Use <b style="color:#e94560">dd</b> to remove extra lines, <b style="color:#e94560">o</b> to add missing statements</span>
+      <span>Precision matters: wrong command costs extra energy</span>
+    </div>
+  </div>
+
+</div><!-- /panel-wrap -->
+
+<script>
+// ============================================================
+//  TAB SWITCHING
+// ============================================================
+const tabBtns = document.querySelectorAll('.tab-btn');
+const panels  = document.querySelectorAll('.panel');
+
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ============================================================
+//  CAPTION AUTO-CYCLING (CSS handles opacity; JS restarts anim)
+// ============================================================
+document.querySelectorAll('.caption-bar').forEach(bar => {
+  const spans = bar.querySelectorAll('span');
+  // Make only one visible at a time via absolute positioning
+  bar.style.position = 'relative';
+  spans.forEach((s, i) => {
+    s.style.position = 'absolute';
+    s.style.left = '24px';
+    s.style.right = '24px';
+  });
+});
+
+// ============================================================
+//  OPTION A: THE TYPEWRITER
+// ============================================================
+(function optionA() {
+  const stage   = document.getElementById('stageA');
+  const cursor  = document.getElementById('cursorA');
+  const scoreEl = document.getElementById('scoreA');
+
+  const BUGS = [
+    { code: 'let total = prce * qty;',      bugIdx: 14, fix: 'i',  fixChar: 'i', display: 'let total = pr<bug>c</bug>e * qty;',   fixed: 'let total = price * qty;' },
+    { code: 'console.log("hello"));',        bugIdx: 21, fix: 'x',  fixChar: '',  display: 'console.log("hello")<bug>)</bug>;',     fixed: 'console.log("hello");' },
+    { code: 'if (x = 10) { return; }',       bugIdx: 6,  fix: 'r',  fixChar: '=', display: 'if (x <bug>=</bug> 10) { return; }',   fixed: 'if (x == 10) { return; }' },
+    { code: 'function add(a, b {}',           bugIdx: 18, fix: 'i',  fixChar: ')', display: 'function add(a, b <bug>{</bug>}',      fixed: 'function add(a, b) {}' },
+    { code: 'returnn result;',               bugIdx: 6,  fix: 'x',  fixChar: '',  display: 'return<bug>n</bug> result;',            fixed: 'return result;' },
+    { code: 'var x = treu;',                 bugIdx: 10, fix: 'r',  fixChar: 'u', display: 'var x = tr<bug>e</bug>u;',              fixed: 'var x = true;' },
+  ];
+
+  const CYCLE_MS   = 10000;
+  const DEADLINE_Y = 32;
+  const START_Y    = 350;
+  let lines = [];
+  let score = 0;
+  let loopStart = 0;
+
+  function spawnBug(idx, delay) {
+    const bug = BUGS[idx % BUGS.length];
+    const el = document.createElement('div');
+    el.className = 'bug-line';
+    el.innerHTML = bug.display.replace(/<bug>/g, '<span class="bug-char">').replace(/<\/bug>/g, '</span>')
+                   + '<span class="cmd-tag">' + bug.fix + '</span>';
+    el.style.top = START_Y + 'px';
+    stage.appendChild(el);
+    return { el, bug, delay, state: 'scrolling', y: START_Y };
+  }
+
+  function resetA() {
+    lines.forEach(l => l.el.remove());
+    lines = [];
+    score = 0;
+    scoreEl.textContent = '0';
+    for (let i = 0; i < 4; i++) {
+      lines.push(spawnBug(i, i * 2200));
+    }
+    loopStart = performance.now();
+  }
+
+  function tickA(now) {
+    const elapsed = now - loopStart;
+    if (elapsed > CYCLE_MS) { resetA(); }
+
+    lines.forEach((l, i) => {
+      const t = elapsed - l.delay;
+      if (t < 0) { l.el.style.opacity = '0'; return; }
+      l.el.style.opacity = '1';
+
+      if (l.state === 'scrolling') {
+        const progress = Math.min(t / 4500, 1);
+        l.y = START_Y - progress * (START_Y - DEADLINE_Y + 40);
+        l.el.style.top = l.y + 'px';
+
+        // When it reaches fix zone (around middle)
+        if (progress > 0.35 && progress < 0.55 && l.state === 'scrolling') {
+          l.state = 'fixing';
+          l.el.querySelector('.cmd-tag').classList.add('show');
+          // Move cursor to bug
+          const rect = l.el.getBoundingClientRect();
+          const stageRect = stage.getBoundingClientRect();
+          cursor.style.top  = (l.y + 4) + 'px';
+          cursor.style.left = (l.bug.bugIdx * 8 + 20) + 'px';
+          cursor.style.opacity = '1';
+
+          setTimeout(() => {
+            if (l.state === 'fixing') {
+              l.state = 'fixed';
+              l.el.classList.add('fixed');
+              l.el.querySelector('.cmd-tag').classList.remove('show');
+              const bugChar = l.el.querySelector('.bug-char');
+              if (bugChar) bugChar.classList.remove('bug-char');
+              score += 100;
+              scoreEl.textContent = score;
+              cursor.style.opacity = '0.3';
+            }
+          }, 600);
+        }
+
+        // Escaped past deadline
+        if (l.y <= DEADLINE_Y && l.state === 'scrolling') {
+          l.state = 'escaped';
+          l.el.classList.add('escaped');
+          l.el.style.opacity = '0.4';
+        }
+      }
+
+      if (l.state === 'fixed') {
+        // Keep drifting up slowly
+        const progress = Math.min(t / 4500, 1);
+        l.y = START_Y - progress * (START_Y - DEADLINE_Y + 40);
+        l.el.style.top = l.y + 'px';
+      }
+    });
+
+    requestAnimationFrame(tickA);
+  }
+
+  resetA();
+  requestAnimationFrame(tickA);
+})();
+
+// ============================================================
+//  OPTION B: ASSEMBLY LINE
+// ============================================================
+(function optionB() {
+  const stage    = document.getElementById('stageB');
+  const fixedEl  = document.getElementById('fixedCount');
+  const totalEl  = document.getElementById('totalCount');
+
+  const PARTS = [
+    { code: 'let x = 5',    defect: 'missing ;',     cmd: 'A' },
+    { code: '}}',            defect: 'extra }',        cmd: 'x' },
+    { code: 'retrun val',   defect: 'typo in return',  cmd: 'r' },
+    { code: '/* old */',    defect: 'dead code line',  cmd: 'dd' },
+    { code: 'fn(a  b)',     defect: 'missing ,',       cmd: 'i' },
+    { code: '',             defect: 'blank line',      cmd: 'dd' },
+  ];
+
+  const CYCLE_MS = 11000;
+  const BELT_Y   = 0; // offset handled by CSS bottom
+  let parts = [];
+  let fixed = 0;
+  let loopStart = 0;
+
+  function spawnPart(idx, delay) {
+    const p = PARTS[idx % PARTS.length];
+    const el = document.createElement('div');
+    el.className = 'part-box';
+    el.innerHTML = '<div style="color:#7fdbca">' + (p.code || '&nbsp;') + '</div>'
+                 + '<div class="defect-label">' + p.defect + '</div>'
+                 + '<div class="cmd-label">' + p.cmd + '</div>';
+    el.style.left = '-120px';
+    stage.appendChild(el);
+    return { el, data: p, delay, state: 'moving', x: -120 };
+  }
+
+  function resetB() {
+    parts.forEach(p => p.el.remove());
+    parts = [];
+    fixed = 0;
+    fixedEl.textContent = '0';
+    const count = 5;
+    totalEl.textContent = count;
+    for (let i = 0; i < count; i++) {
+      parts.push(spawnPart(i, i * 2000));
+    }
+    loopStart = performance.now();
+  }
+
+  const stageW = 720;
+  const stationX = stageW / 2 - 55;
+
+  function tickB(now) {
+    const elapsed = now - loopStart;
+    if (elapsed > CYCLE_MS) { resetB(); }
+
+    parts.forEach((p) => {
+      const t = elapsed - p.delay;
+      if (t < 0) { p.el.style.opacity = '0'; return; }
+      p.el.style.opacity = '1';
+
+      const speed = stageW + 120;
+      const progress = Math.min(t / 5000, 1);
+      p.x = -120 + progress * (stageW + 140);
+      p.el.style.left = p.x + 'px';
+
+      // At station?
+      const atStation = Math.abs(p.x - stationX) < 30;
+      if (atStation && p.state === 'moving') {
+        p.el.classList.add('at-station');
+        p.state = 'station';
+        setTimeout(() => {
+          if (p.state === 'station') {
+            p.state = 'fixed';
+            p.el.classList.remove('at-station');
+            p.el.classList.add('fixed');
+            fixed++;
+            fixedEl.textContent = fixed;
+          }
+        }, 500);
+      }
+    });
+
+    requestAnimationFrame(tickB);
+  }
+
+  resetB();
+  requestAnimationFrame(tickB);
+})();
+
+// ============================================================
+//  OPTION C: CODE HOSPITAL
+// ============================================================
+(function optionC() {
+  const codeChart   = document.getElementById('codeChart');
+  const symptomList = document.getElementById('symptomList');
+  const hbCanvas    = document.getElementById('hbCanvas');
+  const bpmVal      = document.getElementById('bpmVal');
+  const ctx         = hbCanvas.getContext('2d');
+
+  // Resize canvas
+  function sizeCanvas() {
+    const r = hbCanvas.parentElement.getBoundingClientRect();
+    let cw = r.width, ch = r.height;
+    if(!cw || !ch) {
+      cw = 300; ch = 150;
+    }
+    hbCanvas.width  = cw;
+    hbCanvas.height = ch;
+  }
+  sizeCanvas();
+  window.addEventListener('resize', sizeCanvas);
+
+  const CODE_LINES = [
+    { num: 1, text: 'function calculateTotal(items) {', sick: false },
+    { num: 2, text: '  let sum = 0;',                   sick: false },
+    { num: 3, text: '  ',                               sick: true, symptom: 0 },  // extra blank line
+    { num: 4, text: '  for (let i = 0; i < items.length; i++) {', sick: false },
+    { num: 5, text: '    sum += items[i].prce;',        sick: true, symptom: 1 },  // wrong var name (prce -> price)
+    { num: 6, text: '  }',                              sick: false },
+    { num: 7, text: '',                                  sick: true, symptom: 2 },  // missing return statement
+    { num: 8, text: '}',                                 sick: false },
+  ];
+
+  const SYMPTOMS = [
+    { text: 'Extra blank line (ln 3)',        cmd: 'dd',  fixLine: 2 },
+    { text: 'Wrong variable name (ln 5)',     cmd: 'cw',  fixLine: 4 },
+    { text: 'Missing return statement (ln 7)', cmd: 'o',   fixLine: 6 },
+  ];
+
+  let bpm = 62;
+  let targetBpm = 62;
+  let phase = 0; // heartbeat phase
+  let cureIdx = -1;
+  let loopStart = 0;
+
+  function renderCode(curedUpTo) {
+    let html = '';
+    CODE_LINES.forEach((ln, i) => {
+      const numSpan = '<span class="line-num">' + ln.num + '</span>';
+      let content = ln.text;
+
+      if (ln.sick) {
+        const si = ln.symptom;
+        if (si <= curedUpTo) {
+          // healed version
+          if (si === 0) content = '<span class="healed" style="opacity:.4">  [line removed]</span>';
+          if (si === 1) content = '    sum += items[i].<span class="healed">price</span>;';
+          if (si === 2) content = '  <span class="healed">return sum;</span>';
+        } else {
+          // sick version
+          if (si === 0) content = '  <span class="sick">&nbsp;</span>';
+          if (si === 1) content = '    sum += items[i].<span class="sick">prce</span>;';
+          if (si === 2) content = '<span class="sick">  // ???</span>';
+        }
+      }
+      html += '<div>' + numSpan + content + '</div>';
+    });
+    codeChart.innerHTML = html;
+  }
+
+  function renderSymptoms(curedUpTo, operatingIdx) {
+    symptomList.innerHTML = '';
+    SYMPTOMS.forEach((s, i) => {
+      const li = document.createElement('li');
+      li.textContent = s.text;
+      const cmdSpan = document.createElement('span');
+      cmdSpan.className = 'op-cmd';
+      cmdSpan.textContent = s.cmd;
+      li.appendChild(cmdSpan);
+      if (i <= curedUpTo) li.classList.add('cured');
+      if (i === operatingIdx) li.classList.add('operating');
+      symptomList.appendChild(li);
+    });
+  }
+
+  const CYCLE_MS = 10000;
+
+  function resetC() {
+    cureIdx = -1;
+    bpm = 62;
+    targetBpm = 62;
+    renderCode(-1);
+    renderSymptoms(-1, -1);
+    loopStart = performance.now();
+  }
+
+  // Heartbeat drawing
+  let hbData = [];
+  let hbX = 0;
+
+  function drawHeartbeat() {
+    const w = hbCanvas.width;
+    const h = hbCanvas.height;
+    if (w === 0 || h === 0) return;
+
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, w, h);
+
+    // Generate waveform
+    const speed = bpm / 60; // beats per second
+    phase += speed * 0.03;
+
+    const midY = h / 2;
+    // Shift data left and add new point
+    const val = heartbeatWave(phase);
+    hbData.push(val);
+    if (hbData.length > w) hbData.shift();
+
+    ctx.strokeStyle = '#50fa7b';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#50fa7b';
+    ctx.shadowBlur = 4;
+    ctx.beginPath();
+    for (let i = 0; i < hbData.length; i++) {
+      const y = midY - hbData[i] * (h * 0.35);
+      if (i === 0) ctx.moveTo(i, y);
+      else ctx.lineTo(i, y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  function heartbeatWave(t) {
+    // Stylized ECG-like wave
+    const cycle = t % 1;
+    if (cycle < 0.1)  return Math.sin(cycle * Math.PI / 0.1) * 0.3;
+    if (cycle < 0.15) return 0;
+    if (cycle < 0.2)  return -Math.sin((cycle - 0.15) * Math.PI / 0.05) * 0.2;
+    if (cycle < 0.25) return Math.sin((cycle - 0.2) * Math.PI / 0.05) * 1.0;
+    if (cycle < 0.3)  return -Math.sin((cycle - 0.25) * Math.PI / 0.05) * 0.4;
+    if (cycle < 0.35) return Math.sin((cycle - 0.3) * Math.PI / 0.05) * 0.15;
+    return 0;
+  }
+
+  function tickC(now) {
+    const elapsed = now - loopStart;
+    if (elapsed > CYCLE_MS) { resetC(); }
+
+    // Schedule cures
+    const newCureIdx = elapsed < 2500 ? -1
+                     : elapsed < 5000 ? 0
+                     : elapsed < 7500 ? 1
+                     : elapsed < 9500 ? 2
+                     : 2;
+
+    const operating = elapsed < 2500 ? 0
+                    : elapsed < 5000 ? 1
+                    : elapsed < 7500 ? 2
+                    : -1;
+
+    if (newCureIdx !== cureIdx) {
+      cureIdx = newCureIdx;
+      targetBpm = 62 + (cureIdx + 1) * 14;
+      renderCode(cureIdx);
+      renderSymptoms(cureIdx, operating);
+    } else {
+      renderSymptoms(cureIdx, operating);
+    }
+
+    // Smooth BPM
+    bpm += (targetBpm - bpm) * 0.05;
+    bpmVal.textContent = Math.round(bpm);
+
+    drawHeartbeat();
+    requestAnimationFrame(tickC);
+  }
+
+  resetC();
+  requestAnimationFrame(tickC);
+})();
+</script>
+</body>
+</html>
