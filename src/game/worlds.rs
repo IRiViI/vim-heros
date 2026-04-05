@@ -84,7 +84,7 @@ pub struct WorldDef {
     pub new_skills: &'static [VimSkill],
 }
 
-/// All 14 worlds.
+/// All 15 worlds.
 pub const WORLDS: &[WorldDef] = &[
     WorldDef {
         number: 1,
@@ -99,6 +99,14 @@ pub const WORLDS: &[WorldDef] = &[
     },
     WorldDef {
         number: 2,
+        name: "Basic Edit",
+        subtitle: "Enter insert mode",
+        new_skills: &[
+            VimSkill::InsertMode,
+        ],
+    },
+    WorldDef {
+        number: 3,
         name: "Word Surfer",
         subtitle: "Ride the words",
         new_skills: &[
@@ -107,7 +115,7 @@ pub const WORLDS: &[WorldDef] = &[
         ],
     },
     WorldDef {
-        number: 3,
+        number: 4,
         name: "Line Rider",
         subtitle: "Precision movement",
         new_skills: &[
@@ -116,15 +124,15 @@ pub const WORLDS: &[WorldDef] = &[
         ],
     },
     WorldDef {
-        number: 4,
+        number: 5,
         name: "The Writer",
-        subtitle: "Enter insert mode",
+        subtitle: "Advanced insert mode",
         new_skills: &[
-            VimSkill::InsertMode, VimSkill::ReplaceMode,
+            VimSkill::ReplaceMode,
         ],
     },
     WorldDef {
-        number: 5,
+        number: 6,
         name: "The Destroyer",
         subtitle: "Delete with precision",
         new_skills: &[
@@ -132,7 +140,7 @@ pub const WORLDS: &[WorldDef] = &[
         ],
     },
     WorldDef {
-        number: 6,
+        number: 7,
         name: "Verb + Noun",
         subtitle: "The most important lesson",
         new_skills: &[
@@ -140,7 +148,7 @@ pub const WORLDS: &[WorldDef] = &[
         ],
     },
     WorldDef {
-        number: 7,
+        number: 8,
         name: "Copy Ninja",
         subtitle: "Yank and paste",
         new_skills: &[
@@ -148,7 +156,7 @@ pub const WORLDS: &[WorldDef] = &[
         ],
     },
     WorldDef {
-        number: 8,
+        number: 9,
         name: "The Selector",
         subtitle: "Visual mode",
         new_skills: &[
@@ -156,7 +164,7 @@ pub const WORLDS: &[WorldDef] = &[
         ],
     },
     WorldDef {
-        number: 9,
+        number: 10,
         name: "Text Object Surgeon",
         subtitle: "Inner and around",
         new_skills: &[
@@ -164,7 +172,7 @@ pub const WORLDS: &[WorldDef] = &[
         ],
     },
     WorldDef {
-        number: 10,
+        number: 11,
         name: "Code Navigator",
         subtitle: "Structural movement",
         new_skills: &[
@@ -172,7 +180,7 @@ pub const WORLDS: &[WorldDef] = &[
         ],
     },
     WorldDef {
-        number: 11,
+        number: 12,
         name: "Search & Destroy",
         subtitle: "Find anything",
         new_skills: &[
@@ -180,7 +188,7 @@ pub const WORLDS: &[WorldDef] = &[
         ],
     },
     WorldDef {
-        number: 12,
+        number: 13,
         name: "Time Traveler",
         subtitle: "Undo and registers",
         new_skills: &[
@@ -188,7 +196,7 @@ pub const WORLDS: &[WorldDef] = &[
         ],
     },
     WorldDef {
-        number: 13,
+        number: 14,
         name: "Macro Wizard",
         subtitle: "Record and replay",
         new_skills: &[
@@ -196,7 +204,7 @@ pub const WORLDS: &[WorldDef] = &[
         ],
     },
     WorldDef {
-        number: 14,
+        number: 15,
         name: "The Grandmaster",
         subtitle: "The final challenge",
         new_skills: &[], // No new skills — everything already unlocked
@@ -231,7 +239,12 @@ pub fn skill_for_action(action: &Action) -> Option<VimSkill> {
             Some(VimSkill::GotoLine)
         }
 
-        // World 2 — word motions
+        // World 2 — insert mode (Basic Edit)
+        Action::EnterInsertMode | Action::InsertAfter
+        | Action::InsertAtStart | Action::InsertAtEnd
+        | Action::OpenLineBelow | Action::OpenLineAbove => Some(VimSkill::InsertMode),
+
+        // World 3 — word motions
         Action::WordForward => Some(VimSkill::WordForward),
         Action::WordBackward => Some(VimSkill::WordBackward),
         Action::WordEnd => Some(VimSkill::WordEnd),
@@ -239,25 +252,22 @@ pub fn skill_for_action(action: &Action) -> Option<VimSkill> {
         Action::BigWordBackward => Some(VimSkill::BigWordBackward),
         Action::BigWordEnd => Some(VimSkill::BigWordEnd),
 
-        // World 3 — line precision
+        // World 4 — line precision
         Action::LineStart => Some(VimSkill::LineStart),
         Action::LineFirstChar => Some(VimSkill::LineFirstChar),
         Action::LineEnd => Some(VimSkill::LineEnd),
         Action::FindCharForward(_) | Action::FindCharBackward(_) => Some(VimSkill::FindChar),
         Action::TillCharForward(_) | Action::TillCharBackward(_) => Some(VimSkill::TillChar),
 
-        // World 4 — insert mode
-        Action::EnterInsertMode | Action::InsertAfter
-        | Action::InsertAtStart | Action::InsertAtEnd
-        | Action::OpenLineBelow | Action::OpenLineAbove => Some(VimSkill::InsertMode),
+        // World 5 — replace mode
         Action::EnterReplaceMode | Action::ReplaceChar(_) => Some(VimSkill::ReplaceMode),
 
-        // World 5 — simple deletion
+        // World 6 — simple deletion
         Action::DeleteChar | Action::DeleteCharBefore => Some(VimSkill::DeleteChar),
         Action::DeleteLine => Some(VimSkill::DeleteLine),
         Action::DeleteToEnd => Some(VimSkill::DeleteToEnd),
 
-        // World 6 — operator + motion
+        // World 7 — operator + motion (Verb + Noun)
         Action::OperatorMotion(op, _, _) => match op {
             Operator::Delete | Operator::Change => Some(VimSkill::OperatorMotion),
             Operator::Yank => Some(VimSkill::YankMotion),
@@ -265,33 +275,33 @@ pub fn skill_for_action(action: &Action) -> Option<VimSkill> {
         Action::ChangeToEnd => Some(VimSkill::OperatorMotion),
         Action::DotRepeat => Some(VimSkill::DotRepeat),
 
-        // World 6 — operator + text object
+        // World 10 — text objects
         Action::OperatorTextObject(op, _) => match op {
             Operator::Delete | Operator::Change => Some(VimSkill::TextObject),
             Operator::Yank => Some(VimSkill::TextObject),
         },
 
-        // World 7 — yank and paste
+        // World 8 — yank and paste
         Action::YankLine => Some(VimSkill::YankLine),
         Action::PasteAfter | Action::PasteBefore => Some(VimSkill::Paste),
 
-        // World 8 — visual mode
+        // World 9 — visual mode
         Action::EnterVisualMode => Some(VimSkill::VisualMode),
         Action::EnterVisualLineMode => Some(VimSkill::VisualLineMode),
 
-        // World 10 — code navigation
+        // World 11 — code navigation
         Action::ParagraphForward | Action::ParagraphBackward => Some(VimSkill::Paragraph),
         Action::MatchBracket => Some(VimSkill::MatchBracket),
 
-        // World 11 — search
+        // World 12 — search
         Action::SearchForward | Action::SearchBackward
         | Action::SearchNext | Action::SearchPrev => Some(VimSkill::Search),
         Action::SearchWordForward | Action::SearchWordBackward => Some(VimSkill::SearchWord),
 
-        // World 12 — undo
+        // World 13 — undo
         Action::Undo | Action::Redo => Some(VimSkill::Undo),
 
-        // World 13 — macros
+        // World 14 — macros
         Action::MacroRecord(_) | Action::MacroStop | Action::MacroPlay(_) => {
             Some(VimSkill::Macro)
         }
@@ -551,6 +561,41 @@ pub fn w1_zone_skills(zone: &str) -> HashSet<VimSkill> {
     skills
 }
 
+// ── World 2 (Basic Edit) per-level insert mode gating ──────────
+
+/// Which insert-mode entry actions are allowed for a World 2 sub-level.
+pub fn w2_allowed_insert_actions(level: usize) -> Vec<Action> {
+    match level {
+        1 => vec![
+            Action::EnterInsertMode, // i
+            Action::InsertAfter,     // a
+        ],
+        2 => vec![
+            Action::EnterInsertMode, // i
+            Action::InsertAfter,     // a
+            Action::InsertAtStart,   // I
+            Action::InsertAtEnd,     // A
+        ],
+        _ => vec![
+            Action::EnterInsertMode, // i
+            Action::InsertAfter,     // a
+            Action::InsertAtStart,   // I
+            Action::InsertAtEnd,     // A
+            Action::OpenLineBelow,   // o
+            Action::OpenLineAbove,   // O
+        ],
+    }
+}
+
+/// Check if an action is an insert-mode entry action.
+pub fn is_insert_entry(action: &Action) -> bool {
+    matches!(action,
+        Action::EnterInsertMode | Action::InsertAfter
+        | Action::InsertAtStart | Action::InsertAtEnd
+        | Action::OpenLineBelow | Action::OpenLineAbove
+    )
+}
+
 /// Check whether an action is a motion (moves the cursor without editing).
 pub fn is_motion_action(action: &Action) -> bool {
     matches!(action,
@@ -613,67 +658,94 @@ pub fn skill_hint_lines(world: usize, level: usize) -> Vec<&'static str> {
                 "j / k      move down / up",
             ],
         },
-        2 => vec![
+        2 => match level {
+            1 => vec![
+                "i          insert before cursor",
+                "a          insert after cursor",
+                "Esc        back to normal mode",
+            ],
+            2 => vec![
+                "i / a      insert before / after cursor",
+                "I          insert at line start",
+                "A          insert at line end",
+            ],
+            3 => vec![
+                "i / a      insert before / after",
+                "I / A      insert at line start / end",
+                "o          open line below",
+                "O          open line above",
+            ],
+            4 => vec![
+                "All insert commands available",
+                "Per-task restrictions shown in HUD",
+            ],
+            5 => vec![
+                "All insert commands available",
+                "Must use OPTIMAL entry point",
+            ],
+            _ => vec![
+                "i / a      insert before / after cursor",
+            ],
+        },
+        3 => vec![
             "w / b      next word / back a word",
             "e          jump to end of word",
             "W / B / E  big-word motions",
             "3w / 2b    word motions with counts",
         ],
-        3 => vec![
+        4 => vec![
             "0 / $      start / end of line",
             "^          first non-blank character",
             "f<c> / t<c>  find / till character",
             ";          repeat last f/t",
         ],
-        4 => vec![
-            "i / a      insert before / after cursor",
-            "I / A      insert at line start / end",
-            "o / O      open line below / above",
-            "r<c>       replace single character",
-        ],
         5 => vec![
+            "r<c>       replace single character",
+            "R          enter replace mode",
+        ],
+        6 => vec![
             "x          delete character under cursor",
             "dd         delete entire line",
             "D          delete to end of line",
         ],
-        6 => vec![
+        7 => vec![
             "dw / d$    delete word / to end",
             "cw / c$    change word / to end",
             ".          repeat last change",
             ">> / <<    indent / dedent line",
         ],
-        7 => vec![
+        8 => vec![
             "yy         yank (copy) line",
             "yw         yank word",
             "p / P      paste after / before",
         ],
-        8 => vec![
+        9 => vec![
             "v          visual character mode",
             "V          visual line mode",
             "v + d/c/y  select then operate",
         ],
-        9 => vec![
+        10 => vec![
             "iw / aw    inner / around word",
             "i\" / a\"    inside / around quotes",
             "ci( / di{  change/delete inside brackets",
         ],
-        10 => vec![
+        11 => vec![
             "{ / }      jump between paragraphs",
             "%          jump to matching bracket",
         ],
-        11 => vec![
+        12 => vec![
             "/pattern   search forward",
             "?pattern   search backward",
             "n / N      next / prev match",
             "* / #      search word under cursor",
         ],
-        12 => vec![
+        13 => vec![
             "u          undo",
             "Ctrl-R     redo",
             "\"ayy       yank into register a",
             "\"ap        paste from register a",
         ],
-        13 => vec![
+        14 => vec![
             "qa ... q   record macro into register a",
             "@a         play macro from register a",
             "@@         replay last macro",
@@ -693,17 +765,21 @@ mod tests {
     fn test_skills_cumulative() {
         let w1 = skills_for_world(1);
         assert!(w1.contains(&VimSkill::MoveLeft));
-        assert!(!w1.contains(&VimSkill::WordForward));
+        assert!(!w1.contains(&VimSkill::InsertMode));
 
         let w2 = skills_for_world(2);
         assert!(w2.contains(&VimSkill::MoveLeft)); // still has W1
-        assert!(w2.contains(&VimSkill::WordForward));
-        assert!(!w2.contains(&VimSkill::FindChar));
+        assert!(w2.contains(&VimSkill::InsertMode)); // W2 = Basic Edit
+        assert!(!w2.contains(&VimSkill::WordForward)); // W3
+
+        let w3 = skills_for_world(3);
+        assert!(w3.contains(&VimSkill::WordForward));
+        assert!(!w3.contains(&VimSkill::FindChar)); // W4
     }
 
     #[test]
-    fn test_world_14_has_everything() {
-        let all = skills_for_world(14);
+    fn test_world_15_has_everything() {
+        let all = skills_for_world(15);
         // Should have skills from every world
         assert!(all.contains(&VimSkill::MoveLeft));
         assert!(all.contains(&VimSkill::Macro));
@@ -720,8 +796,9 @@ mod tests {
     #[test]
     fn test_unlock_world() {
         assert_eq!(skill_unlock_world(VimSkill::MoveLeft), 1);
-        assert_eq!(skill_unlock_world(VimSkill::WordForward), 2);
-        assert_eq!(skill_unlock_world(VimSkill::FindChar), 3);
-        assert_eq!(skill_unlock_world(VimSkill::Macro), 13);
+        assert_eq!(skill_unlock_world(VimSkill::InsertMode), 2);
+        assert_eq!(skill_unlock_world(VimSkill::WordForward), 3);
+        assert_eq!(skill_unlock_world(VimSkill::FindChar), 4);
+        assert_eq!(skill_unlock_world(VimSkill::Macro), 14);
     }
 }

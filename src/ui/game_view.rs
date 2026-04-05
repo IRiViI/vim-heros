@@ -22,7 +22,13 @@ pub fn render(frame: &mut ratatui::Frame, app: &App) {
 
     render_hud(frame, app, chunks[0]);
     render_energy_bar(frame, app, chunks[1]);
-    render_buffer(frame, app, chunks[2]);
+
+    if app.level.is_basic_edit() && app.target_buffer.is_some() {
+        render_split_buffer(frame, app, chunks[2]);
+    } else {
+        render_buffer(frame, app, chunks[2]);
+    }
+
     render_status_bar(frame, app, chunks[3]);
 
     if matches!(app.engine.state, GameState::GameOver | GameState::LevelComplete) {
@@ -317,6 +323,111 @@ fn task_for_line(tasks: &[Task], line_idx: usize, primary_line: Option<usize>) -
             && matches!(t.state, TaskState::Pending | TaskState::Active);
         (t, is_primary)
     })
+}
+
+/// Render World 2 split-screen: player buffer (left) + target buffer (right).
+fn render_split_buffer(frame: &mut ratatui::Frame, app: &App, area: Rect) {
+    let halves = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ])
+        .split(area);
+
+    // Left half: player's editable buffer
+    render_buffer(frame, app, halves[0]);
+
+    // Right half: target buffer with diff highlighting
+    if let Some(ref target_buf) = app.target_buffer {
+        render_target_buffer(frame, app, target_buf, halves[1]);
+    }
+}
+
+/// Render the target buffer (right side in World 2 split-screen).
+/// Read-only, no cursor, with diff highlighting showing what's missing.
+fn render_target_buffer(
+    frame: &mut ratatui::Frame,
+    app: &App,
+    target_buf: &crate::vim::buffer::Buffer,
+    area: Rect,
+) {
+    let inner_height = area.height.saturating_sub(2) as usize;
+    let line_count = target_buf.line_count();
+    let max_line_num = line_count;
+    let gutter_width = format!("{}", max_line_num).len() + 1;
+    let scroll_top = app.target_viewport.top_line;
+
+    // Build a set of "missing" lines by comparing player buffer to target buffer
+    let player_lines: Vec<String> = (0..app.buffer.line_count())
+        .map(|i| app.buffer.line(i).unwrap_or_default())
+        .collect();
+
+    let mut lines: Vec<Line> = Vec::with_capacity(inner_height);
+
+    for i in 0..inner_height {
+        let line_idx = scroll_top + i;
+        if line_idx >= line_count {
+            let gutter = format!("{:>width$} ", "~", width = gutter_width - 1);
+            lines.push(Line::from(vec![Span::styled(
+                gutter,
+                Style::default().fg(Color::DarkGray),
+            )]));
+            continue;
+        }
+
+        let target_line = target_buf.line(line_idx).unwrap_or_default();
+
+        // Check if this line is "missing" or "different" from player buffer
+        let is_missing = !player_lines.iter().any(|pl| pl.trim() == target_line.trim());
+
+        // Check if there's an active/pending task targeting this line
+        let has_task = app.tasks.iter().any(|t| {
+            t.target_line == line_idx && t.is_completable()
+        });
+
+        let gutter = format!("{:>width$} ", line_idx + 1, width = gutter_width - 1);
+
+        let mut spans = Vec::new();
+        spans.push(Span::styled(
+            gutter,
+            Style::default().fg(Color::DarkGray),
+        ));
+
+        if has_task {
+            // Active task line: bright highlight
+            spans.push(Span::styled(
+                target_line.clone(),
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Green),
+            ));
+        } else if is_missing {
+            // Missing line: dim highlight
+            spans.push(Span::styled(
+                target_line.clone(),
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Rgb(60, 80, 60)),
+            ));
+        } else {
+            // Matched line: normal rendering
+            spans.push(Span::styled(
+                target_line.clone(),
+                Style::default().fg(Color::Gray),
+            ));
+        }
+
+        lines.push(Line::from(spans));
+    }
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Green))
+        .title(" Target ");
+
+    let paragraph = Paragraph::new(lines).block(block);
+    frame.render_widget(paragraph, area);
 }
 
 /// Render the text buffer with line numbers, cursor, and task overlays.

@@ -1,0 +1,78 @@
+[meta]
+id = "intro-2-4-restricted-entry"
+zone = "basic_edit"
+language = "python"
+tags = ["intro", "insert", "restricted"]
+difficulty = 1
+intro = true
+intro_level = "2-4"
+
+[code]
+content = """
+# ===================================
+# Level 2-4: Restricted entry points
+# ===================================
+#
+# You know all the insert commands.
+# Each task tells you which to use.
+# The HUD shows the allowed key.
+# ===================================
+
+def binary_search(arr, target):
+    left = 0
+    right = len(arr) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1
+"""
+
+# i-only task
+[[removals]]
+type = "inline"
+line_anchor = "left = 0"
+remove = "0"
+description = "Add '0' (USE: i only)"
+entry_point = "i"
+points = 50
+
+# A-only task
+[[removals]]
+type = "inline"
+line_anchor = "right = len(arr) - 1"
+remove = " - 1"
+description = "Append ' - 1' (USE: A only)"
+entry_point = "A"
+points = 75
+
+# o-only task
+[[removals]]
+type = "whole_line"
+line_anchor = "mid = (left + right) // 2"
+description = "Add mid calculation (USE: o only)"
+entry_point = "o"
+points = 100
+
+# I-only task
+[[removals]]
+type = "inline"
+line_anchor = "elif arr[mid] < target"
+remove = "        elif"
+insert_text = "        elif"
+description = "Add 'elif' at line start (USE: I only)"
+entry_point = "I"
+points = 75
+
+# a-only task
+[[removals]]
+type = "inline"
+line_anchor = "return -1"
+remove = "-1"
+description = "Add '-1' (USE: a only)"
+entry_point = "a"
+points = 50

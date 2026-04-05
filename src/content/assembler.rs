@@ -751,6 +751,147 @@ fn resolve_segment_task(
     }
 }
 
+// ── World 2 (Basic Edit) assembler ─────────────────────────────
+
+use super::segment::Removal;
+
+/// Result of assembling a World 2 level.
+pub struct AssembledW2Level {
+    /// Player's starting code (incomplete — removals applied).
+    pub player_buffer: Buffer,
+    /// Target code (complete — what the player is building toward).
+    pub target_buffer: Buffer,
+    /// Tasks generated from removals.
+    pub tasks: Vec<Task>,
+}
+
+/// Assemble a World 2 level from a single segment with removals.
+/// The segment's `code.content` is the target (complete) code.
+/// The `removals` list defines what to strip out for the player's starting code.
+pub fn assemble_w2(segment: &Segment, level_ctx: Option<&LevelContext>) -> AssembledW2Level {
+    let target_code = segment.code.content.trim_start_matches('\n');
+    let target_lines: Vec<&str> = target_code.lines().collect();
+    let target_buffer = Buffer::from_str(target_code);
+
+    // Build player starting code by applying removals
+    let mut player_lines: Vec<String> = target_lines.iter().map(|l| l.to_string()).collect();
+    let mut tasks: Vec<Task> = Vec::new();
+
+    // Collect removals with their resolved target line indices (in original target code)
+    struct ResolvedRemoval {
+        target_line: usize,
+        removal_idx: usize,
+    }
+
+    let mut resolved: Vec<ResolvedRemoval> = Vec::new();
+
+    for (ri, removal) in segment.removals.iter().enumerate() {
+        // Find the line matching line_anchor in the target code
+        let mut found_count = 0usize;
+        for (li, line) in target_lines.iter().enumerate() {
+            if line.contains(&removal.line_anchor) {
+                found_count += 1;
+                if found_count == removal.occurrence {
+                    resolved.push(ResolvedRemoval {
+                        target_line: li,
+                        removal_idx: ri,
+                    });
+                    break;
+                }
+            }
+        }
+    }
+
+    // Sort removals by target line (bottom-up for whole_line removals to preserve indices)
+    resolved.sort_by_key(|r| std::cmp::Reverse(r.target_line));
+
+    // Track line offset caused by whole_line removals
+    let mut removed_lines: Vec<usize> = Vec::new();
+
+    for rr in &resolved {
+        let removal = &segment.removals[rr.removal_idx];
+        match removal.removal_type.as_str() {
+            "whole_line" => {
+                player_lines.remove(rr.target_line);
+                removed_lines.push(rr.target_line);
+            }
+            "inline" => {
+                if let Some(remove_text) = &removal.remove {
+                    if let Some(line) = player_lines.get_mut(rr.target_line) {
+                        *line = line.replacen(remove_text.as_str(), "", 1);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // Sort removed_lines for offset calculation
+    removed_lines.sort();
+
+    // Now create tasks (process in top-to-bottom order)
+    let mut resolved_sorted: Vec<&ResolvedRemoval> = resolved.iter().collect();
+    resolved_sorted.sort_by_key(|r| r.target_line);
+
+    for rr in resolved_sorted {
+        let removal = &segment.removals[rr.removal_idx];
+
+        // Calculate the player-buffer line index (adjusted for removed lines above)
+        let lines_removed_above = removed_lines.iter()
+            .filter(|&&rl| rl < rr.target_line)
+            .count();
+        let player_line = rr.target_line - lines_removed_above;
+
+        match removal.removal_type.as_str() {
+            "whole_line" => {
+                // The line was removed — player needs to add it with o/O
+                let expected = target_lines[rr.target_line].trim().to_string();
+                let task = Task::insert_line(
+                    rr.target_line, // target_line in target buffer (for highlighting)
+                    &expected,
+                    player_line.saturating_sub(1), // near_line: line above in player buffer
+                    &removal.description,
+                    removal.points,
+                    removal.entry_point.clone(),
+                );
+                tasks.push(task);
+            }
+            "inline" => {
+                let expected = removal.insert_text.as_deref()
+                    .or(removal.remove.as_deref())
+                    .unwrap_or("");
+                // Find col in the target line where the text starts
+                let col = target_lines[rr.target_line]
+                    .find(expected)
+                    .unwrap_or(0);
+                let task = Task::insert_text(
+                    player_line,
+                    col,
+                    expected,
+                    &removal.description,
+                    removal.points,
+                    removal.entry_point.clone(),
+                );
+                tasks.push(task);
+            }
+            _ => {}
+        }
+    }
+
+    // Sort tasks top-to-bottom
+    tasks.sort_by_key(|t| (t.target_line, t.target_col));
+
+    // Build player buffer
+    let player_code = player_lines.join("\n");
+    let player_buffer = Buffer::from_str(&player_code);
+
+    AssembledW2Level {
+        player_buffer,
+        target_buffer,
+        tasks,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

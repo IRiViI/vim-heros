@@ -1,0 +1,78 @@
+[meta]
+id = "intro-2-2-line-edges"
+zone = "basic_edit"
+language = "python"
+tags = ["intro", "insert", "I", "A"]
+difficulty = 1
+intro = true
+intro_level = "2-2"
+
+[code]
+content = """
+# ===================================
+# Level 2-2: Line edges
+# ===================================
+#
+# New entry points:
+#   I -- insert at beginning of line
+#   A -- insert at end of line
+#
+# Use I to add text at the start.
+# Use A to append at the end.
+# ===================================
+
+def factorial(n):
+    if n <= 1:
+        return 1
+    result = 1
+    for i in range(2, n + 1):
+        result *= i
+    return result
+
+# Test the function
+print(factorial(5))
+print(factorial(10))
+"""
+
+[[removals]]
+type = "inline"
+line_anchor = "def factorial"
+remove = "def "
+description = "Add 'def ' keyword (use I at line start)"
+entry_point = "I"
+points = 50
+
+[[removals]]
+type = "inline"
+line_anchor = "return 1"
+occurrence = 1
+remove = "return "
+description = "Add 'return ' keyword (use I)"
+entry_point = "I"
+points = 50
+
+[[removals]]
+type = "inline"
+line_anchor = "result *= i"
+remove = " *= i"
+description = "Append ' *= i' (use A at end of line)"
+entry_point = "A"
+points = 75
+
+[[removals]]
+type = "inline"
+line_anchor = "# Test the function"
+remove = "# "
+description = "Add comment prefix '# ' (use I)"
+entry_point = "I"
+points = 50
+
+[[removals]]
+type = "inline"
+line_anchor = "print(factorial(5))"
+remove = ")"
+insert_text = ")"
+occurrence = 1
+description = "Add closing ')' (use A)"
+entry_point = "A"
+points = 50

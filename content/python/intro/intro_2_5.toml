@@ -1,0 +1,78 @@
+[meta]
+id = "intro-2-5-perfect-entry"
+zone = "basic_edit"
+language = "python"
+tags = ["intro", "insert", "perfect"]
+difficulty = 1
+intro = true
+intro_level = "2-5"
+
+[code]
+content = """
+# ===================================
+# Level 2-5: Perfect entry
+# ===================================
+#
+# Every insertion must use the OPTIMAL
+# entry command. No wasted keystrokes.
+# ===================================
+
+def insertion_sort(arr):
+    for i in range(1, len(arr)):
+        key = arr[i]
+        j = i - 1
+        while j >= 0 and key < arr[j]:
+            arr[j + 1] = arr[j]
+            j -= 1
+        arr[j + 1] = key
+    return arr
+
+def is_sorted(arr):
+    for i in range(len(arr) - 1):
+        if arr[i] > arr[i + 1]:
+            return False
+    return True
+"""
+
+# Must use A (end of line)
+[[removals]]
+type = "inline"
+line_anchor = "key = arr[i]"
+remove = "[i]"
+description = "Add '[i]' at end (optimal: A)"
+entry_point = "A"
+points = 75
+
+# Must use o (new line below)
+[[removals]]
+type = "whole_line"
+line_anchor = "j -= 1"
+description = "Add 'j -= 1' below arr assignment (optimal: o)"
+entry_point = "o"
+points = 100
+
+# Must use I (line start)
+[[removals]]
+type = "inline"
+line_anchor = "def is_sorted"
+remove = "def "
+description = "Add 'def ' at start (optimal: I)"
+entry_point = "I"
+points = 75
+
+# Must use o (new line)
+[[removals]]
+type = "whole_line"
+line_anchor = "return True"
+description = "Add 'return True' (optimal: o)"
+entry_point = "o"
+points = 100
+
+# Must use i (before cursor)
+[[removals]]
+type = "inline"
+line_anchor = "return False"
+remove = "False"
+description = "Add 'False' (optimal: i)"
+entry_point = "i"
+points = 75

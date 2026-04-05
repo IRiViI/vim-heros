@@ -63,6 +63,20 @@ pub enum TaskKind {
         /// Expected leading whitespace.
         expected_indent: String,
     },
+    /// Insert a new line (World 2). Completed when a line with matching content appears
+    /// near the target position.
+    InsertLine {
+        /// The expected trimmed content of the new line.
+        expected_content: String,
+        /// Approximate line in the player buffer where this should appear.
+        near_line: usize,
+    },
+    /// Insert text inline (World 2). Completed when the line contains the expected text.
+    /// Similar to ChangeWord but the starting code has the text removed.
+    InsertText {
+        /// The text the player must type.
+        expected_text: String,
+    },
 }
 
 /// How well a task was completed.
@@ -99,6 +113,9 @@ pub struct Task {
     /// "hl" = h/l only, "wb" = w/b only, "ft" = f/t only, "line_edge" = $/0 only.
     /// None = no restriction.
     pub zone: Option<String>,
+    /// World 2: optimal insert entry point for this task ("i", "a", "I", "A", "o", "O").
+    /// Used for level 4 restrictions and level 5 enforcement.
+    pub entry_point: Option<String>,
 }
 
 impl Task {
@@ -123,6 +140,7 @@ impl Task {
             hint_command: String::new(),
             at_end: false,
             zone: None,
+            entry_point: None,
         }
     }
 
@@ -149,6 +167,7 @@ impl Task {
             hint_command: String::new(),
             at_end: false,
             zone: None,
+            entry_point: None,
         }
     }
 
@@ -176,6 +195,7 @@ impl Task {
             hint_command: String::new(),
             at_end: false,
             zone: None,
+            entry_point: None,
         }
     }
 
@@ -206,6 +226,7 @@ impl Task {
             hint_command: String::new(),
             at_end: false,
             zone: None,
+            entry_point: None,
         }
     }
 
@@ -231,6 +252,7 @@ impl Task {
             hint_command: String::new(),
             at_end: false,
             zone: None,
+            entry_point: None,
         }
     }
 
@@ -260,6 +282,7 @@ impl Task {
             hint_command: String::new(),
             at_end: false,
             zone: None,
+            entry_point: None,
         }
     }
 
@@ -287,6 +310,7 @@ impl Task {
             hint_command: String::new(),
             at_end: false,
             zone: None,
+            entry_point: None,
         }
     }
 
@@ -311,6 +335,7 @@ impl Task {
             hint_command: String::new(),
             at_end: false,
             zone: None,
+            entry_point: None,
         }
     }
 
@@ -337,6 +362,64 @@ impl Task {
             hint_command: String::new(),
             at_end: false,
             zone: None,
+            entry_point: None,
+        }
+    }
+
+    pub fn insert_line(
+        target_line: usize,
+        expected_content: impl Into<String>,
+        near_line: usize,
+        description: impl Into<String>,
+        points: i64,
+        entry_point: Option<String>,
+    ) -> Self {
+        Self {
+            kind: TaskKind::InsertLine {
+                expected_content: expected_content.into(),
+                near_line,
+            },
+            state: TaskState::Pending,
+            target_line,
+            target_col: 0,
+            description: description.into(),
+            points,
+            gutter_text: "INSERT".into(),
+            good_keys: 0,
+            perfect_keys: 0,
+            quality: CompletionQuality::Done,
+            hint_command: String::new(),
+            at_end: false,
+            zone: None,
+            entry_point,
+        }
+    }
+
+    pub fn insert_text(
+        target_line: usize,
+        target_col: usize,
+        expected_text: impl Into<String>,
+        description: impl Into<String>,
+        points: i64,
+        entry_point: Option<String>,
+    ) -> Self {
+        Self {
+            kind: TaskKind::InsertText {
+                expected_text: expected_text.into(),
+            },
+            state: TaskState::Pending,
+            target_line,
+            target_col,
+            description: description.into(),
+            points,
+            gutter_text: "TYPE".into(),
+            good_keys: 0,
+            perfect_keys: 0,
+            quality: CompletionQuality::Done,
+            hint_command: String::new(),
+            at_end: false,
+            zone: None,
+            entry_point,
         }
     }
 
@@ -399,6 +482,12 @@ impl Task {
                 }
             }
             TaskKind::Indent { .. } => ">> or <<".to_string(),
+            TaskKind::InsertLine { .. } => {
+                self.entry_point.clone().unwrap_or_else(|| "o".to_string())
+            }
+            TaskKind::InsertText { .. } => {
+                self.entry_point.clone().unwrap_or_else(|| "i".to_string())
+            }
         }
     }
 }

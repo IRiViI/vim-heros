@@ -1,8 +1,8 @@
 [meta]
-id = "intro-3-1-line-rider"
+id = "intro-3-1-word-surfer"
 zone = "intro"
 language = "python"
-tags = ["intro", "line-motions", "f", "t", "0", "$"]
+tags = ["intro", "word-motions", "w", "b", "e"]
 difficulty = 1
 intro = true
 intro_level = "3-1"
@@ -10,61 +10,72 @@ intro_level = "3-1"
 [code]
 content = """
 # =============================================
-# WORLD 3: Line Rider
+# WORLD 2: Word Surfer
 # =============================================
 #
-# Moving within a line is where speed lives.
-# These commands get you anywhere on a line:
+# You already know h/j/k/l.
+# But pressing 'lllllll' to cross a line
+# is slow. There's a better way:
 #
-#   0  jump to START of line
-#   $  jump to END of line
-#   ^  jump to first non-blank character
+#   w  jump to the NEXT word
+#   b  jump BACK a word
+#   e  jump to the END of a word
 #
-#   f<char>  FIND character forward
-#   t<char>  TILL character (one before it)
-#   F<char>  find character BACKWARD
-#   T<char>  till character backward
+# Capital versions skip punctuation:
+#   W  next WORD (skip symbols)
+#   B  back WORD (skip symbols)
+#   E  end of WORD (skip symbols)
 #
-#   ;  repeat last f/t forward
-#   ,  repeat last f/t backward
+# Use counts too: 3w = jump 3 words forward
 #
-# Example: f( jumps to the next '('
+# Try these new motions on the code below!
 # =============================================
 
-config = {"host": "localhost", "port": 8080, "debug": True}
-database_url = "postgres://user:pass@localhost:5432/mydb"
-api_endpoint = "https://api.example.com/v2/users"
-max_retries = 3
+first_name = "Alice"
+last_name = "Johnson"
+full_name = first_name + " " + last_name
+
+total_students = 42
+passing_grade = 70
+average_score = 85.5
 """
 
-# Task 1: move to 'config'
+# Task 1: move to 'first_name'
 [[tasks]]
 type = "move_to"
-anchor = { pattern = "config", occurrence = 1 }
-description = "Move to 'config'"
+anchor = { pattern = "first_name", occurrence = 1 }
+description = "Move to 'first_name'"
 points = 25
 optimal_keys = 2
 
-# Task 2: end of 'database_url'
+# Task 2: end of 'last_name'
 [[tasks]]
 type = "move_to"
-anchor = { pattern = "database_url", occurrence = 1, at_end = true }
-description = "End of 'database_url'"
+anchor = { pattern = "last_name", occurrence = 1, at_end = true }
+description = "End of 'last_name'"
 points = 25
 optimal_keys = 3
 
-# Task 3: move to 'api_endpoint'
+# Task 3: move to 'full_name'
 [[tasks]]
 type = "move_to"
-anchor = { pattern = "api_endpoint", occurrence = 1 }
-description = "Move to 'api_endpoint'"
+anchor = { pattern = "full_name", occurrence = 1 }
+description = "Move to 'full_name'"
 points = 25
 optimal_keys = 2
 
-# Task 4: move to 'max_retries'
+# Task 4: move to 'passing_grade'
 [[tasks]]
 type = "move_to"
-anchor = { pattern = "max_retries", occurrence = 1 }
-description = "Move to 'max_retries'"
+anchor = { pattern = "passing_grade", occurrence = 1 }
+description = "Move to 'passing_grade'"
 points = 25
-optimal_keys = 2
+optimal_keys = 3
+
+# Task 5: end of 'average_score'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "average_score", occurrence = 1, at_end = true }
+description = "End of 'average_score'"
+points = 25
+optimal_keys = 3

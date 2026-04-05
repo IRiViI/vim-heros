@@ -7,6 +7,9 @@ pub struct Segment {
     pub code: SegmentCode,
     #[serde(default)]
     pub tasks: Vec<SegmentTask>,
+    /// World 2: removals that generate starting code from target code.
+    #[serde(default)]
+    pub removals: Vec<Removal>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -90,6 +93,31 @@ pub struct TaskAnchor {
 
 fn default_occurrence() -> usize {
     1
+}
+
+/// World 2 removal: defines what to remove from target code to create starting code.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Removal {
+    /// "inline" (remove text within a line) or "whole_line" (remove entire line).
+    #[serde(rename = "type")]
+    pub removal_type: String,
+    /// Pattern to find the target line in the code.
+    pub line_anchor: String,
+    #[serde(default = "default_occurrence")]
+    pub occurrence: usize,
+    /// For inline removals: text to remove from the line.
+    #[serde(default)]
+    pub remove: Option<String>,
+    /// What the player must type to restore the removed text.
+    #[serde(default)]
+    pub insert_text: Option<String>,
+    /// Task description shown to the player.
+    pub description: String,
+    /// Optimal insert command: "i", "a", "I", "A", "o", "O".
+    #[serde(default)]
+    pub entry_point: Option<String>,
+    #[serde(default = "default_points")]
+    pub points: i64,
 }
 
 impl Segment {

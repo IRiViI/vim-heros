@@ -1,0 +1,77 @@
+[meta]
+id = "intro-2-3-new-lines"
+zone = "basic_edit"
+language = "python"
+tags = ["intro", "insert", "o", "O"]
+difficulty = 1
+intro = true
+intro_level = "2-3"
+
+[code]
+content = """
+# ===================================
+# Level 2-3: New lines
+# ===================================
+#
+# Now you can create new lines:
+#   o -- open line below, enter insert
+#   O -- open line above, enter insert
+#
+# Build functions line by line.
+# ===================================
+
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n):
+        for j in range(0, n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+
+def selection_sort(arr):
+    n = len(arr)
+    for i in range(n):
+        min_idx = i
+        for j in range(i + 1, n):
+            if arr[j] < arr[min_idx]:
+                min_idx = j
+        arr[i], arr[min_idx] = arr[min_idx], arr[i]
+    return arr
+"""
+
+[[removals]]
+type = "whole_line"
+line_anchor = "n = len(arr)"
+occurrence = 1
+description = "Add 'n = len(arr)' (use o below def line)"
+entry_point = "o"
+points = 75
+
+[[removals]]
+type = "whole_line"
+line_anchor = "arr[j], arr[j + 1] = arr[j + 1], arr[j]"
+description = "Add the swap line (use o below if)"
+entry_point = "o"
+points = 100
+
+[[removals]]
+type = "whole_line"
+line_anchor = "return arr"
+occurrence = 1
+description = "Add 'return arr' (use o at end of function)"
+entry_point = "o"
+points = 75
+
+[[removals]]
+type = "whole_line"
+line_anchor = "min_idx = i"
+description = "Add 'min_idx = i' (use o below for i)"
+entry_point = "o"
+points = 75
+
+[[removals]]
+type = "whole_line"
+line_anchor = "arr[i], arr[min_idx] = arr[min_idx], arr[i]"
+description = "Add the swap line (use o after inner loop)"
+entry_point = "o"
+points = 100

@@ -1,8 +1,8 @@
 [meta]
-id = "intro-4-1-the-writer"
+id = "intro-4-1-line-rider"
 zone = "intro"
 language = "python"
-tags = ["intro", "insert-mode", "i", "a", "o"]
+tags = ["intro", "line-motions", "f", "t", "0", "$"]
 difficulty = 1
 intro = true
 intro_level = "4-1"
@@ -10,63 +10,61 @@ intro_level = "4-1"
 [code]
 content = """
 # =============================================
-# WORLD 4: The Writer
+# WORLD 3: Line Rider
 # =============================================
 #
-# Time to actually CHANGE text! Until now
-# you've only been moving. These commands
-# put you into INSERT MODE:
+# Moving within a line is where speed lives.
+# These commands get you anywhere on a line:
 #
-#   i  insert BEFORE cursor
-#   a  insert AFTER cursor
-#   I  insert at START of line
-#   A  insert at END of line
-#   o  open new line BELOW
-#   O  open new line ABOVE
+#   0  jump to START of line
+#   $  jump to END of line
+#   ^  jump to first non-blank character
 #
-# Press Esc to go back to Normal mode.
+#   f<char>  FIND character forward
+#   t<char>  TILL character (one before it)
+#   F<char>  find character BACKWARD
+#   T<char>  till character backward
 #
-#   r<char>  REPLACE one character
-#   R        enter REPLACE mode (overwrite)
+#   ;  repeat last f/t forward
+#   ,  repeat last f/t backward
 #
-# In this game, tasks will tell you what
-# text to insert or change!
+# Example: f( jumps to the next '('
 # =============================================
 
-name = "World"
-greeting = "Hello"
-counter = 0
-status = "ready"
+config = {"host": "localhost", "port": 8080, "debug": True}
+database_url = "postgres://user:pass@localhost:5432/mydb"
+api_endpoint = "https://api.example.com/v2/users"
+max_retries = 3
 """
 
-# Task 1: move to 'World'
+# Task 1: move to 'config'
 [[tasks]]
 type = "move_to"
-anchor = { pattern = "World", occurrence = 1 }
-description = "Move to 'World'"
+anchor = { pattern = "config", occurrence = 1 }
+description = "Move to 'config'"
 points = 25
 optimal_keys = 2
 
-# Task 2: move to 'greeting'
+# Task 2: end of 'database_url'
 [[tasks]]
 type = "move_to"
-anchor = { pattern = "greeting", occurrence = 1 }
-description = "Move to 'greeting'"
+anchor = { pattern = "database_url", occurrence = 1, at_end = true }
+description = "End of 'database_url'"
+points = 25
+optimal_keys = 3
+
+# Task 3: move to 'api_endpoint'
+[[tasks]]
+type = "move_to"
+anchor = { pattern = "api_endpoint", occurrence = 1 }
+description = "Move to 'api_endpoint'"
 points = 25
 optimal_keys = 2
 
-# Task 3: move to 'counter'
+# Task 4: move to 'max_retries'
 [[tasks]]
 type = "move_to"
-anchor = { pattern = "counter", occurrence = 1 }
-description = "Move to 'counter'"
-points = 25
-optimal_keys = 2
-
-# Task 4: move to 'status'
-[[tasks]]
-type = "move_to"
-anchor = { pattern = "status", occurrence = 1 }
-description = "Move to 'status'"
+anchor = { pattern = "max_retries", occurrence = 1 }
+description = "Move to 'max_retries'"
 points = 25
 optimal_keys = 2
